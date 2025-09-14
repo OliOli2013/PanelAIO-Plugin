@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8 z opcją aktualizacji
+Wersja 1.8 - Hybrydowe źródła list
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -28,6 +28,7 @@ import sys
 import subprocess
 import shutil
 import re
+import json
 
 # === SEKCJA GLOBALNYCH ZMIENNYCH ===
 PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -39,7 +40,6 @@ VER = "1.8"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-# ZAKTUALIZOWANA LEGENDA
 LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Aktualizuj  \c000000ff●\c00ffffff Wyjście")
 LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Update  \c000000ff●\c00ffffff Exit")
 # === KONIEC SEKCJI ===
@@ -238,7 +238,6 @@ class Panel(Screen):
         self["footer"] = Label(FOOT)
         
         self.onLayoutFinish.append(self.initial_setup)
-        # ZAKTUALIZOWANA MAPA PRZYCISKÓW
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
@@ -246,7 +245,7 @@ class Panel(Screen):
             "green": lambda: self.set_lang('EN'),
             "yellow": self.restart_gui,
             "blue": self.close,
-            "info": self.check_for_updates, # <-- DODANY PRZYCISK "INFO"
+            "info": self.check_for_updates,
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
@@ -257,9 +256,7 @@ class Panel(Screen):
         if check_dependencies(self.sess):
             self.set_lang('PL')
             self._focus()
-            # Automatyczne sprawdzanie aktualizacji zostało usunięte, teraz jest tylko ręczne
 
-    # DODANA NOWA FUNKCJA DO AKTUALIZACJI
     def check_for_updates(self):
         version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
         tmp_version_path = os.path.join(PLUGIN_TMP_PATH, 'version.txt')
@@ -291,6 +288,41 @@ class Panel(Screen):
             print("[PanelAIO] Błąd podczas sprawdzania aktualizacji:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas sprawdzania aktualizacji.", message_type=MessageBox.TYPE_ERROR)
 
+    def get_lists_from_repo(self):
+        manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
+        tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
+        prepare_tmp_dir()
+        
+        try:
+            cmd = "curl -k -L --silent --connect-timeout 15 -o {} {}".format(tmp_json_path, manifest_url)
+            process = subprocess.Popen(cmd, shell=True)
+            process.wait()
+            if not (os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0):
+                return [("Błąd pobierania list (Repo)", "SEPARATOR")]
+        except Exception as e:
+            print("[PanelAIO] Błąd pobierania manifest.json:", e)
+            return [("Błąd krytyczny (Repo)", "SEPARATOR")]
+
+        lists_menu = []
+        try:
+            with open(tmp_json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            for item in data:
+                menu_title = "{} - {} ({})".format(item.get('name', 'Brak nazwy'), item.get('author', ''), item.get('version', ''))
+                action = "archive:{}".format(item.get('url', ''))
+                if item.get('url'):
+                    lists_menu.append((menu_title, action))
+                
+        except Exception as e:
+            print("[PanelAIO] Błąd przetwarzania pliku manifest.json:", e)
+            return [("Błąd formatu pliku (Repo)", "SEPARATOR")]
+            
+        if not lists_menu:
+            return [("Brak list w repozytorium", "SEPARATOR")]
+            
+        return lists_menu
+
     def run_with_confirmation(self):
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
@@ -315,7 +347,11 @@ class Panel(Screen):
         elif action.startswith("archive:"):
             install_archive(self.sess, title, action.split(':', 1)[1])
         elif action.startswith("bash:"):
-            console_screen_open(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, action.split(':', 1)[1])])
+            script_path = os.path.join(PLUGIN_PATH, action.split(':', 1)[1])
+            if os.path.exists(script_path):
+                 console_screen_open(self.sess, title, ["bash " + script_path])
+            else:
+                 show_message_compat(self.sess, f"Błąd: Brak skryptu {action.split(':', 1)[1]}", message_type=MessageBox.TYPE_ERROR)
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
             if command_key == "SPEEDTEST_DISPLAY": self.run_speed_test()
@@ -345,10 +381,30 @@ class Panel(Screen):
 
     def set_lang(self, lang):
         self.lang = lang
+        
+        # --- NOWA LOGIKA SCALANIA I FILTROWANIA ---
+        # 1. Pobierz listy z Twojego repozytorium
+        repo_lists = self.get_lists_from_repo()
+        
+        # 2. Pobierz pełną listę ze starego źródła
+        s4a_lists_full = get_s4aupdater_lists_dynamic()
+        
+        # 3. Zdefiniuj, które listy chcesz usunąć ze starego źródła
+        keywords_to_remove = ['bzyk', 'jakitaki']
+        
+        # 4. Odfiltruj starą listę
+        s4a_lists_filtered = [
+            item for item in s4a_lists_full 
+            if not any(keyword in item[0].lower() for keyword in keywords_to_remove)
+        ]
+        
+        # 5. Połącz obie listy (Twoje z repo będą na górze)
+        final_channel_lists = repo_lists + s4a_lists_filtered
+        
         if lang == 'PL':
-            self.data = (get_s4aupdater_lists_dynamic(), SOFTCAM_AND_PLUGINS_PL, TOOLS_AND_ADDONS_PL)
+            self.data = (final_channel_lists, SOFTCAM_AND_PLUGINS_PL, TOOLS_AND_ADDONS_PL)
         else:
-            self.data = (get_s4aupdater_lists_dynamic(), SOFTCAM_AND_PLUGINS_EN, TOOLS_AND_ADDONS_EN)
+            self.data = (final_channel_lists, SOFTCAM_AND_PLUGINS_EN, TOOLS_AND_ADDONS_EN)
         
         for i, menu_widget in enumerate((self["menuL"], self["menuM"], self["menuR"])):
             menu_widget.setList([item[0] for item in self.data[i]])
