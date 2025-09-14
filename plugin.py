@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8
+Wersja 1.8 z opcją aktualizacji
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -39,8 +39,9 @@ VER = "1.8"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-LEGEND_PL = ("\c00ff0000●\c00ffffff  PL     \c0000ff00●\c00ffffff  EN     \c00ffff00●\c00ffffff  Restart GUI     \c000000ff●\c00ffffff  Wyjście")
-LEGEND_EN = ("\c00ff0000●\c00ffffff  PL     \c0000ff00●\c00ffffff  EN     \c00ffff00●\c00ffffff  Restart GUI     \c000000ff●\c00ffffff  Exit")
+# ZAKTUALIZOWANA LEGENDA
+LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Aktualizuj  \c000000ff●\c00ffffff Wyjście")
+LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Update  \c000000ff●\c00ffffff Exit")
 # === KONIEC SEKCJI ===
 
 # === FUNKCJE POMOCNICZE ===
@@ -237,12 +238,58 @@ class Panel(Screen):
         self["footer"] = Label(FOOT)
         
         self.onLayoutFinish.append(self.initial_setup)
-        self["act"] = ActionMap(["DirectionActions","OkCancelActions","ColorActions"], {"ok": self.run_with_confirmation, "cancel": self.close, "red": lambda: self.set_lang('PL'), "green": lambda: self.set_lang('EN'), "yellow": self.restart_gui, "blue":  self.close, "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp), "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown), "left":  self.left, "right": self.right}, -1)
+        # ZAKTUALIZOWANA MAPA PRZYCISKÓW
+        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
+            "ok": self.run_with_confirmation,
+            "cancel": self.close,
+            "red": lambda: self.set_lang('PL'),
+            "green": lambda: self.set_lang('EN'),
+            "yellow": self.restart_gui,
+            "blue": self.close,
+            "info": self.check_for_updates, # <-- DODANY PRZYCISK "INFO"
+            "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
+            "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
+            "left": self.left,
+            "right": self.right
+        }, -1)
 
     def initial_setup(self):
         if check_dependencies(self.sess):
             self.set_lang('PL')
             self._focus()
+            # Automatyczne sprawdzanie aktualizacji zostało usunięte, teraz jest tylko ręczne
+
+    # DODANA NOWA FUNKCJA DO AKTUALIZACJI
+    def check_for_updates(self):
+        version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
+        tmp_version_path = os.path.join(PLUGIN_TMP_PATH, 'version.txt')
+        prepare_tmp_dir()
+        
+        try:
+            cmd = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_version_path, version_url)
+            process = subprocess.Popen(cmd, shell=True)
+            process.wait()
+            
+            if os.path.exists(tmp_version_path) and os.path.getsize(tmp_version_path) > 0:
+                with open(tmp_version_path, 'r') as f:
+                    latest_ver = f.read().strip()
+                
+                if latest_ver and latest_ver != VER:
+                    def do_update(result):
+                        if result:
+                            update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
+                            console_screen_open(self.sess, "Aktualizacja Panelu AIO...", [update_cmd])
+                    
+                    message = "Dostępna jest nowa wersja Panelu AIO: {}.\nTwoja wersja to: {}.\n\nCzy chcesz ją teraz zainstalować?".format(latest_ver, VER)
+                    self.sess.openWithCallback(do_update, MessageBox, message, type=MessageBox.TYPE_YESNO)
+                else:
+                    show_message_compat(self.sess, "Używasz najnowszej wersji wtyczki ({}).".format(VER))
+            else:
+                show_message_compat(self.sess, "Nie można sprawdzić dostępności aktualizacji.\nSprawdź połączenie z internetem.", message_type=MessageBox.TYPE_ERROR)
+
+        except Exception as e:
+            print("[PanelAIO] Błąd podczas sprawdzania aktualizacji:", e)
+            show_message_compat(self.sess, "Wystąpił błąd podczas sprawdzania aktualizacji.", message_type=MessageBox.TYPE_ERROR)
 
     def run_with_confirmation(self):
         try:
