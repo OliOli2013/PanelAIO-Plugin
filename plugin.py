@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8 - Hybrydowe źródła list
+Wersja 1.8 - Szerszy panel
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -215,16 +215,21 @@ COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodat
 # === KONIEC DEFINICJI MENU ===
 
 class Panel(Screen):
+    # === ZAKTUALIZOWANA SKÓRKA ===
     skin = """
     <screen name='PanelAIO' position='center,center' size='1200,680' title=' '>
         <widget name='titleBig'  position='15,10'   size='350,55'  font='Regular;38' halign='left'/>
         <widget name='logo' position='375,0'  size='128,128' pixmap='logo.png' alphatest='blend' />
-        <widget name='headL' position='15,150'  size='380,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuL' position='15,190'  size='380,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headM' position='410,150' size='380,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuM' position='410,190'  size='380,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headR' position='805,150' size='380,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuR' position='805,190'  size='380,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
+        <widget name='headL' position='15,150'  size='480,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuL' position='15,190'  size='480,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
+        <widget name='headM' position='510,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuM' position='510,190'  size='330,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
+        <widget name='headR' position='855,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuR' position='855,190'  size='330,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
         <widget name='legend' position='15,620'  size='1170,28'  font='Regular;20' halign='center'/>
         <widget name='footer' position='center,645' size='1170,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
     </screen>"""
@@ -382,23 +387,14 @@ class Panel(Screen):
     def set_lang(self, lang):
         self.lang = lang
         
-        # --- NOWA LOGIKA SCALANIA I FILTROWANIA ---
-        # 1. Pobierz listy z Twojego repozytorium
+        # Logika scalania i filtrowania list
         repo_lists = self.get_lists_from_repo()
-        
-        # 2. Pobierz pełną listę ze starego źródła
         s4a_lists_full = get_s4aupdater_lists_dynamic()
-        
-        # 3. Zdefiniuj, które listy chcesz usunąć ze starego źródła
         keywords_to_remove = ['bzyk', 'jakitaki']
-        
-        # 4. Odfiltruj starą listę
         s4a_lists_filtered = [
             item for item in s4a_lists_full 
             if not any(keyword in item[0].lower() for keyword in keywords_to_remove)
         ]
-        
-        # 5. Połącz obie listy (Twoje z repo będą na górze)
         final_channel_lists = repo_lists + s4a_lists_filtered
         
         if lang == 'PL':
