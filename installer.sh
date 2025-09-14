@@ -5,7 +5,8 @@
 PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
 GIT_USER="OliOli2013"
 GIT_REPO="PanelAIO-Plugin"
-FILES="plugin.py logo.png selection.png" # Dodaj tu inne pliki, jeśli są potrzebne
+# Add all necessary scripts to this list
+FILES="plugin.py logo.png selection.png install_archive_script.sh update_satellites_xml.sh" 
 
 # Komunikaty
 echo ">>>"
@@ -26,6 +27,10 @@ echo "> Pobieranie plików wtyczki..."
 for FILE in $FILES; do
     wget -q "--no-check-certificate" "https://raw.githubusercontent.com/$GIT_USER/$GIT_REPO/main/$FILE" -O "$PLUGIN_PATH/$FILE"
 done
+
+# === WAŻNA POPRAWKA - NADAWANIE UPRAWNIEŃ ===
+echo "> Ustawianie uprawnień do uruchamiania..."
+chmod +x "$PLUGIN_PATH"/*.sh
 
 # Zakończenie
 echo ">>>"
