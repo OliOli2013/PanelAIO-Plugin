@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8 - Szerszy panel
+Wersja 1.8r1 - Aktualizacja NCam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -36,7 +36,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 
-VER = "1.8"
+VER = "1.8r1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -153,7 +153,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.4", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Instalacja/Aktualizacja", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
@@ -169,7 +169,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.4", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Install/Update", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
@@ -215,7 +215,6 @@ COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodat
 # === KONIEC DEFINICJI MENU ===
 
 class Panel(Screen):
-    # === ZAKTUALIZOWANA SKÓRKA ===
     skin = """
     <screen name='PanelAIO' position='center,center' size='1200,680' title=' '>
         <widget name='titleBig'  position='15,10'   size='350,55'  font='Regular;38' halign='left'/>
