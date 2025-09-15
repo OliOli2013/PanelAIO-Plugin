@@ -1,40 +1,45 @@
 #!/bin/sh
-# Skrypt instalacyjny dla Panelu AIO
+# Skrypt do instalacji archiwum (zip lub tar.gz)
 
-# Konfiguracja
-PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
-GIT_USER="OliOli2013"
-GIT_REPO="PanelAIO-Plugin"
-FILES="plugin.py logo.png selection.png install_archive_script.sh" 
+ARCHIVE_PATH="$1"
+ARCHIVE_TYPE="$2"
+EXTRACT_DIR="/tmp/list_extract_tmp"
 
-# Komunikaty
-echo ">>>"
-echo ">>> Instalacja wtyczki Panel AIO..."
-echo ">>>"
+echo "--- START install_archive_script.sh ---"
+echo "Argumenty: \$1='$1' \$2='$2' \$3='$3'"
 
-# Usuwanie starej wersji
-if [ -d "$PLUGIN_PATH" ]; then
-    echo "> Usuwanie poprzedniej wersji..."
-    rm -rf "$PLUGIN_PATH"
+if [ ! -f "$ARCHIVE_PATH" ]; then
+    echo "KRYTYCZNY BŁĄD: Plik archiwum nie istnieje: $ARCHIVE_PATH"
+    exit 1
 fi
 
-# Tworzenie katalogu
-mkdir -p "$PLUGIN_PATH"
+echo "DEBUG: Tworzę/czyszczę katalog tymczasowy ($EXTRACT_DIR)..."
+rm -rf "$EXTRACT_DIR"
+mkdir -p "$EXTRACT_DIR"
+echo "DEBUG: Katalog tymczasowy gotowy."
 
-# Pobieranie plików
-echo "> Pobieranie plików wtyczki..."
-for FILE in $FILES; do
-    wget -q "--no-check-certificate" "https://raw.githubusercontent.com/$GIT_USER/$GIT_REPO/main/$FILE" -O "$PLUGIN_PATH/$FILE"
-done
+if [ "$ARCHIVE_TYPE" = "zip" ]; then
+    echo "DEBUG: Rozpakowuję archiwum ZIP: $ARCHIVE_PATH do $EXTRACT_DIR..."
+    unzip -o "$ARCHIVE_PATH" -d "$EXTRACT_DIR"
+    if [ $? -ne 0 ]; then
+        echo "KRYTYCZNY BŁĄD: Nie udało się rozpakować ZIP!"
+        exit 1
+    fi
+else
+    echo "DEBUG: Rozpakowuję archiwum TAR.GZ: $ARCHIVE_PATH do $EXTRACT_DIR..."
+    tar -xzf "$ARCHIVE_PATH" -C "$EXTRACT_DIR"
+    if [ $? -ne 0 ]; then
+        echo "KRYTYCZNY BŁĄD: Nie udało się rozpakować TAR.GZ!"
+        exit 1
+    fi
+fi
 
-# === WAŻNA POPRAWKA - NADAWANIE UPRAWNIEŃ ===
-echo "> Ustawianie uprawnień do uruchamiania..."
-chmod +x "$PLUGIN_PATH"/*.sh
+echo "DEBUG: Kopiuję pliki na swoje miejsca..."
+cp -rf "$EXTRACT_DIR"/* /
 
-# Zakończenie
-echo ">>>"
-echo ">>> Instalacja zakończona pomyślnie!"
-echo ">>> Proszę zrestartować Enigma2."
-echo ">>>"
+echo "DEBUG: Czyszczę po sobie..."
+rm -rf "$EXTRACT_DIR"
+rm -f "$ARCHIVE_PATH"
 
+echo "--- KONIEC install_archive_script.sh ---"
 exit 0
