@@ -1,40 +1,39 @@
 #!/bin/sh
-# Skrypt instalacyjny dla Panelu AIO
+# Skrypt instalacyjny dla wtyczki PanelAIO
 
-# Konfiguracja
-PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
-GIT_USER="OliOli2013"
-GIT_REPO="PanelAIO-Plugin"
-FILES="plugin.py logo.png selection.png install_archive_script.sh" 
+# --- Konfiguracja ---
+PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
+BASE_URL="https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main"
 
-# Komunikaty
-echo ">>>"
-echo ">>> Instalacja wtyczki Panel AIO..."
-echo ">>>"
+# --- Logika instalacji ---
+echo ">>> Rozpoczynam instalację/aktualizację wtyczki PanelAIO..."
 
-# Usuwanie starej wersji
-if [ -d "$PLUGIN_PATH" ]; then
-    echo "> Usuwanie poprzedniej wersji..."
-    rm -rf "$PLUGIN_PATH"
+# Usuń starą wersję, jeśli istnieje, aby zapewnić czystą instalację
+if [ -d "$PLUGIN_DIR" ]; then
+    echo "--> Znaleziono starą wersję. Usuwam katalog: $PLUGIN_DIR"
+    rm -rf "$PLUGIN_DIR"
 fi
 
-# Tworzenie katalogu
-mkdir -p "$PLUGIN_PATH"
+# Utwórz katalog wtyczki
+echo "--> Tworzę katalog wtyczki..."
+mkdir -p "$PLUGIN_DIR"
 
-# Pobieranie plików
-echo "> Pobieranie plików wtyczki..."
-for FILE in $FILES; do
-    wget -q "--no-check-certificate" "https://raw.githubusercontent.com/$GIT_USER/$GIT_REPO/main/$FILE" -O "$PLUGIN_PATH/$FILE"
-done
+# Pobierz wszystkie niezbędne pliki
+echo "--> Pobieram pliki wtyczki..."
+wget -q "$BASE_URL/plugin.py" -O "$PLUGIN_DIR/plugin.py"
+wget -q "$BASE_URL/logo.png" -O "$PLUGIN_DIR/logo.png"
+wget -q "$BASE_URL/selection.png" -O "$PLUGIN_DIR/selection.png"
+wget -q "$BASE_URL/install_archive_script.sh" -O "$PLUGIN_DIR/install_archive_script.sh"
+wget -q "$BASE_URL/update_satellites_xml.sh" -O "$PLUGIN_DIR/update_satellites_xml.sh"
+wget -q "$BASE_URL/reload_bouquets.sh" -O "$PLUGIN_DIR/reload_bouquets.sh" # <-- DODANA LINIA
 
-# === WAŻNA POPRAWKA - NADAWANIE UPRAWNIEŃ ===
-echo "> Ustawianie uprawnień do uruchamiania..."
-chmod +x "$PLUGIN_PATH"/*.sh
+# Ustaw uprawnienia do wykonywania dla skryptów .sh
+echo "--> Ustawiam uprawnienia dla skryptów..."
+chmod +x "$PLUGIN_DIR/install_archive_script.sh"
+chmod +x "$PLUGIN_DIR/update_satellites_xml.sh"
+chmod +x "$PLUGIN_DIR/reload_bouquets.sh" # <-- DODANA LINIA
 
-# Zakończenie
-echo ">>>"
-echo ">>> Instalacja zakończona pomyślnie!"
-echo ">>> Proszę zrestartować Enigma2."
-echo ">>>"
+echo ">>> Instalacja PanelAIO zakończona pomyślnie!"
+echo ">>> Proszę zrestartować Enigma2, aby zmiany były widoczne."
 
 exit 0
