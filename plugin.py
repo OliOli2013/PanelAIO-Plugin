@@ -43,6 +43,24 @@ FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
 LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Aktualizuj  \c000000ff●\c00ffffff Wyjście")
 LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Update  \c000000ff●\c00ffffff Exit")
+
+# === SEKCJA TŁUMACZEŃ ===
+TRANSLATIONS = {
+    "PL": {
+        "support_text": "Wesprzyj rozwój wtyczki",
+        "update_available_msg": "Dostępna jest nowa wersja Panelu AIO: {latest_ver}.\nTwoja wersja to: {current_ver}.\n\nCzy chcesz ją teraz zainstalować?",
+        "already_latest": "Używasz najnowszej wersji wtyczki ({ver}).",
+        "update_check_error": "Nie można sprawdzić dostępności aktualizacji.\nSprawdź połączenie z internetem.",
+        "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji."
+    },
+    "EN": {
+        "support_text": "Support plugin development",
+        "update_available_msg": "A new version of Panel AIO is available: {latest_ver}.\nYour version is: {current_ver}.\n\nDo you want to install it now?",
+        "already_latest": "You are using the latest version of the plugin ({ver}).",
+        "update_check_error": "Could not check for updates.\nPlease check your internet connection.",
+        "update_generic_error": "An error occurred while checking for updates."
+    }
+}
 # === KONIEC SEKCJI ===
 
 # === FUNKCJE POMOCNICZE ===
@@ -241,7 +259,7 @@ class Panel(Screen):
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
         
         self["qr_code_small"] = Pixmap()
-        self["support_label"] = Label("Wesprzyj rozwój wtyczki")
+        self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["logo"] = Pixmap()
 
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
@@ -288,16 +306,17 @@ class Panel(Screen):
                             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
                             console_screen_open(self.sess, "Aktualizacja Panelu AIO...", [update_cmd])
                     
-                    message = "Dostępna jest nowa wersja Panelu AIO: {}.\nTwoja wersja to: {}.\n\nCzy chcesz ją teraz zainstalować?".format(latest_ver, VER)
+                    message = TRANSLATIONS[self.lang]["update_available_msg"].format(latest_ver=latest_ver, current_ver=VER)
                     self.sess.openWithCallback(do_update, MessageBox, message, type=MessageBox.TYPE_YESNO)
                 else:
-                    show_message_compat(self.sess, "Używasz najnowszej wersji wtyczki ({}).".format(VER))
+                    message = TRANSLATIONS[self.lang]["already_latest"].format(ver=VER)
+                    show_message_compat(self.sess, message)
             else:
-                show_message_compat(self.sess, "Nie można sprawdzić dostępności aktualizacji.\nSprawdź połączenie z internetem.", message_type=MessageBox.TYPE_ERROR)
+                show_message_compat(self.sess, TRANSLATIONS[self.lang]["update_check_error"], message_type=MessageBox.TYPE_ERROR)
 
         except Exception as e:
             print("[PanelAIO] Błąd podczas sprawdzania aktualizacji:", e)
-            show_message_compat(self.sess, "Wystąpił błąd podczas sprawdzania aktualizacji.", message_type=MessageBox.TYPE_ERROR)
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["update_generic_error"], message_type=MessageBox.TYPE_ERROR)
 
     def get_lists_from_repo(self):
         manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
@@ -412,7 +431,10 @@ class Panel(Screen):
             menu_widget.setList([item[0] for item in self.data[i]])
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
             head_widget.setText(COL_TITLES[lang][i])
-        self["legend"].setText(LEGEND_PL if lang == 'PL' else LEGEND_EN); self._focus()
+        
+        self["legend"].setText(LEGEND_PL if lang == 'PL' else LEGEND_EN)
+        self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
+        self._focus()
 
     def clear_oscam_password(self):
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
