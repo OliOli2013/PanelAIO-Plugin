@@ -28,3 +28,9 @@ Softcams & Plugins: Quickly install essential softcams (e.g., OSCam) and popular
 System Tools: A suite of tools for cleaning memory, running an internet speed test, managing passwords, or updating the satellites.xml file.
 
 Diagnostics: Simple functions to check your IP, ping, or available disk space.
+
+---
+### Wesprzyj rozwój wtyczki
+Jeśli podoba Ci się moja praca i chcesz wesprzeć dalszy rozwój wtyczki, możesz postawić mi kawę :)
+
+![Wesprzyj rozwój wtyczki](Kod_QR_buycoffee.png)
