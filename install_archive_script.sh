@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e # Zakończ skrypt, jeśli którekolwiek polecenie zwróci błąd
 
-echo "--- START install_archive_script.sh ---" # Dodany log
-echo "Argumenty: \$1='$1' \$2='$2' \$3='$3'" # Dodany log
+echo "--- START install_archive_script.sh ---"
+echo "Argumenty: \$1='$1' \$2='$2' \$3='$3'"
 
 DOWNLOADED_FILE_PATH="$1"
 ARCHIVE_TYPE="$2"
@@ -32,76 +32,34 @@ else
     echo "KRYTYCZNY BŁĄD: Nieobsługiwany format archiwum '$ARCHIVE_TYPE'."; exit 1;
 fi
 echo "DEBUG: Rozpakowywanie zakończone. Zawartość $TMP_EXTRACT_DIR:"
-ls -R "$TMP_EXTRACT_DIR" # Dodany log - pokaż co zostało rozpakowane
+ls -R "$TMP_EXTRACT_DIR"
 
 echo "DEBUG: Wyszukuję pliki list kanałów (50%)..."
 
-SOURCE_ENIGMA2_DIR=""
-SOURCE_TUXBOX_DIR=""
-MAIN_EXTRACTED_DIR="$TMP_EXTRACT_DIR"
+# --- NOWA, POPRAWIONA LOGIKA WYSZUKIWANIA PLIKÓW ---
+SOURCE_DIR=""
+FOUND_LAMEDB_PATH=$(find "$TMP_EXTRACT_DIR" -name "lamedb" -type f -print -quit)
 
-if [ -f "$MAIN_EXTRACTED_DIR/etc/enigma2/lamedb" ]; then
-    SOURCE_ENIGMA2_DIR="$MAIN_EXTRACTED_DIR/etc/enigma2"
-    echo "DEBUG: Pliki Enigma2 (etc/enigma2/lamedb) znaleziono w: $SOURCE_ENIGMA2_DIR"
-elif [ -f "$MAIN_EXTRACTED_DIR/lamedb" ]; then
-    SOURCE_ENIGMA2_DIR="$MAIN_EXTRACTED_DIR"
-    echo "DEBUG: Pliki Enigma2 (lamedb) znaleziono bezpośrednio w: $SOURCE_ENIGMA2_DIR"
+if [ -n "$FOUND_LAMEDB_PATH" ]; then
+    SOURCE_DIR=$(dirname "$FOUND_LAMEDB_PATH")
+    echo "DEBUG: Znaleziono główny katalog z listą kanałów: $SOURCE_DIR"
 else
-    FOUND_LAMEDB_PATH=$(find "$MAIN_EXTRACTED_DIR" -name "lamedb" -type f -print -quit)
-    if [ -n "$FOUND_LAMEDB_PATH" ]; then
-        SOURCE_ENIGMA2_DIR=$(dirname "$FOUND_LAMEDB_PATH")
-        echo "DEBUG: Pliki Enigma2 (lamedb) znaleziono przez find w: $SOURCE_ENIGMA2_DIR"
-    else
-        echo "KRYTYCZNY BŁĄD: Nie znaleziono 'lamedb' w $MAIN_EXTRACTED_DIR. Anuluję kopiowanie."
-        exit 1
-    fi
+    echo "KRYTYCZNY BŁĄD: Nie znaleziono pliku 'lamedb' w rozpakowanym archiwum. Anuluję."
+    exit 1
 fi
-
-if [ -f "$MAIN_EXTRACTED_DIR/etc/tuxbox/satellites.xml" ]; then
-    SOURCE_TUXBOX_DIR="$MAIN_EXTRACTED_DIR/etc/tuxbox"
-    echo "DEBUG: Plik satellites.xml (etc/tuxbox/satellites.xml) znaleziono w: $SOURCE_TUXBOX_DIR"
-elif [ -f "$MAIN_EXTRACTED_DIR/satellites.xml" ]; then
-    SOURCE_TUXBOX_DIR="$MAIN_EXTRACTED_DIR"
-    echo "DEBUG: Plik satellites.xml znaleziono bezpośrednio w: $SOURCE_TUXBOX_DIR"
-else
-    FOUND_SATELLITES_PATH=$(find "$MAIN_EXTRACTED_DIR" -name "satellites.xml" -type f -print -quit)
-    if [ -n "$FOUND_SATELLITES_PATH" ]; then
-        SOURCE_TUXBOX_DIR=$(dirname "$FOUND_SATELLITES_PATH")
-        echo "DEBUG: Plik satellites.xml znaleziono przez find w: $SOURCE_TUXBOX_DIR"
-    else
-        echo "OSTRZEŻENIE: satellites.xml nie znaleziono. Pomijam kopiowanie tego pliku."
-        SOURCE_TUXBOX_DIR=""
-    fi
-fi
+# --- KONIEC NOWEJ LOGIKI ---
 
 echo "DEBUG: Rozpoczynam kopiowanie plików..."
 TARGET_ENIGMA2_DIR="/etc/enigma2"
 TARGET_TUXBOX_DIR="/etc/tuxbox"
 
-echo "DEBUG: Kopiowanie lamedb z '$SOURCE_ENIGMA2_DIR/lamedb' do '$TARGET_ENIGMA2_DIR/'..."
-cp -f "$SOURCE_ENIGMA2_DIR/lamedb" "$TARGET_ENIGMA2_DIR/" || echo "BŁĄD podczas kopiowania lamedb!"
-echo "DEBUG: Kopiowanie lamedb zakończone."
+# Kopiowanie wszystkich plików z znalezionego katalogu źródłowego
+echo "DEBUG: Kopiowanie plików z '$SOURCE_DIR' do '$TARGET_ENIGMA2_DIR/' oraz '$TARGET_TUXBOX_DIR/'..."
+cp -rf "$SOURCE_DIR"/* "$TARGET_ENIGMA2_DIR/" || echo "OSTRZEŻENIE: Wystąpiły problemy podczas kopiowania plików do $TARGET_ENIGMA2_DIR"
 
-echo "DEBUG: Kopiowanie userbouquet* i bouquets* z '$SOURCE_ENIGMA2_DIR' do '$TARGET_ENIGMA2_DIR/'..."
-find "$SOURCE_ENIGMA2_DIR" -maxdepth 1 -type f -name 'userbouquet.*' -print -exec cp -f {} "$TARGET_ENIGMA2_DIR/" \; || echo "OSTRZEŻENIE: Problemy podczas kopiowania userbouquet!"
-find "$SOURCE_ENIGMA2_DIR" -maxdepth 1 -type f -name 'bouquets.*' -print -exec cp -f {} "$TARGET_ENIGMA2_DIR/" \; || echo "OSTRZEŻENIE: Problemy podczas kopiowania bouquets!"
-echo "DEBUG: Kopiowanie userbouquet* i bouquets* zakończone."
-
-echo "DEBUG: Kopiowanie opcjonalnych plików (blacklist, whitelist, itp.)..."
-cp -f "$SOURCE_ENIGMA2_DIR/blacklist" "$TARGET_ENIGMA2_DIR/" >/dev/null 2>&1 || true
-cp -f "$SOURCE_ENIGMA2_DIR/whitelist" "$TARGET_ENIGMA2_DIR/" >/dev/null 2>&1 || true
-cp -f "$SOURCE_ENIGMA2_DIR/autobouquets.xml" "$TARGET_ENIGMA2_DIR/" >/dev/null 2>&1 || true
-echo "DEBUG: Kopiowanie opcjonalnych plików zakończone."
-
-if [ -n "$SOURCE_TUXBOX_DIR" ] && [ -d "$SOURCE_TUXBOX_DIR" ]; then
-    echo "DEBUG: Kopiowanie plików Tuxbox (satellites.xml, itp.) z '$SOURCE_TUXBOX_DIR' do '$TARGET_TUXBOX_DIR/'..."
-    cp -f "$SOURCE_TUXBOX_DIR/satellites.xml" "$TARGET_TUXBOX_DIR/" || echo "BŁĄD podczas kopiowania satellites.xml!"
-    cp -f "$SOURCE_TUXBOX_DIR/terrestrial.xml" "$TARGET_TUXBOX_DIR/" >/dev/null 2>&1 || true
-    cp -f "$SOURCE_TUXBOX_DIR/cables.xml" "$TARGET_TUXBOX_DIR/" >/dev/null 2>&1 || true
-    cp -f "$SOURCE_TUXBOX_DIR/atsc.xml" "$TARGET_TUXBOX_DIR/" >/dev/null 2>&1 || true
-    echo "DEBUG: Kopiowanie plików Tuxbox zakończone."
-else
-    echo "DEBUG: Katalog źródłowy Tuxbox ($SOURCE_TUXBOX_DIR) nie istnieje lub nie określony. Pomijam."
+# Plik satellites.xml ma swoje specjalne miejsce
+if [ -f "$SOURCE_DIR/satellites.xml" ]; then
+    cp -f "$SOURCE_DIR/satellites.xml" "$TARGET_TUXBOX_DIR/" || echo "OSTRZEŻENIE: Nie udało się skopiować satellites.xml"
 fi
 
 echo "DEBUG: Kopiowanie plików zakończone. Przeładowuję bukiety (75%)..."
@@ -130,6 +88,6 @@ rm -rf "$TMP_EXTRACT_DIR"
 rm -f "$DOWNLOADED_FILE_PATH"
 echo "DEBUG: Pliki tymczasowe usunięte."
 
-echo "--- KONIEC install_archive_script.sh ---" # Dodany log
+echo "--- KONIEC install_archive_script.sh ---"
 echo "Instalacja listy kanałów zakończona. Zalecany restart GUI, jeśli listy nie są widoczne!"
 exit 0
