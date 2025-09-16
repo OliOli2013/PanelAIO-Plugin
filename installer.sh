@@ -25,13 +25,14 @@ wget -q "$BASE_URL/logo.png" -O "$PLUGIN_DIR/logo.png"
 wget -q "$BASE_URL/selection.png" -O "$PLUGIN_DIR/selection.png"
 wget -q "$BASE_URL/install_archive_script.sh" -O "$PLUGIN_DIR/install_archive_script.sh"
 wget -q "$BASE_URL/update_satellites_xml.sh" -O "$PLUGIN_DIR/update_satellites_xml.sh"
-wget -q "$BASE_URL/reload_bouquets.sh" -O "$PLUGIN_DIR/reload_bouquets.sh" # <-- DODANA LINIA
+wget -q "$BASE_URL/reload_bouquets.sh" -O "$PLUGIN_DIR/reload_bouquets.sh"
+wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$PLUGIN_DIR/Kod_QR_buycoffee.png" # <--- TA LINIA ZOSTAŁA DODANA
 
 # Ustaw uprawnienia do wykonywania dla skryptów .sh
 echo "--> Ustawiam uprawnienia dla skryptów..."
 chmod +x "$PLUGIN_DIR/install_archive_script.sh"
 chmod +x "$PLUGIN_DIR/update_satellites_xml.sh"
-chmod +x "$PLUGIN_DIR/reload_bouquets.sh" # <-- DODANA LINIA
+chmod +x "$PLUGIN_DIR/reload_bouquets.sh"
 
 echo ">>> Instalacja PanelAIO zakończona pomyślnie!"
 echo ">>> Proszę zrestartować Enigma2, aby zmiany były widoczne."
