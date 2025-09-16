@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8r1 - Aktualizacja NCam
+Wersja 1.8r1
 """
 from __future__ import print_function
 from __future__ import absolute_import
