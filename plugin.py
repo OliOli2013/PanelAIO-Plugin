@@ -35,6 +35,7 @@ PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
 PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
+PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
 
 VER = "1.8r1"
 DATE = str(datetime.date.today())
@@ -74,7 +75,7 @@ def install_archive(session, title, url):
         full_command = f"{download_cmd} && opkg install \"{tmp_archive_path}\" && rm -f \"{tmp_archive_path}\""
     else:
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
-        full_command = "{} && {} \"{}\" \"{}\" && echo 'Czekaj, odświeżam listę kanałów...' && sleep 2 && wget -qO - \"http://127.0.0.1/web/servicelistreload?mode=0\" > /dev/null 2>&1 && wget -qO - \"http://127.0.0.1/web/servicelistreload?mode=4\" > /dev/null 2>&1".format(download_cmd, install_script_path, tmp_archive_path, archive_type)
+        full_command = "{} && {} \"{}\" \"{}\"".format(download_cmd, install_script_path, tmp_archive_path, archive_type)
 
     console_screen_open(session, "Pobieranie i Instalacja: " + title, [full_command])
 
@@ -216,27 +217,33 @@ COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodat
 
 class Panel(Screen):
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1200,680' title=' '>
-        <widget name='titleBig'  position='15,10'   size='350,55'  font='Regular;38' halign='left'/>
-        <widget name='logo' position='375,0'  size='128,128' pixmap='logo.png' alphatest='blend' />
+    <screen name='PanelAIO' position='center,center' size='1200,680' title='Panel AIO'>
+        <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
+        <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
+        <widget name='logo' position='1057,15' size='128,128' pixmap='logo.png' alphatest='blend' />
         
         <widget name='headL' position='15,150'  size='480,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuL' position='15,190'  size='480,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='menuL' position='15,190'  size='480,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
         <widget name='headM' position='510,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuM' position='510,190'  size='330,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='menuM' position='510,190'  size='330,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
         <widget name='headR' position='855,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuR' position='855,190'  size='330,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='menuR' position='855,190'  size='330,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
         <widget name='legend' position='15,620'  size='1170,28'  font='Regular;20' halign='center'/>
         <widget name='footer' position='center,645' size='1170,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
-    </screen>"""
+    </screen>""".format(PLUGIN_QR_CODE_PATH)
     
     def __init__(self, session):
         Screen.__init__(self, session)
+        self.setTitle("Panel AIO {}".format(VER))
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
-        self["logo"] = Pixmap(); self["titleBig"] = Label("Panel AIO {}".format(VER))
+        
+        self["qr_code_small"] = Pixmap()
+        self["support_label"] = Label("Wesprzyj rozwój wtyczki")
+        self["logo"] = Pixmap()
+
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
