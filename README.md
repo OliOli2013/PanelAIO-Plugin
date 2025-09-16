@@ -1,5 +1,5 @@
 ![Logo Panelu AIO](logo.png)
-# PanelAIO-Plugin
+# Panel AIO-Plugin
 Oficjalne repozytorium wtyczki Panel AIO dla Enigma2
 Panel All-In-One (AIO) to wszechstronna wtyczka narzędziowa dla dekoderów z oprogramowaniem Enigma2. Została stworzona, aby w jednym miejscu zgromadzić wszystkie niezbędne funkcje do zarządzania dekoderem.
 
