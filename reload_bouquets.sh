@@ -1,37 +1,36 @@
 #!/bin/sh
+set -e
+echo "--- Przeładowywanie list kanałów (reload_bouquets.sh) ---"
 
-echo "--- ROZPOCZYNAM PRZEŁADOWANIE BUKIETÓW (WERSJA ZAWANSOWANA) ---"
-
-# Metoda 1: Użycie WGET (Web Interface)
-echo "[Metoda 1] Próba przeładowania przez Web Interface..."
-wget -qO - "http://127.0.0.1/web/servicelistreload?mode=0" >/dev/null 2>&1
-WGET_STATUS_1=$?
-wget -qO - "http://127.0.0.1/web/servicelistreload?mode=4" >/dev/null 2>&1
-WGET_STATUS_2=$?
-
-if [ "$WGET_STATUS_1" -eq 0 ] && [ "$WGET_STATUS_2" -eq 0 ]; then
-    echo "[Metoda 1] SUKCES: Polecenia WGET wysłane pomyślnie."
-    echo "--- ZAKOŃCZONO PRZEŁADOWANIE BUKIETÓW ---"
-    exit 0
-else
-    echo "[Metoda 1] BŁĄD: Nie udało się połączyć z Web Interface (kody wyjścia: $WGET_STATUS_1, $WGET_STATUS_2)."
-fi
-
-# Metoda 2: Użycie DBUS (komunikacja systemowa) - jako fallback
-if command -v dbus-send >/dev/null 2>&1; then
-    echo "[Metoda 2] Próba przeładowania przez DBUS..."
-    dbus-send --type=signal / org.openpli.Enigma2.reloadSettings
-    DBUS_STATUS=$?
-    if [ "$DBUS_STATUS" -eq 0 ]; then
-        echo "[Metoda 2] SUKCES: Sygnał DBUS wysłany pomyślnie."
-        echo "--- ZAKOŃCZONO PRZEŁADOWANIE BUKIETÓW ---"
+# Metoda 1: Poprzez OpenWebIF (preferowana, jeśli WebIF jest aktywny)
+if command -v wget >/dev/null 2>&1; then
+    echo "DEBUG (reload_bouquets): Próbuję przeładować przez OpenWebIF (mode=2)..."
+    if wget -q -O - 'http://127.0.0.1/web/servicelistreload?mode=2' > /dev/null; then
+        echo "Listy kanałów przeładowane przez OpenWebIF (tryb 2)."
+        exit 0
+    elif wget -q -O - 'http://127.0.0.1/web/servicelistreload?mode=0' > /dev/null; then # Fallback na inny tryb
+        echo "Listy kanałów przeładowane przez OpenWebIF (tryb 0)."
         exit 0
     else
-        echo "[Metoda 2] BŁĄD: Wystąpił problem z wysłaniem sygnału DBUS (kod wyjścia: $DBUS_STATUS)."
+        echo "OSTRZEŻENIE (reload_bouquets): Przeładowanie przez OpenWebIF nie powiodło się."
     fi
 else
-    echo "[Metoda 2] POMINIĘTO: Polecenie 'dbus-send' nie jest dostępne w systemie."
+    echo "OSTRZEŻENIE (reload_bouquets): Narzędzie 'wget' niedostępne, nie można użyć OpenWebIF."
 fi
 
-echo "OSTRZEŻENIE: Żadna z metod automatycznego przeładowania list nie powiodła się."
+# Metoda 2: Poprzez SIGHUP do Enigma2 (bardziej bezpośrednia)
+if command -v killall >/dev/null 2>&1; then
+    echo "DEBUG (reload_bouquets): Próbuję wysłać SIGHUP do enigma2..."
+    if killall -SIGHUP enigma2; then
+       echo "Wysłano SIGHUP do enigma2 w celu przeładowania list."
+       exit 0
+    else
+        echo "BŁĄD (reload_bouquets): Nie udało się wysłać SIGHUP do enigma2."
+    fi
+else
+    echo "OSTRZEŻENIE (reload_bouquets): Narzędzie 'killall' niedostępne, nie można wysłać SIGHUP."
+fi
+
+echo "KRYTYCZNY BŁĄD (reload_bouquets): Nie udało się automatycznie przeładować list kanałów znanymi metodami."
+echo "Może być konieczny restart GUI lub dekodera."
 exit 1
