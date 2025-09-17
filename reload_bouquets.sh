@@ -5,9 +5,9 @@ echo "--- ROZPOCZYNAM PRZEŁADOWANIE BUKIETÓW (WERSJA ZAWANSOWANA) ---"
 # Metoda 1: Użycie WGET (Web Interface)
 echo "[Metoda 1] Próba przeładowania przez Web Interface..."
 wget -qO - "http://127.0.0.1/web/servicelistreload?mode=0" >/dev/null 2>&1
-WGET_STATUS_1=0
+WGET_STATUS_1=$?
 wget -qO - "http://127.0.0.1/web/servicelistreload?mode=4" >/dev/null 2>&1
-WGET_STATUS_2=0
+WGET_STATUS_2=$?
 
 if [ "$WGET_STATUS_1" -eq 0 ] && [ "$WGET_STATUS_2" -eq 0 ]; then
     echo "[Metoda 1] SUKCES: Polecenia WGET wysłane pomyślnie."
