@@ -34,3 +34,6 @@ Diagnostics: Simple functions to check your IP, ping, or available disk space.
 Jeśli podoba Ci się moja praca i chcesz wesprzeć dalszy rozwój wtyczki, możesz postawić mi kawę :)
 
 ![Wesprzyj rozwój wtyczki](Kod_QR_buycoffee.png)
+
+
+Instalacja Telnet: wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
