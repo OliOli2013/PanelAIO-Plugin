@@ -8,9 +8,9 @@ BASE_URL="https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main"
 # --- Logika instalacji ---
 echo ">>> Rozpoczynam instalację/aktualizację wtyczki PanelAIO..."
 
-# Usuń starą wersję, jeśli istnieje, aby zapewnić czystą instalację
+# Usuń starą wersję, jeśli istnieje
 if [ -d "$PLUGIN_DIR" ]; then
-    echo "--> Znaleziono starą wersję. Usuwam katalog: $PLUGIN_DIR"
+    echo "--> Usuwam starą wersję..."
     rm -rf "$PLUGIN_DIR"
 fi
 
@@ -26,13 +26,29 @@ wget -q "$BASE_URL/selection.png" -O "$PLUGIN_DIR/selection.png"
 wget -q "$BASE_URL/install_archive_script.sh" -O "$PLUGIN_DIR/install_archive_script.sh"
 wget -q "$BASE_URL/update_satellites_xml.sh" -O "$PLUGIN_DIR/update_satellites_xml.sh"
 wget -q "$BASE_URL/reload_bouquets.sh" -O "$PLUGIN_DIR/reload_bouquets.sh"
-wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$PLUGIN_DIR/Kod_QR_buycoffee.png" # <--- TA LINIA ZOSTAŁA DODANA
+wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$PLUGIN_DIR/Kod_QR_buycoffee.png"
 
-# Ustaw uprawnienia do wykonywania dla skryptów .sh
-echo "--> Ustawiam uprawnienia dla skryptów..."
-chmod +x "$PLUGIN_DIR/install_archive_script.sh"
-chmod +x "$PLUGIN_DIR/update_satellites_xml.sh"
-chmod +x "$PLUGIN_DIR/reload_bouquets.sh"
+# --- NOWA SEKCJA: Naprawa plików ---
+echo "--> Weryfikuję i naprawiam uprawnienia oraz format plików..."
+
+# Spróbuj zainstalować dos2unix, jeśli go nie ma
+if ! command -v dos2unix > /dev/null 2>&1; then
+    echo "--> Próbuję doinstalować 'dos2unix'..."
+    opkg update
+    opkg install dos2unix
+fi
+
+# Użyj dos2unix na wszystkich skryptach, jeśli jest dostępny
+if command -v dos2unix > /dev/null 2>&1; then
+    echo "--> Konwertuję format plików na Unix..."
+    dos2unix "$PLUGIN_DIR"/*.sh
+fi
+
+# Zawsze nadawaj uprawnienia do wykonania
+echo "--> Ustawiam uprawnienia do wykonania dla skryptów .sh..."
+chmod +x "$PLUGIN_DIR"/*.sh
+
+# --- KONIEC NOWEJ SEKCJI ---
 
 echo ">>> Instalacja PanelAIO zakończona pomyślnie!"
 echo ">>> Proszę zrestartować Enigma2, aby zmiany były widoczne."
