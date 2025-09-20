@@ -1,0 +1,4 @@
+[1.8r2]
+- Zastąpiono wtyczkę XStreamity przez JediMakerXtream.
+- Naprawiono błąd (kod 126) związany z formatowaniem skryptów.
+- Drobne poprawki stabilności i optymalizacje.
