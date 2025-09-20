@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8r1
+Wersja 1.8r2
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -37,7 +37,7 @@ PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
 
-VER = "1.8r1"
+VER = "1.8r2"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -48,14 +48,16 @@ LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00
 TRANSLATIONS = {
     "PL": {
         "support_text": "Wesprzyj rozwój wtyczki",
-        "update_available_msg": "Dostępna jest nowa wersja Panelu AIO: {latest_ver}.\nTwoja wersja to: {current_ver}.\n\nCzy chcesz ją teraz zainstalować?",
+        "update_available_title": "Dostępna nowa wersja!",
+        "update_available_msg": "Panel AIO: {latest_ver}\nTwoja wersja: {current_ver}\n\nLista zmian:\n{changelog}\n\nCzy chcesz ją teraz zainstalować?",
         "already_latest": "Używasz najnowszej wersji wtyczki ({ver}).",
         "update_check_error": "Nie można sprawdzić dostępności aktualizacji.\nSprawdź połączenie z internetem.",
         "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji."
     },
     "EN": {
         "support_text": "Support plugin development",
-        "update_available_msg": "A new version of Panel AIO is available: {latest_ver}.\nYour version is: {current_ver}.\n\nDo you want to install it now?",
+        "update_available_title": "New version available!",
+        "update_available_msg": "Panel AIO: {latest_ver}\nYour version: {current_ver}\n\nChangelog:\n{changelog}\n\nDo you want to install it now?",
         "already_latest": "You are using the latest version of the plugin ({ver}).",
         "update_check_error": "Could not check for updates.\nPlease check your internet connection.",
         "update_generic_error": "An error occurred while checking for updates."
@@ -120,7 +122,6 @@ def get_s4aupdater_lists_dynamic():
                 clean_line = line.strip()
                 if "_url:" in clean_line: parts = clean_line.split(':', 1); urls_dict[parts[0].strip()] = parts[1].strip()
                 elif "_version:" in clean_line: parts = clean_line.split(':', 1); versions_dict[parts[0].strip()] = parts[1].strip()
-        f.close()
         for var_name, url_value in urls_dict.items():
             display_name_base = var_name.replace('_url', '').replace('_', ' ').title()
             version_key = var_name.replace('_url', '_version')
@@ -178,7 +179,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("E2iPlayer Master - Instalacja/Aktualizacja", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
     ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("S4aUpdater", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("XStreamity", "bash_raw:opkg update && opkg install python3-requests; wget -qO- https://xtreamity.com/repo/install.sh | /bin/sh"),
+    ("JediMakerXtream", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("YouTube", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
 ]
 
@@ -194,7 +195,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("E2iPlayer Master - Install/Update", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
     ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("S4aUpdater", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("XStreamity", "bash_raw:opkg update && opkg install python3-requests; wget -qO- https://xtreamity.com/repo/install.sh | /bin/sh"),
+    ("JediMakerXtream", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("YouTube", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
 ]
 
@@ -287,27 +288,63 @@ class Panel(Screen):
             self._focus()
 
     def check_for_updates(self):
-        version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
+        # Definiowanie URLi do plików na GitHubie
+        repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
+        version_url = repo_base_url + "version.txt"
+        changelog_url = repo_base_url + "changelog.txt"
+        
+        # Ścieżki do plików tymczasowych
         tmp_version_path = os.path.join(PLUGIN_TMP_PATH, 'version.txt')
+        tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog.txt')
         prepare_tmp_dir()
         
         try:
-            cmd = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_version_path, version_url)
-            process = subprocess.Popen(cmd, shell=True)
-            process.wait()
+            # Pobieranie obu plików
+            cmd_ver = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_version_path, version_url)
+            cmd_log = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_changelog_path, changelog_url)
+            
+            process_ver = subprocess.Popen(cmd_ver, shell=True)
+            process_log = subprocess.Popen(cmd_log, shell=True)
+            process_ver.wait()
+            process_log.wait()
             
             if os.path.exists(tmp_version_path) and os.path.getsize(tmp_version_path) > 0:
                 with open(tmp_version_path, 'r') as f:
                     latest_ver = f.read().strip()
                 
                 if latest_ver and latest_ver != VER:
+                    # Mamy nową wersję, teraz odczytajmy changelog
+                    changelog_text = "Brak informacji o zmianach." # Domyślny tekst
+                    if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
+                        with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                        
+                        found_version_section = False
+                        changes = []
+                        for line in lines:
+                            line = line.strip()
+                            if line == "[{}]".format(latest_ver):
+                                found_version_section = True
+                                continue
+                            if found_version_section:
+                                if line.startswith("[") and line.endswith("]"):
+                                    break # Znaleziono sekcję następnej wersji, kończymy
+                                if line:
+                                    changes.append(line)
+                        if changes:
+                            changelog_text = "\n".join(changes)
+
                     def do_update(result):
                         if result:
                             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
                             console_screen_open(self.sess, "Aktualizacja Panelu AIO...", [update_cmd])
                     
-                    message = TRANSLATIONS[self.lang]["update_available_msg"].format(latest_ver=latest_ver, current_ver=VER)
-                    self.sess.openWithCallback(do_update, MessageBox, message, type=MessageBox.TYPE_YESNO)
+                    message = TRANSLATIONS[self.lang]["update_available_msg"].format(
+                        latest_ver=latest_ver, 
+                        current_ver=VER, 
+                        changelog=changelog_text
+                    )
+                    self.sess.openWithCallback(do_update, MessageBox, message, title=TRANSLATIONS[self.lang]["update_available_title"], type=MessageBox.TYPE_YESNO)
                 else:
                     message = TRANSLATIONS[self.lang]["already_latest"].format(ver=VER)
                     show_message_compat(self.sess, message)
