@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8r2
+Wersja 1.8r2 (z poprawką dostępności aktualizacji)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -37,12 +37,14 @@ PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
 
-VER = "1.8r2"
+VER = "1.8r2" # Możesz zmienić na 1.8r3, jeśli to już nowa wersja
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Aktualizuj  \c000000ff●\c00ffffff Wyjście")
-LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000088ff(i)\c00ffffff Update  \c000000ff●\c00ffffff Exit")
+# Zmieniona legenda - Niebieski to teraz Aktualizuj
+LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Aktualizuj  \c00aaaaaa(i)\c00ffffff Info/Wyjście")
+LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Update  \c00aaaaaa(i)\c00ffffff Info/Exit")
+
 
 # === SEKCJA TŁUMACZEŃ ===
 TRANSLATIONS = {
@@ -201,6 +203,7 @@ SOFTCAM_AND_PLUGINS_EN = [
 
 TOOLS_AND_ADDONS_PL = [
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
+    ("Sprawdź aktualizacje", "CMD:CHECK_FOR_UPDATES"), # NOWA POZYCJA W MENU
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Aktualizuj satellites.xml",  "bash:update_satellites_xml.sh"),
@@ -217,6 +220,7 @@ TOOLS_AND_ADDONS_PL = [
 
 TOOLS_AND_ADDONS_EN = [
     ("--- System Tools ---", "SEPARATOR"),
+    ("Check for updates", "CMD:CHECK_FOR_UPDATES"), # NOWA POZYCJA W MENU
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Update satellites.xml",  "bash:update_satellites_xml.sh"),
@@ -268,14 +272,15 @@ class Panel(Screen):
         self["footer"] = Label(FOOT)
         
         self.onLayoutFinish.append(self.initial_setup)
+        # ZMIENIONA MAPA PRZYCISKÓW
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
             "red": lambda: self.set_lang('PL'),
             "green": lambda: self.set_lang('EN'),
             "yellow": self.restart_gui,
-            "blue": self.close,
-            "info": self.check_for_updates,
+            "blue": self.check_for_updates, # ZMIANA: niebieski przycisk uruchamia aktualizację
+            "info": self.close, # ZMIANA: "i" teraz tylko zamyka wtyczkę, jak "exit"
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
@@ -398,7 +403,7 @@ class Panel(Screen):
         if action == "SEPARATOR":
             return
             
-        actions_no_confirm = ["CMD:IP_PING_DISPLAY", "CMD:SPEEDTEST_DISPLAY", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI"]
+        actions_no_confirm = ["CMD:IP_PING_DISPLAY", "CMD:SPEEDTEST_DISPLAY", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES"]
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
@@ -421,7 +426,9 @@ class Panel(Screen):
                  show_message_compat(self.sess, f"Błąd: Brak skryptu {action.split(':', 1)[1]}", message_type=MessageBox.TYPE_ERROR)
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
-            if command_key == "SPEEDTEST_DISPLAY": self.run_speed_test()
+            # NOWA OBSŁUGA POLECENIA Z MENU
+            if command_key == "CHECK_FOR_UPDATES": self.check_for_updates()
+            elif command_key == "SPEEDTEST_DISPLAY": self.run_speed_test()
             elif command_key == "IP_PING_DISPLAY": self.show_ip_and_ping()
             elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
