@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 
-Wersja 1.8r2 (z poprawką dostępności aktualizacji)
+Wersja 1.9 (finalne poprawki kosmetyczne)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -37,13 +37,12 @@ PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
 
-VER = "1.8r2" # Możesz zmienić na 1.8r3, jeśli to już nowa wersja
+VER = "1.9"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-# Zmieniona legenda - Niebieski to teraz Aktualizuj
-LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Aktualizuj  \c00aaaaaa(i)\c00ffffff Info/Wyjście")
-LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Update  \c00aaaaaa(i)\c00ffffff Info/Exit")
+LEGEND_PL = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Aktualizuj")
+LEGEND_EN = ("\c00ff0000●\c00ffffff PL  \c0000ff00●\c00ffffff EN  \c00ffff00●\c00ffffff Restart GUI  \c000000ff●\c00ffffff Update")
 
 
 # === SEKCJA TŁUMACZEŃ ===
@@ -68,18 +67,28 @@ TRANSLATIONS = {
 # === KONIEC SEKCJI ===
 
 # === FUNKCJE POMOCNICZE ===
-def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10):
+def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
     from twisted.internet import reactor
-    reactor.callLater(0.2, lambda: session.open(MessageBox, message, message_type, timeout=timeout))
+    reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
-def console_screen_open(session, title, cmds_with_args, callback=None):
+def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    c_dialog = session.open(Console, title, cmds_list)
+    c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
     if callback: c_dialog.onClose.append(callback)
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
         os.makedirs(PLUGIN_TMP_PATH)
+
+def set_script_permissions():
+    scripts = ["install_archive_script.sh", "reload_bouquets.sh", "update_satellites_xml.sh"]
+    for script in scripts:
+        script_path = os.path.join(PLUGIN_PATH, script)
+        if os.path.exists(script_path):
+            try:
+                os.chmod(script_path, 0o755)
+            except OSError as e:
+                print("[PanelAIO] Błąd nadawania uprawnień dla {}: {}".format(script, e))
 
 def install_archive(session, title, url):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
@@ -94,7 +103,7 @@ def install_archive(session, title, url):
     download_cmd = "curl -sS -k -L --connect-timeout 20 --max-time 300 -A {} -o \"{}\" \"{}\"".format(user_agent_header, tmp_archive_path, url)
     
     if archive_type == "ipk":
-        full_command = f"{download_cmd} && opkg install \"{tmp_archive_path}\" && rm -f \"{tmp_archive_path}\""
+        full_command = f"{download_cmd} && opkg install --force-reinstall \"{tmp_archive_path}\" && rm -f \"{tmp_archive_path}\""
     else:
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         full_command = "{} && {} \"{}\" \"{}\"".format(download_cmd, install_script_path, tmp_archive_path, archive_type)
@@ -131,6 +140,20 @@ def get_s4aupdater_lists_dynamic():
             lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
     except Exception as e: print("[PanelAIO] Błąd parsowania listy S4aUpdater:", e)
     return lists
+
+def get_best_oscam_version_info():
+    try:
+        cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, _ = process.communicate()
+        if process.returncode == 0 and stdout:
+            line = stdout.decode('utf-8').strip()
+            parts = line.split(' - ')
+            if len(parts) > 1:
+                return parts[1].strip()
+        return "Auto"
+    except Exception:
+        return "Auto"
 
 def check_dependencies(session):
     try:
@@ -177,6 +200,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
+    ("StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Instalacja/Aktualizacja", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
     ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
@@ -193,6 +217,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
+    ("StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Install/Update", 'bash_raw:wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'),
     ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
@@ -202,12 +227,14 @@ SOFTCAM_AND_PLUGINS_EN = [
 ]
 
 TOOLS_AND_ADDONS_PL = [
+    ("--- Konfigurator ---", "SEPARATOR"),
+    ("Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
-    ("Sprawdź aktualizacje", "CMD:CHECK_FOR_UPDATES"), # NOWA POZYCJA W MENU
+    ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Aktualizuj satellites.xml",  "bash:update_satellites_xml.sh"),
-    ("Pobierz Picony", "archive:https://github.com/picons/picons/releases/download/2025-07-26--09-20-58/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-07-26--09-20-58_all.ipk"),
+    ("Pobierz Picony", "archive:https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
     ("--- Diagnostyka i Czyszczenie ---", "SEPARATOR"),
@@ -219,12 +246,14 @@ TOOLS_AND_ADDONS_PL = [
 ]
 
 TOOLS_AND_ADDONS_EN = [
+    ("--- Configurator ---", "SEPARATOR"),
+    ("Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- System Tools ---", "SEPARATOR"),
-    ("Check for updates", "CMD:CHECK_FOR_UPDATES"), # NOWA POZYCJA W MENU
+    ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Update satellites.xml",  "bash:update_satellites_xml.sh"),
-    ("Download Picons", "archive:https://github.com/picons/picons/releases/download/2025-07-26--09-20-58/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-07-26--09-20-58_all.ipk"),
+    ("Download Picons", "archive:https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
     ("--- Diagnostics & Cleaning ---", "SEPARATOR"),
@@ -240,47 +269,46 @@ COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodat
 
 class Panel(Screen):
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1200,680' title='Panel AIO'>
+    <screen name='PanelAIO' position='center,center' size='1260,680' title=' '>
         <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
         <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
-        <widget name='logo' position='1057,15' size='128,128' pixmap='logo.png' alphatest='blend' />
+        <widget name="title_label" position="630,25" size="615,40" font="Regular;32" halign="right" valign="center" transparent="1" />
         
-        <widget name='headL' position='15,150'  size='480,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuL' position='15,190'  size='480,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='headL' position='15,150'  size='500,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuL' position='15,190'  size='500,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
-        <widget name='headM' position='510,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuM' position='510,190'  size='330,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='headM' position='530,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuM' position='530,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
-        <widget name='headR' position='855,150' size='330,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuR' position='855,190'  size='330,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='headR' position='895,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
-        <widget name='legend' position='15,620'  size='1170,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,645' size='1170,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+        <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
+        <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
     
     def __init__(self, session):
         Screen.__init__(self, session)
-        self.setTitle("Panel AIO {}".format(VER))
+        self.setTitle(" ") # Ustawiamy pusty tytuł, aby był czysty
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
         
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
-        self["logo"] = Pixmap()
+        self["title_label"] = Label("Panel AIO " + VER) # Nowa, duża etykieta
 
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         
         self.onLayoutFinish.append(self.initial_setup)
-        # ZMIENIONA MAPA PRZYCISKÓW
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
             "red": lambda: self.set_lang('PL'),
             "green": lambda: self.set_lang('EN'),
             "yellow": self.restart_gui,
-            "blue": self.check_for_updates, # ZMIANA: niebieski przycisk uruchamia aktualizację
-            "info": self.close, # ZMIANA: "i" teraz tylko zamyka wtyczkę, jak "exit"
+            "blue": self.check_for_updates,
+            "info": self.close,
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
@@ -288,23 +316,21 @@ class Panel(Screen):
         }, -1)
 
     def initial_setup(self):
+        set_script_permissions()
         if check_dependencies(self.sess):
             self.set_lang('PL')
             self._focus()
 
     def check_for_updates(self):
-        # Definiowanie URLi do plików na GitHubie
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
         version_url = repo_base_url + "version.txt"
         changelog_url = repo_base_url + "changelog.txt"
         
-        # Ścieżki do plików tymczasowych
         tmp_version_path = os.path.join(PLUGIN_TMP_PATH, 'version.txt')
         tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog.txt')
         prepare_tmp_dir()
         
         try:
-            # Pobieranie obu plików
             cmd_ver = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_version_path, version_url)
             cmd_log = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_changelog_path, changelog_url)
             
@@ -318,8 +344,7 @@ class Panel(Screen):
                     latest_ver = f.read().strip()
                 
                 if latest_ver and latest_ver != VER:
-                    # Mamy nową wersję, teraz odczytajmy changelog
-                    changelog_text = "Brak informacji o zmianach." # Domyślny tekst
+                    changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
                         with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
                             lines = f.readlines()
@@ -333,7 +358,7 @@ class Panel(Screen):
                                 continue
                             if found_version_section:
                                 if line.startswith("[") and line.endswith("]"):
-                                    break # Znaleziono sekcję następnej wersji, kończymy
+                                    break
                                 if line:
                                     changes.append(line)
                         if changes:
@@ -403,7 +428,7 @@ class Panel(Screen):
         if action == "SEPARATOR":
             return
             
-        actions_no_confirm = ["CMD:IP_PING_DISPLAY", "CMD:SPEEDTEST_DISPLAY", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES"]
+        actions_no_confirm = ["CMD:IP_PING_DISPLAY", "CMD:SPEEDTEST_DISPLAY", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD"]
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
@@ -426,8 +451,8 @@ class Panel(Screen):
                  show_message_compat(self.sess, f"Błąd: Brak skryptu {action.split(':', 1)[1]}", message_type=MessageBox.TYPE_ERROR)
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
-            # NOWA OBSŁUGA POLECENIA Z MENU
-            if command_key == "CHECK_FOR_UPDATES": self.check_for_updates()
+            if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
+            elif command_key == "CHECK_FOR_UPDATES": self.check_for_updates()
             elif command_key == "SPEEDTEST_DISPLAY": self.run_speed_test()
             elif command_key == "IP_PING_DISPLAY": self.show_ip_and_ping()
             elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
@@ -442,6 +467,90 @@ class Panel(Screen):
             elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"])
             elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"])
 
+    # === SEKCJA SUPER KONFIGURATORA ===
+    def run_super_setup_wizard(self):
+        self.sess.openWithCallback(
+            self.do_run_super_setup,
+            MessageBox, 
+            "-->   U W A G A !   <--\n\n"
+            "Ta funkcja jest przeznaczona do PIERWSZEJ, czystej instalacji.\n\n"
+            "Jej użycie na skonfigurowanym tunerze **NADPISZE I BEZPOWROTNIE USUNIE** Twoją aktualną listę kanałów, ulubione bukiety i ich kolejność.\n\n"
+            "Czy na pewno chcesz kontynuować?", 
+            type=MessageBox.TYPE_YESNO,
+            title="Super Konfigurator - OSTRZEŻENIE"
+        )
+
+    def do_run_super_setup(self, confirmed):
+        if not confirmed:
+            show_message_compat(self.sess, "Anulowano.", message_type=MessageBox.TYPE_INFO)
+            return
+        
+        list_url = ""
+        if self.data[0]:
+            _name, action = self.data[0][0]
+            list_url = action.split(':', 1)[1]
+        
+        if not list_url:
+            show_message_compat(self.sess, "Błąd: Nie można znaleźć URL pierwszej listy kanałów.", message_type=MessageBox.TYPE_ERROR)
+            return
+
+        title = "Krok 1/4: Instalacja Listy Kanałów"
+        self.install_archive_with_callback(title, list_url, self.on_list_done, close_on_finish=True)
+
+    def on_list_done(self):
+        from twisted.internet import reactor
+        reactor.callLater(0.2, self.start_step2_feed)
+
+    def start_step2_feed(self):
+        self.install_softcam_feed(callback=self.on_feed_done, close_on_finish=True)
+
+    def on_feed_done(self):
+        from twisted.internet import reactor
+        reactor.callLater(0.2, self.start_step3_oscam)
+        
+    def start_step3_oscam(self):
+        self.install_best_oscam(callback=self.on_oscam_done, close_on_finish=True)
+        
+    def on_oscam_done(self):
+        from twisted.internet import reactor
+        reactor.callLater(0.2, self.start_step4_picons)
+
+    def start_step4_picons(self):
+        picon_url = "https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"
+        self.install_archive_with_callback("Krok 4/4: Instalacja Pikon", picon_url, self.on_picons_done, close_on_finish=True)
+    
+    def on_picons_done(self):
+        from twisted.internet import reactor
+        def final_restart_prompt(answer=None):
+            self.sess.open(TryQuitMainloop, 3)
+            
+        reactor.callLater(0.2, lambda: show_message_compat(self.sess, 
+            "Super Konfigurator zakończył pracę!\n\nWszystkie komponenty zostały zainstalowane.\n\nNaciśnij OK, aby zrestartować interfejs (GUI).", 
+            message_type=MessageBox.TYPE_INFO,
+            timeout=0,
+            on_close=final_restart_prompt
+        ))
+
+    def install_archive_with_callback(self, title, url, callback, close_on_finish=False):
+        if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
+            show_message_compat(self.sess, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
+            if callback: callback()
+            return
+        
+        archive_type = "zip" if url.endswith(".zip") else ("tar.gz" if url.endswith((".tar.gz", ".tgz")) else "ipk")
+        prepare_tmp_dir()
+        tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
+        
+        user_agent_header = "'PanelAIO/{} (Python {})'".format(VER, 'py3' if sys.version_info[0] == 3 else 'py2')
+        download_cmd = "curl -sS -k -L --connect-timeout 20 --max-time 300 -A {} -o \"{}\" \"{}\"".format(user_agent_header, tmp_archive_path, url)
+        
+        if archive_type == "ipk":
+            full_command = f"{download_cmd} && opkg install --force-reinstall \"{tmp_archive_path}\" && rm -f \"{tmp_archive_path}\""
+        else:
+            install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
+            full_command = "{} && {} \"{}\" \"{}\"".format(download_cmd, install_script_path, tmp_archive_path, archive_type)
+        console_screen_open(self.sess, title, [full_command], callback=callback, close_on_finish=close_on_finish)
+    
     def _menu(self): return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
     def _focus(self):
         self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
@@ -450,13 +559,12 @@ class Panel(Screen):
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
     
-    def install_softcam_feed(self):
-        console_screen_open(self.sess, "Instalacja Feeda Softcam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
+    def install_softcam_feed(self, callback=None, close_on_finish=False):
+        console_screen_open(self.sess, "Instalacja Feeda Softcam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"], callback=callback, close_on_finish=close_on_finish)
 
     def set_lang(self, lang):
         self.lang = lang
         
-        # Logika scalania i filtrowania list
         repo_lists = self.get_lists_from_repo()
         s4a_lists_full = get_s4aupdater_lists_dynamic()
         keywords_to_remove = ['bzyk', 'jakitaki']
@@ -466,10 +574,23 @@ class Panel(Screen):
         ]
         final_channel_lists = repo_lists + s4a_lists_filtered
         
+        best_oscam_version = get_best_oscam_version_info()
+        
         if lang == 'PL':
-            self.data = (final_channel_lists, SOFTCAM_AND_PLUGINS_PL, TOOLS_AND_ADDONS_PL)
+            softcam_menu = list(SOFTCAM_AND_PLUGINS_PL)
+            tools_menu = list(TOOLS_AND_ADDONS_PL)
+            oscam_text = "Oscam z Feeda ({})"
         else:
-            self.data = (final_channel_lists, SOFTCAM_AND_PLUGINS_EN, TOOLS_AND_ADDONS_EN)
+            softcam_menu = list(SOFTCAM_AND_PLUGINS_EN)
+            tools_menu = list(TOOLS_AND_ADDONS_EN)
+            oscam_text = "Oscam from Feed ({})"
+
+        for i, (name, action) in enumerate(softcam_menu):
+            if action == "CMD:INSTALL_BEST_OSCAM":
+                softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+                break
+        
+        self.data = (final_channel_lists, softcam_menu, tools_menu)
         
         for i, menu_widget in enumerate((self["menuL"], self["menuM"], self["menuR"])):
             menu_widget.setList([item[0] for item in self.data[i]])
@@ -697,11 +818,11 @@ sleep 2
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
-    def install_best_oscam(self):
+    def install_best_oscam(self, callback=None, close_on_finish=False):
         cmd = """
             echo "Aktualizuję listę pakietów...";
             opkg update && \\
-            echo "Wyszukuję najlepszą wersję Oscam (master > emu > stable)...";
+            echo "Wyszukuję najlepszą wersję Oscam...";
             PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) && \\
             if [ -n "$PKG_NAME" ]; then \\
                 echo "Znaleziono pakiet: $PKG_NAME"; \\
@@ -711,7 +832,7 @@ sleep 2
                 sleep 5; \\
             fi
         """
-        console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd])
+        console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
 
 def main(session, **kwargs):
