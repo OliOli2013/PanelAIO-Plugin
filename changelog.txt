@@ -1,4 +1,8 @@
-[1.8r2]
-- Zastąpiono wtyczkę XStreamity przez JediMakerXtream.
-- Naprawiono błąd (kod 126) związany z formatowaniem skryptów.
-- Drobne poprawki stabilności i optymalizacje.
+[1.9]
+[NOWOŚĆ] Dodano "Super Konfigurator" – w pełni zautomatyzowane narzędzie do kompleksowej konfiguracji tunera (lista kanałów, softcam, picony), idealne dla nowych instalacji.
+[NOWOŚĆ] Dynamiczne wyświetlanie w menu wersji OSCam dostępnej do instalacji z feeda.
+[NOWOŚĆ] Dodano instalator wtyczki "StreamlinkProxy" w menu.
+[ZMIANY W INTERFEJSIE] Poszerzono główne okno wtyczki dla lepszej czytelności.
+[ZMIANY W INTERFEJSIE] Zmieniono sposób wyświetlania wersji wtyczki na dużą etykietę w prawym górnym rogu.
+[ZMIANY W INTERFEJSIE] Zmieniono nazwę "Sprawdź aktualizacje" na "Aktualizacja Wtyczki".
+[ZMIANY W INTERFEJSIE] Uproszczono legendę w stopce.
