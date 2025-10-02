@@ -1,5 +1,5 @@
-[1.9r1]
-- Dodano instalator ServiceApp w menu Wtyczki Online.
-- Naprawiono problem z dublowaniem się list kanałów przy kolejnych instalacjach.
-- Ulepszono instalator E2iPlayer (teraz automatycznie instaluje zależność PPanel).
-- Drobne poprawki stabilności i optymalizacje kodu.
+[1.9r2]
+- Przebudowano moduł 'Super Konfigurator' dla lepszej stabilności i czytelności.
+- Proces instalacji w Super Konfiguratorze jest teraz widoczny w jednym oknie z automatycznym restartem GUI po zakończeniu.
+- Naprawiono krytyczny błąd (crash), który występował po zakończeniu pracy Super Konfiguratora.
+- Poprawiono ogólną stabilność działania wtyczki.
