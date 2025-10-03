@@ -1,5 +1,10 @@
-[1.9r2]
-- Przebudowano moduł 'Super Konfigurator' dla lepszej stabilności i czytelności.
-- Proces instalacji w Super Konfiguratorze jest teraz widoczny w jednym oknie z automatycznym restartem GUI po zakończeniu.
-- Naprawiono krytyczny błąd (crash), który występował po zakończeniu pracy Super Konfiguratora.
-- Poprawiono ogólną stabilność działania wtyczki.
+[1.9r3] - 03.10.2025
+
+- [Super Konfigurator]
+  - Gruntowna przebudowa i uproszczenie działania.
+  - Usunięto podział na instalację "z piconami" i "bez" - obie opcje (Podstawowa i Pełna) teraz domyślnie instalują picony.
+
+- [Picony]
+  - Dodano nowy, domyślny pakiet picon: Transparent dla satelity Hot Bird 13°E.
+  - Zaktualizowano nazwę w menu, aby odzwierciedlała nowy pakiet.
+  - Poprawiono instalator, aby picony rozpakowywały się do prawidłowego katalogu (usunięto problem zagnieżdżonego folderu /picon/picon).
