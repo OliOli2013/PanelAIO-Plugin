@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 1.9r2 (finalna, uniwersalna)
+Wersja 1.9r2 (finalna, uniwersalna) - poprawiona wersja Super Konfiguratora
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -96,15 +96,19 @@ def install_archive(session, title, url, callback_on_finish=None):
     archive_type = "zip" if url.endswith(".zip") else ("tar.gz" if url.endswith((".tar.gz", ".tgz")) else "ipk")
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
-    user_agent_header = "'PanelAIO/{} (Python {})'".format(VER, 'py3' if sys.version_info[0] == 3 else 'py2')
-    download_cmd = "curl -sS -k -L --connect-timeout 20 --max-time 300 -A {} -o \"{}\" \"{}\"".format(user_agent_header, tmp_archive_path, url)
+    # Użycie WGET zamiast CURL dla większej niezawodności
+    download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
+    
     if archive_type == "ipk":
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
+        # Używamy '&&' aby przerwać w razie błędu pobierania
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
+    
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
+
 
 def get_s4aupdater_lists_dynamic():
     s4aupdater_list_txt_url = 'http://s4aupdater.one.pl/s4aupdater_list.txt'
@@ -112,8 +116,7 @@ def get_s4aupdater_lists_dynamic():
     tmp_list_file = os.path.join(PLUGIN_TMP_PATH, 's4aupdater_list.txt')
     lists = []
     try:
-        user_agent_header = "'PanelAIO/{} (Python {})'".format(VER, 'py3' if sys.version_info[0] == 3 else 'py2')
-        cmd = "curl -k -L --silent --connect-timeout 20 --max-time 180 -A {} -o {} {}".format(user_agent_header, tmp_list_file, s4aupdater_list_txt_url)
+        cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_list_file, s4aupdater_list_txt_url)
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.communicate()
         if not (process.returncode == 0 and os.path.exists(tmp_list_file) and os.path.getsize(tmp_list_file) > 0):
@@ -250,7 +253,9 @@ class Panel(Screen):
         Screen.__init__(self, session)
         self.setTitle(" ")
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
-        self.wizard_steps = []
+        self.wizard_queue = []
+        self.wizard_total_steps = 0
+        self.wizard_current_step = 0
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("Panel AIO " + VER)
@@ -300,7 +305,7 @@ class Panel(Screen):
         for pkg in missing_packages:
             ipk_name = os.path.basename(pkg['ipk_url'])
             tmp_path = os.path.join("/tmp", ipk_name)
-            wget_cmd = "wget --header=\"Host: {host}\" {url} -O {tmp_path}".format(
+            wget_cmd = "wget --no-check-certificate --header=\"Host: {host}\" {url} -O {tmp_path}".format(
                 host=pkg['host'],
                 url=pkg['ipk_url'].replace(pkg['host'], pkg['ip_addr']),
                 tmp_path=tmp_path
@@ -339,8 +344,8 @@ Czy chcesz zrestartować teraz?""",
         tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog.txt')
         prepare_tmp_dir()
         try:
-            cmd_ver = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_version_path, version_url)
-            cmd_log = "curl -k -L --silent --connect-timeout 10 -o {} {}".format(tmp_changelog_path, changelog_url)
+            cmd_ver = "wget --no-check-certificate -O {} {}".format(tmp_version_path, version_url)
+            cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
             process_ver = subprocess.Popen(cmd_ver, shell=True)
             process_log = subprocess.Popen(cmd_log, shell=True)
             process_ver.wait()
@@ -391,8 +396,8 @@ Czy chcesz zrestartować teraz?""",
         tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
         prepare_tmp_dir()
         try:
-            cmd = "curl -k -L --silent --connect-timeout 15 -o {} {}".format(tmp_json_path, manifest_url)
-            process = subprocess.Popen(cmd, shell=True)
+            cmd = "wget --no-check-certificate -q -T 15 -O {} {}".format(tmp_json_path, manifest_url)
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             process.wait()
             if not (os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0):
                 return [("Błąd pobierania list (Repo)", "SEPARATOR")]
@@ -757,7 +762,27 @@ sleep 2
         console_screen_open(self.sess, "Wolne miejsce", ["df -h"])
 
     def restart_oscam(self):
-        console_screen_open(self.sess, "Restart Oscam", ["for i in softcam.oscam oscam softcam; do if [ -f /etc/init.d/$i ]; then /etc/init.d/$i restart; break; fi; done"])
+        cmd = """
+            echo "Szukam aktywnego skryptu startowego Oscam...";
+            FOUND=0;
+            for SCRIPT in softcam.oscam oscam softcam; do
+                INIT_SCRIPT="/etc/init.d/$SCRIPT";
+                if [ -f "$INIT_SCRIPT" ]; then
+                    echo "Znaleziono skrypt: $INIT_SCRIPT";
+                    echo "Restartowanie...";
+                    $INIT_SCRIPT restart;
+                    echo "Polecenie restartu wysłane.";
+                    FOUND=1;
+                    break;
+                fi;
+            done;
+            if [ $FOUND -eq 0 ]; then
+                echo "Nie znaleziono żadnego znanego skryptu startowego Oscam.";
+                echo "Restart nie powiódł się.";
+            fi;
+            sleep 2;
+        """
+        console_screen_open(self.sess, "Restart Oscam", [cmd.strip()])
 
     def show_uninstall_manager(self):
         try:
@@ -783,26 +808,24 @@ sleep 2
     def install_best_oscam(self, callback=None, close_on_finish=False):
         cmd = """
             echo "Aktualizuję listę pakietów...";
-            opkg update && \\
+            opkg update ;
             echo "Wyszukuję najlepszą wersję Oscam...";
-            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) && \\
-            if [ -n "$PKG_NAME" ]; then \\
-                echo "Znaleziono pakiet: $PKG_NAME"; \\
-                opkg install $PKG_NAME; \\
-            else \\
-                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."; \\
-                sleep 5; \\
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ;
+            if [ -n "$PKG_NAME" ]; then
+                echo "Znaleziono pakiet: $PKG_NAME" ;
+                opkg install $PKG_NAME ;
+            else
+                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach.";
+                sleep 3 ;
             fi
         """
         console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
-    # === SEKCJA Super Konfiguratora (Wersja Stabilna) ===
+    # === SEKCJA Super Konfiguratora (Wersja Ostateczna - W pełni automatyczna) ===
     def run_super_setup_wizard(self):
-        """
-        Uruchamia Super Konfigurator z poprawionymi opcjami i logiką.
-        """
+        """Uruchamia Super Konfigurator."""
         options = [
-            ("1) Zainstaluj tylko zależności (curl/tar/unzip)", "deps_only"),
+            ("1) Zainstaluj tylko zależności (wget, tar, unzip)", "deps_only"),
             ("2) Podstawowa Konfiguracja Systemu (bez piconów)", "install_no_picons"),
             ("3) Podstawowa Konfiguracja Systemu (z piconami)", "install_with_picons"),
             ("Anuluj", "cancel")
@@ -815,6 +838,7 @@ sleep 2
         )
 
     def _super_wizard_selected(self, choice):
+        """Przetwarza wybór użytkownika i przygotowuje listę kroków."""
         if not choice or choice[1] == "cancel":
             show_message_compat(self.sess, "Anulowano.")
             return
@@ -827,79 +851,113 @@ sleep 2
             steps = ["deps"]
             message = "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?"
         elif key == "install_no_picons":
-            steps = ["deps", "channel_list", "softcam_feed", "install_oscam"]
-            message = "Rozpocznie się podstawowa konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n\nCzy chcesz kontynuować?"
+            steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "reload_settings"]
+            message = "Rozpocznie się podstawowa konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n\nCzy chcesz kontynuować?"
         elif key == "install_with_picons":
-            steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "picons"]
-            message = "Rozpocznie się pełna konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n- Instalacja Piconów (duży plik, wymaga czasu)\n\nCzy chcesz kontynuować?"
+            steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "picons", "reload_settings"]
+            message = "Rozpocznie się pełna konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?"
 
         if steps:
             self.sess.openWithCallback(
-                lambda confirmed: self._run_super_steps(steps) if confirmed else None,
-                MessageBox,
-                message,
-                type=MessageBox.TYPE_YESNO,
-                title="Potwierdzenie operacji"
+                lambda confirmed: self._wizard_start(steps) if confirmed else None,
+                MessageBox, message, type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
             )
-
-    def _run_super_steps(self, steps):
-        """
-        Wykonuje sekwencyjnie listę kroków w jednym oknie konsoli.
-        """
-        title = "Super Konfigurator - Postęp operacji"
-        cmds = ["echo 'Rozpoczynam automatyczną konfigurację. Proszę czekać...' && sleep 2"]
-        total_steps = len([s for s in steps if s != 'deps']) # Liczymy kroki widoczne dla użytkownika
-        step_counter = 0
-
-        if "deps" in steps:
-            cmds.append("echo '--- Sprawdzanie i instalacja zależności (curl, tar, unzip)...' && opkg update && opkg install curl tar unzip")
-
+            
+    def _wizard_start(self, steps):
+        """Inicjuje proces wykonywania kroków konfiguratora."""
+        channel_list_url = ''
+        list_name = 'domyślna lista'
         if "channel_list" in steps:
-            step_counter += 1
-            channel_list_url = "https://github.com/OliOli2013/PanelAIO-Lists/raw/main/PL_Hotbird_Cyfrowy_Polsat.zip"
-            archive_name = os.path.basename(channel_list_url)
-            tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, archive_name)
-            install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
-            cmds.append("echo '--- KROK {}/{}: Instalowanie listy kanałów...'".format(step_counter, total_steps))
-            download_cmd = "curl -sS -k -L --connect-timeout 20 --max-time 300 -o {} {}".format(tmp_archive_path, channel_list_url)
-            install_cmd = "chmod +x {} && {} {} zip".format(install_script_path, install_script_path, tmp_archive_path)
-            cmds.append("{} && {}".format(download_cmd, install_cmd))
+            repo_lists = self.get_lists_from_repo()
+            if repo_lists and repo_lists[0][1] != 'SEPARATOR':
+                try:
+                    list_name = repo_lists[0][0].split(' - ')[0]
+                    channel_list_url = repo_lists[0][1].split(':', 1)[1]
+                except (IndexError, AttributeError):
+                    channel_list_url = '' 
+            
+            if not channel_list_url:
+                self.sess.open(MessageBox, "Nie udało się pobrać adresu listy kanałów. Sprawdź połączenie z internetem i spróbuj ponownie.", type=MessageBox.TYPE_ERROR)
+                return
 
-        if "softcam_feed" in steps:
-            step_counter += 1
-            cmds.append("echo '--- KROK {}/{}: Instalowanie Softcam Feed...'".format(step_counter, total_steps))
-            cmds.append("wget -O - -q http://updates.mynonpublic.com/oea/feed | bash")
+        self.wizard_queue = steps
+        self.wizard_total_steps = len(steps)
+        self.wizard_current_step = 0
+        self.wizard_channel_list_url = channel_list_url
+        self.wizard_channel_list_name = list_name
+        self._wizard_run_next_step()
 
-        if "install_oscam" in steps:
-            step_counter += 1
-            cmds.append("echo '--- KROK {}/{}: Inteligentna instalacja Oscam...'".format(step_counter, total_steps))
-            oscam_cmd = "opkg update && PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) && if [ -n \\\"$PKG_NAME\\\" ]; then opkg install $PKG_NAME; else echo 'Nie znaleziono odpowiedniego pakietu Oscam.'; sleep 3; fi"
-            cmds.append(oscam_cmd)
+    def _wizard_run_next_step(self, *args, **kwargs):
+        """Główna funkcja sterująca, która pobiera i wykonuje kolejny krok z kolejki."""
+        if not self.wizard_queue:
+            self._on_wizard_finish()
+            return
 
-        if "picons" in steps:
-            step_counter += 1
-            cmds.append("echo '--- KROK {}/{}: Pobieranie i instalacja piconów (może potrwać kilka minut)...'".format(step_counter, total_steps))
-            picons_url = "https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"
-            picons_tmp_path = os.path.join("/tmp", os.path.basename(picons_url))
-            picons_cmd = "wget -c -O {} {} && opkg install {}".format(picons_tmp_path, picons_url, picons_tmp_path)
-            cmds.append(picons_cmd)
+        next_step = self.wizard_queue.pop(0)
+        self.wizard_current_step += 1
+        
+        step_functions = {
+            "deps": self._wizard_step_deps,
+            "channel_list": self._wizard_step_channel_list,
+            "softcam_feed": self._wizard_step_softcam_feed,
+            "install_oscam": self._wizard_step_install_oscam,
+            "picons": self._wizard_step_picons,
+            "reload_settings": self._wizard_step_reload_settings
+        }
+        
+        func_to_run = step_functions.get(next_step)
+        if func_to_run:
+            reactor.callLater(0.2, func_to_run)
+        else:
+            print("[PanelAIO] Nieznany krok w Super Konfiguratorze:", next_step)
+            self._wizard_run_next_step()
 
-        cmds.append("echo '--------------------------------------------------'")
-        cmds.append("echo 'Wszystkie zadania zostały zakończone pomyślnie!'")
-        cmds.append("echo 'System zostanie automatycznie uruchomiony ponownie za 10 sekund...'")
-        cmds.append("sleep 10")
+    def _get_wizard_title(self, task_name):
+        """Tworzy ujednolicony tytuł dla okna konsoli."""
+        return "Super Konfigurator [{}/{}]: {}".format(self.wizard_current_step, self.wizard_total_steps, task_name)
 
-        full_command = " && ".join(cmds)
-        console_screen_open(self.sess, title, [full_command], callback=self._on_wizard_finish, close_on_finish=True)
+    def _wizard_step_deps(self):
+        title = self._get_wizard_title("Instalacja zależności")
+        # ### ZMIANA ### - Dodano '; exit 0' aby zagwarantować automatyczne zamknięcie okna
+        cmd = "opkg update; opkg install wget tar unzip --force-reinstall; exit 0"
+        console_screen_open(self.sess, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+
+    def _wizard_step_channel_list(self):
+        title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
+        url = self.wizard_channel_list_url
+        install_archive(self.sess, title, url, callback_on_finish=self._wizard_run_next_step)
+
+    def _wizard_step_softcam_feed(self):
+        title = self._get_wizard_title("Instalacja Softcam Feed")
+        self.install_softcam_feed(callback=self._wizard_run_next_step, close_on_finish=True)
+
+    def _wizard_step_install_oscam(self):
+        title = self._get_wizard_title("Instalacja Oscam")
+        self.install_best_oscam(callback=self._wizard_run_next_step, close_on_finish=True)
+
+    def _wizard_step_picons(self):
+        title = self._get_wizard_title("Instalacja Picon")
+        url = "https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"
+        install_archive(self.sess, title, url, callback_on_finish=self._wizard_run_next_step)
+        
+    def _wizard_step_reload_settings(self):
+        """Przeładowuje listy kanałów po instalacji."""
+        self.reload_settings_python()
+        self._wizard_run_next_step()
 
     def _on_wizard_finish(self, *args, **kwargs):
-        """
-        Callback po zakończeniu Super Konfiguratora. Używa opóźnienia,
-        aby bezpiecznie zrestartować GUI i uniknąć błędu 'modal open'.
-        """
-        # Używamy callLater, aby dać głównemu wątkowi czas na ustabilizowanie się
-        # po zamknięciu konsoli, co zapobiega crashowi.
-        reactor.callLater(0.5, self.restart_gui)
+        """Callback po zakończeniu wszystkich kroków Super Konfiguratora."""
+        def do_restart(_=None):
+            self.reload_settings_python()
+            reactor.callLater(1.0, self.restart_gui)
+        
+        show_message_compat(
+            self.sess, 
+            "Super Konfigurator zakończył pracę.\nUruchamiam ponownie interfejs GUI...",
+            message_type=MessageBox.TYPE_INFO, 
+            timeout=5, 
+            on_close=do_restart
+        )
     # === KONIEC SEKCJI Super Konfiguratora ===
 
 def main(session, **kwargs):
