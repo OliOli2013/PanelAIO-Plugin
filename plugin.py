@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 1.9r2 (finalna, uniwersalna) - poprawiona wersja Super Konfiguratora
+Wersja 1.9r3 (finalna, uniwersalna) - poprawiona wersja Super Konfiguratora
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -35,7 +35,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "1.9r2"
+VER = "1.9r3"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -98,9 +98,29 @@ def install_archive(session, title, url, callback_on_finish=None):
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
     
-    if archive_type == "ipk":
+    # ### ZMIANA ### - Logika do obsługi różnych typów archiwów (listy vs picony)
+    if "picon" in title.lower():
+        # Dedykowana komenda dla picon, która naprawia problem zagnieżdżonego katalogu
+        picon_path = "/usr/share/enigma2/picon"
+        nested_picon_path = os.path.join(picon_path, "picon")
+        full_command = (
+            "{download_cmd} && "
+            "mkdir -p {picon_path} && "
+            "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
+            "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
+            "rm -f \"{archive_path}\" && "
+            "echo 'Picony zostały pomyślnie zainstalowane.' && sleep 3"
+        ).format(
+            download_cmd=download_cmd,
+            archive_path=tmp_archive_path,
+            picon_path=picon_path,
+            nested_path=nested_picon_path
+        )
+    elif archive_type == "ipk":
+        # Logika dla pakietów IPK
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
+        # Oryginalna logika dla list kanałów i innych archiwów .zip/.tar.gz
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
@@ -198,7 +218,7 @@ TOOLS_AND_ADDONS_PL = [
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("Pobierz Picony", "archive:https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"),
+    ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
     ("--- Diagnostyka i Czyszczenie ---", "SEPARATOR"),
@@ -217,7 +237,7 @@ TOOLS_AND_ADDONS_EN = [
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("Download Picons", "archive:https://github.com/picons/picons/releases/download/2025-09-20--21-57-11/enigma2-plugin-picons-snp-full.220x132-190x102.dark.on.reflection_2025-09-20--21-57-11_all.ipk"),
+    ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
     ("--- Diagnostics & Cleaning ---", "SEPARATOR"),
@@ -249,7 +269,6 @@ class WizardProgressScreen(Screen):
 
         self["message"] = Label("Trwa automatyczna instalacja...\nProszę czekać.\n\nNie wyłączaj tunera.\nPo zakończeniu nastąpi automatyczny restart.")
         
-        # ### ZMIANA ### - Uczynienie kodu kompatybilnym z różnymi systemami (np. OpenViX i OpenATV)
         if hasattr(self, 'onFirstExec'):
             self.onFirstExec.append(self.start_wizard)
         else:
@@ -305,7 +324,7 @@ class WizardProgressScreen(Screen):
         console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
     def _wizard_step_picons(self):
-        title = self._get_wizard_title("Instalacja Picon")
+        title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
         install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
         
@@ -914,8 +933,8 @@ sleep 2
         """Uruchamia Super Konfigurator."""
         options = [
             ("1) Zainstaluj tylko zależności (wget, tar, unzip)", "deps_only"),
-            ("2) Podstawowa Konfiguracja Systemu (bez piconów)", "install_no_picons"),
-            ("3) Podstawowa Konfiguracja Systemu (z piconami)", "install_with_picons"),
+            ("2) Podstawowa Konfiguracja (z piconami)", "install_no_picons"),
+            ("3) Pełna Konfiguracja (z piconami)", "install_with_picons"),
             ("Anuluj", "cancel")
         ]
         self.sess.openWithCallback(
@@ -939,8 +958,8 @@ sleep 2
             steps = ["deps"]
             message = "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?"
         elif key == "install_no_picons":
-            steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "reload_settings"]
-            message = "Rozpocznie się podstawowa konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n\nCzy chcesz kontynuować?"
+            steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "picons", "reload_settings"]
+            message = "Rozpocznie się podstawowa konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n- Instalacja Piconów\n\nCzy chcesz kontynuować?"
         elif key == "install_with_picons":
             steps = ["deps", "channel_list", "softcam_feed", "install_oscam", "picons", "reload_settings"]
             message = "Rozpocznie się pełna konfiguracja systemu.\nZostaną wykonane następujące kroki:\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?"
@@ -972,7 +991,7 @@ sleep 2
 
         if "picons" in steps:
             for name, action in TOOLS_AND_ADDONS_PL:
-                if name == "Pobierz Picony":
+                if name.startswith("Pobierz Picony"): # Użyj startswith dla elastyczności
                     try:
                         picon_url = action.split(':', 1)[1]
                         break
