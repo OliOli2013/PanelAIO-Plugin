@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 1.9r3 (finalna, uniwersalna) - poprawiona wersja Super Konfiguratora
+Wersja 2.0 (finalna, uniwersalna) - poprawiona wersja Super Konfiguratora
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -35,7 +35,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.0"
+VER = "2.0" # Zmieniono wersję, aby odzwierciedlić poprawki
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -156,6 +156,9 @@ def get_s4aupdater_lists_dynamic():
     except Exception as e: print("[PanelAIO] Błąd parsowania listy S4aUpdater:", e)
     return lists
 
+# ###########################################
+# ###             POPRAWKA                ###
+# ###########################################
 def get_best_oscam_version_info():
     try:
         cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
@@ -164,11 +167,18 @@ def get_best_oscam_version_info():
         if process.returncode == 0 and stdout:
             line = stdout.decode('utf-8').strip()
             parts = line.split(' - ')
+            # Bezpieczne sprawdzenie, czy istnieją co najmniej 2 części
             if len(parts) > 1:
                 return parts[1].strip()
+        # Jeśli polecenie nic nie zwróci lub wystąpi błąd, zwracamy bezpieczną wartość
         return "Auto"
     except Exception:
+        # W razie jakiegokolwiek innego wyjątku również zwracamy bezpieczną wartość
         return "Auto"
+# ###########################################
+# ###          KONIEC POPRAWKI            ###
+# ###########################################
+
 # === KONIEC FUNKCJI POMOCNICZYCH ===
 
 # === DEFINICJE MENU ===
@@ -320,7 +330,20 @@ class WizardProgressScreen(Screen):
 
     def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Oscam")
-        cmd = "opkg update ; PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ; if [ -n \"$PKG_NAME\" ]; then echo \"Znaleziono pakiet: $PKG_NAME\" ; opkg install $PKG_NAME ; else echo 'Nie znaleziono odpowiedniego pakietu Oscam w feedach.'; sleep 3 ; fi"
+        cmd = """
+            echo "Aktualizuję listę pakietów...";
+            opkg update ;
+            echo "Wyszukuję najlepszą wersję Oscam w feedach...";
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ;
+            if [ -n "$PKG_NAME" ]; then
+                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..." ;
+                opkg install $PKG_NAME ;
+            else
+                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach.";
+                echo "Próbuję instalacji z alternatywnego źródła (Levi45)...";
+                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi45/oscam-emulator/main/installer.sh -O - | /bin/sh;
+            fi
+        """
         console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
     def _wizard_step_picons(self):
@@ -927,21 +950,28 @@ sleep 2
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
+    # ###########################################
+    # ###             POPRAWKA                ###
+    # ###########################################
     def install_best_oscam(self, callback=None, close_on_finish=False):
         cmd = """
             echo "Aktualizuję listę pakietów...";
             opkg update ;
-            echo "Wyszukuję najlepszą wersję Oscam...";
+            echo "Wyszukuję najlepszą wersję Oscam w feedach...";
             PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ;
             if [ -n "$PKG_NAME" ]; then
-                echo "Znaleziono pakiet: $PKG_NAME" ;
+                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..." ;
                 opkg install $PKG_NAME ;
             else
                 echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach.";
-                sleep 3 ;
+                echo "Próbuję instalacji z alternatywnego źródła (Levi45)...";
+                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi45/oscam-emulator/main/installer.sh -O - | /bin/sh;
             fi
         """
         console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
+    # ###########################################
+    # ###          KONIEC POPRAWKI            ###
+    # ###########################################
 
     def run_super_setup_wizard(self):
         """Uruchamia Super Konfigurator."""
