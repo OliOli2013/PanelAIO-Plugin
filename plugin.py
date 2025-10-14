@@ -35,7 +35,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.0" # Zmieniono wersję, aby odzwierciedlić poprawki
+VER = "2.0" # Zachowano wersję 2.0
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -98,9 +98,7 @@ def install_archive(session, title, url, callback_on_finish=None):
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
     
-    # ### ZMIANA ### - Logika do obsługi różnych typów archiwów (listy vs picony)
     if "picon" in title.lower():
-        # Dedykowana komenda dla picon, która naprawia problem zagnieżdżonego katalogu
         picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
         full_command = (
@@ -117,10 +115,8 @@ def install_archive(session, title, url, callback_on_finish=None):
             nested_path=nested_picon_path
         )
     elif archive_type == "ipk":
-        # Logika dla pakietów IPK
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
-        # Oryginalna logika dla list kanałów i innych archiwów .zip/.tar.gz
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
@@ -156,9 +152,6 @@ def get_s4aupdater_lists_dynamic():
     except Exception as e: print("[PanelAIO] Błąd parsowania listy S4aUpdater:", e)
     return lists
 
-# ###########################################
-# ###             POPRAWKA                ###
-# ###########################################
 def get_best_oscam_version_info():
     try:
         cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
@@ -167,18 +160,11 @@ def get_best_oscam_version_info():
         if process.returncode == 0 and stdout:
             line = stdout.decode('utf-8').strip()
             parts = line.split(' - ')
-            # Bezpieczne sprawdzenie, czy istnieją co najmniej 2 części
             if len(parts) > 1:
                 return parts[1].strip()
-        # Jeśli polecenie nic nie zwróci lub wystąpi błąd, zwracamy bezpieczną wartość
         return "Auto"
     except Exception:
-        # W razie jakiegokolwiek innego wyjątku również zwracamy bezpieczną wartość
         return "Auto"
-# ###########################################
-# ###          KONIEC POPRAWKI            ###
-# ###########################################
-
 # === KONIEC FUNKCJI POMOCNICZYCH ===
 
 # === DEFINICJE MENU ===
@@ -276,13 +262,8 @@ class WizardProgressScreen(Screen):
         self.wizard_channel_list_url = kwargs.get("channel_list_url", "")
         self.wizard_channel_list_name = kwargs.get("channel_list_name", "")
         self.wizard_picon_url = kwargs.get("picon_url", "")
-
         self["message"] = Label("Trwa automatyczna instalacja...\nProszę czekać.\n\nNie wyłączaj tunera.\nPo zakończeniu nastąpi automatyczny restart.")
-        
-        if hasattr(self, 'onFirstExec'):
-            self.onFirstExec.append(self.start_wizard)
-        else:
-            self.onShown.append(self.start_wizard)
+        self.onShown.append(self.start_wizard)
 
     def start_wizard(self):
         self._wizard_run_next_step()
@@ -359,13 +340,20 @@ class WizardProgressScreen(Screen):
             print("[PanelAIO] Błąd podczas przeładowywania list w wizardzie:", e)
         self._wizard_run_next_step()
 
+    # ###########################################
+    # ###     POPRAWKA ZAWIESZANIA SIĘ        ###
+    # ###########################################
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText("Instalacja zakończona!\n\nZa chwilę nastąpi restart interfejsu GUI...")
-        reactor.callLater(3, self.do_restart)
+        # Używamy callLater, aby dać czas na wyświetlenie wiadomości, a następnie zamykamy okno i dopiero potem restartujemy
+        reactor.callLater(4, self.do_restart_and_close)
 
-    def do_restart(self):
-        self.session.open(TryQuitMainloop, 3)
-        self.close()
+    def do_restart_and_close(self):
+        # Najpierw zamykamy okno kreatora, a dopiero potem otwieramy okno restartu
+        self.close(self.session.open(TryQuitMainloop, 3))
+    # ###########################################
+    # ###          KONIEC POPRAWKI            ###
+    # ###########################################
 
 class Panel(Screen):
     skin = """
@@ -601,78 +589,10 @@ Czy chcesz zrestartować teraz?""",
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
 
     def nav_up(self):
-        try:
-            menu = self._menu()
-            idx = menu.getSelectedIndex()
-            if isinstance(idx, int) and idx > 0:
-                menu.setIndex(idx - 1)
-        except Exception as e:
-            print("[PanelAIO] nav_up error:", e)
-        try:
-            menu = self._menu()
-            inst = getattr(menu, "instance", None)
-            if inst is not None and callable(getattr(inst, "moveUp", None)):
-                try:
-                    inst.moveUp()
-                    return
-                except Exception:
-                    pass
-            if callable(getattr(menu, "moveUp", None)):
-                try:
-                    menu.moveUp()
-                    return
-                except Exception:
-                    pass
-            idx = None
-            if callable(getattr(menu, "getSelectedIndex", None)):
-                idx = menu.getSelectedIndex()
-            elif callable(getattr(menu, "getCurrentIndex", None)):
-                idx = menu.getCurrentIndex()
-            if isinstance(idx, int):
-                new_idx = max(0, idx - 1)
-                if callable(getattr(menu, "setIndex", None)):
-                    menu.setIndex(new_idx)
-                elif callable(getattr(menu, "moveSelection", None)):
-                    menu.moveSelection(new_idx)
-        except Exception as e:
-            print("[PanelAIO] nav_up error:", e)
+        self._menu().instance.moveSelection(self._menu().instance.moveUp)
 
     def nav_down(self):
-        try:
-            menu = self._menu()
-            idx = menu.getSelectedIndex()
-            if isinstance(idx, int) and idx < len(menu.list) - 1:
-                menu.setIndex(idx + 1)
-        except Exception as e:
-            print("[PanelAIO] nav_down error:", e)
-        try:
-            menu = self._menu()
-            inst = getattr(menu, "instance", None)
-            if inst is not None and callable(getattr(inst, "moveDown", None)):
-                try:
-                    inst.moveDown()
-                    return
-                except Exception:
-                    pass
-            if callable(getattr(menu, "moveDown", None)):
-                try:
-                    menu.moveDown()
-                    return
-                except Exception:
-                    pass
-            idx = None
-            if callable(getattr(menu, "getSelectedIndex", None)):
-                idx = menu.getSelectedIndex()
-            elif callable(getattr(menu, "getCurrentIndex", None)):
-                idx = menu.getCurrentIndex()
-            if isinstance(idx, int):
-                new_idx = idx + 1
-                if callable(getattr(menu, "setIndex", None)):
-                    menu.setIndex(new_idx)
-                elif callable(getattr(menu, "moveSelection", None)):
-                    menu.moveSelection(new_idx)
-        except Exception as e:
-            print("[PanelAIO] nav_down error:", e)
+        self._menu().instance.moveSelection(self._menu().instance.moveDown)
 
     def _focus(self):
         self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
@@ -950,9 +870,6 @@ sleep 2
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
-    # ###########################################
-    # ###             POPRAWKA                ###
-    # ###########################################
     def install_best_oscam(self, callback=None, close_on_finish=False):
         cmd = """
             echo "Aktualizuję listę pakietów...";
@@ -969,12 +886,8 @@ sleep 2
             fi
         """
         console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
-    # ###########################################
-    # ###          KONIEC POPRAWKI            ###
-    # ###########################################
 
     def run_super_setup_wizard(self):
-        """Uruchamia Super Konfigurator."""
         options = [
             ("1) Zainstaluj tylko zależności (wget, tar, unzip)", "deps_only"),
             ("2) Podstawowa Konfiguracja (z piconami)", "install_no_picons"),
@@ -989,7 +902,6 @@ sleep 2
         )
 
     def _super_wizard_selected(self, choice):
-        """Przetwarza wybór użytkownika i przygotowuje listę kroków."""
         if not choice or choice[1] == "cancel":
             show_message_compat(self.sess, "Anulowano.")
             return
@@ -1015,7 +927,6 @@ sleep 2
             )
             
     def _wizard_start(self, steps):
-        """Inicjuje proces wykonywania kroków konfiguratora."""
         channel_list_url = ''
         list_name = 'domyślna lista'
         picon_url = ''
@@ -1035,7 +946,7 @@ sleep 2
 
         if "picons" in steps:
             for name, action in TOOLS_AND_ADDONS_PL:
-                if name.startswith("Pobierz Picony"): # Użyj startswith dla elastyczności
+                if name.startswith("Pobierz Picony"):
                     try:
                         picon_url = action.split(':', 1)[1]
                         break
