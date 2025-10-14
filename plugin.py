@@ -35,7 +35,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "1.9r3"
+VER = "2.0"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -272,7 +272,7 @@ class WizardProgressScreen(Screen):
         if hasattr(self, 'onFirstExec'):
             self.onFirstExec.append(self.start_wizard)
         else:
-            self.onFirstExecBegin.append(self.start_wizard)
+            self.onShown.append(self.start_wizard)
 
     def start_wizard(self):
         self._wizard_run_next_step()
@@ -580,6 +580,13 @@ Czy chcesz zrestartować teraz?""",
     def nav_up(self):
         try:
             menu = self._menu()
+            idx = menu.getSelectedIndex()
+            if isinstance(idx, int) and idx > 0:
+                menu.setIndex(idx - 1)
+        except Exception as e:
+            print("[PanelAIO] nav_up error:", e)
+        try:
+            menu = self._menu()
             inst = getattr(menu, "instance", None)
             if inst is not None and callable(getattr(inst, "moveUp", None)):
                 try:
@@ -608,6 +615,13 @@ Czy chcesz zrestartować teraz?""",
             print("[PanelAIO] nav_up error:", e)
 
     def nav_down(self):
+        try:
+            menu = self._menu()
+            idx = menu.getSelectedIndex()
+            if isinstance(idx, int) and idx < len(menu.list) - 1:
+                menu.setIndex(idx + 1)
+        except Exception as e:
+            print("[PanelAIO] nav_down error:", e)
         try:
             menu = self._menu()
             inst = getattr(menu, "instance", None)
@@ -682,7 +696,7 @@ Czy chcesz zrestartować teraz?""",
                 break
         self.data = (final_channel_lists, softcam_menu, tools_menu)
         for i, menu_widget in enumerate((self["menuL"], self["menuM"], self["menuR"])):
-            menu_widget.setList([item[0] for item in self.data[i]])
+            menu_widget.setList([str(item[0]) for item in self.data[i]])
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
             head_widget.setText(COL_TITLES[lang][i])
         self["legend"].setText(LEGEND_PL if lang == 'PL' else LEGEND_EN)
