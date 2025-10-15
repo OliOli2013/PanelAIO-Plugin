@@ -1,5 +1,7 @@
 ![Logo Panelu AIO](logo.png)
+
 Panel AIO Plugin
+
 Oficjalne repozytorium wtyczki Panel All-In-One (AIO) dla dekoderów z oprogramowaniem Enigma2.
 
 Panel AIO to zaawansowana, wielofunkcyjna wtyczka narzędziowa, która centralizuje zarządzanie dekoderem. Umożliwia błyskawiczną instalację list kanałów, popularnych wtyczek i softcamów, a także oferuje kompletny zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym, intuicyjnym miejscu.
@@ -89,12 +91,6 @@ Wtyczka posiada intuicyjny, trzykolumnowy interfejs. Do nawigacji służą kolor
 Jeżeli wtyczka jest dla Ciebie pomocna, możesz wesprzeć jej rozwój, stawiając autorowi kawę. Link znajdziesz w kodzie QR w interfejsie wtyczki.
 
 Autor: Paweł Pawełek (msisystem@t.pl)
-
-Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
-Kod QR w interfejsie → Buy me a coffee
-
-Autor: Paweł Pawełek (msisystem@t.pl)
-
 
 Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
 
