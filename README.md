@@ -1,33 +1,40 @@
 ![Logo Panelu AIO](logo.png)
-Panel AIO-Plugin
+Panel AIO Plugin
+Oficjalne repozytorium wtyczki Panel All-In-One (AIO) dla dekoderów z oprogramowaniem Enigma2.
 
-Oficjalne repozytorium wtyczki Panel All-In-One (AIO) dla Enigma2
+Panel AIO to zaawansowana, wielofunkcyjna wtyczka narzędziowa, która centralizuje zarządzanie dekoderem. Umożliwia błyskawiczną instalację list kanałów, popularnych wtyczek i softcamów, a także oferuje kompletny zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym, intuicyjnym miejscu.
 
-Panel AIO to zaawansowana, wielofunkcyjna wtyczka narzędziowa dla dekoderów z oprogramowaniem Enigma2.
-Umożliwia zarządzanie listami kanałów, instalację popularnych wtyczek i softcamów, a także oferuje zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym miejscu.
+🚀 Wielka Aktualizacja do Wersji 2.0! (Październik 2025)
+Ta aktualizacja jest obowiązkowa dla użytkowników najnowszych obrazów, takich jak OpenATV 7.6+, OpenPLi 9.1+ i innych opartych na Pythonie 3.11+.
 
-✨ Główne możliwości wtyczki
+Wersja 2.0 rozwiązuje kluczowe problemy, które powodowały błędy krytyczne (BSOD/GSOD) na nowszych systemach. Wtyczka została w pełni dostosowana i jest teraz w 100% kompatybilna z najnowszym oprogramowaniem.
+
+Co naprawiono?
+
+Krytyczny błąd (BSOD/GSOD) – Usunięto problem powodujący awarię wtyczki przy starcie na systemach z Python 3.11+.
+
+Zawieszanie się tunera – Naprawiono błąd, który powodował zawieszanie się interfejsu po zakończeniu pracy "Super Konfiguratora".
+
+Błąd "Modal open" – Rozwiązano problem z awarią podczas pierwszego uruchomienia wtyczki na niektórych systemach.
+
+Instalator Oscam – Ulepszono inteligentny instalator, który teraz posiada alternatywną metodę instalacji, gdy softcam nie jest dostępny w oficjalnym feedzie.
+
+✨ Główne Możliwości Wtyczki
 📡 Listy kanałów
+Pobieranie i instalacja gotowych list kanałów z dedykowanego repozytorium oraz zewnętrznego S4aUpdater.
 
-Pobieranie i instalacja list kanałów z repozytorium PanelAIO oraz zewnętrznego S4aUpdater.
-
-Automatyczne filtrowanie list (np. usuwanie niepożądanych źródeł).
-
-Dynamiczne aktualizacje z pliku manifest.json.
+Automatyczne filtrowanie i dynamiczne aktualizacje.
 
 🔑 Softcamy i wtyczki
+Oscam – Inteligentny instalator z automatycznym wyborem najlepszej wersji (master/emu/stable) oraz awaryjną metodą instalacji.
 
-Oscam – inteligentny instalator z automatycznym wyborem najlepszej wersji (master/emu/stable).
+Pełne zarządzanie Oscam: restart, kasowanie hasła, edycja pliku oscam.dvbapi z wielu źródeł.
 
-Restart Oscam i czyszczenie hasła Oscam.
-
-Zarządzanie plikiem oscam.dvbapi: pobieranie z wielu repozytoriów, czyszczenie zawartości, możliwość wprowadzenia własnego URL.
-
-Instalacja popularnych dodatków online:
+Błyskawiczna instalacja popularnych dodatków online:
 
 AJPanel
 
-E2iPlayer (Python3)
+E2iPlayer (dla Python 3)
 
 EPG Import
 
@@ -35,65 +42,55 @@ S4aUpdater
 
 JediMakerXtream
 
-YouTube plugin
+YouTube
 
-NCam 15.5
+NCam
 
-🛠️ Narzędzia systemowe
-
+🛠️ Narzędzia systemowe i diagnostyka
 Menadżer deinstalacji pakietów (opkg).
 
-Instalacja Softcam Feed.
+Aktualizacja pliku satellites.xml i instalacja Softcam Feed.
 
-Aktualizacja pliku satellites.xml.
+Pobieranie piconów z GitHub z automatycznym tworzeniem katalogu.
 
-Pobieranie piconów z GitHub (z automatycznym nadpisywaniem i tworzeniem katalogu).
+Zarządzanie hasłem dostępu root/FTP (ustawianie i kasowanie).
 
-Zarządzanie hasłem root/FTP (ustawianie i kasowanie).
+Test prędkości internetu oraz wyświetlanie IP i pingu.
 
-🧹 Diagnostyka i czyszczenie
+Informacja o wolnym miejscu i czyszczenie pamięci tymczasowej oraz cache RAM.
 
-Test prędkości internetu.
+🔄 Aktualizacje i Interfejs
+Wbudowany system sprawdzania aktualizacji z repozytorium GitHub (wersja i changelog).
 
-Wyświetlanie własnego adresu IP i średniego pingu.
+Obsługa języków polskiego i angielskiego, zmieniana jednym przyciskiem.
 
-Informacja o wolnym miejscu na dysku/flash.
-
-Czyszczenie pamięci tymczasowej (/tmp) i cache RAM.
-
-🔄 Aktualizacje i wsparcie
-
-Wbudowany system sprawdzania aktualizacji z repozytorium GitHub (wersja, changelog).
-
-Szybka aktualizacja do najnowszej wersji jednym kliknięciem.
-
-Wbudowany kod QR z linkiem wsparcia autora.
-
-Obsługa języków: polski / angielski (zmiana jednym przyciskiem pilota).
+Wbudowany kod QR ze linkiem wsparcia autora.
 
 💻 Instalacja
+Połącz się z dekoderem przez terminal (np. PuTTY lub Telnet) i wykonaj poniższą komendę:
 
-Wgraj i uruchom wtyczkę bezpośrednio przez Telnet/SSH:
+Bash
 
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
+Po instalacji zalecany jest restart Enigma2.
 
-🖼️ Interfejs
+🖼️ Interfejs i Sterowanie
+Wtyczka posiada intuicyjny, trzykolumnowy interfejs. Do nawigacji służą kolorowe przyciski pilota:
 
-Trzykolumnowy panel: Listy Kanałów, Softcam & Plugins, Tools & Extras.
+🔴 Czerwony – Zmiana języka na Polski
 
-Obsługa przycisków pilota:
-
-🔴 Czerwony – Polski
-
-🟢 Zielony – English
+🟢 Zielony – Zmiana języka na Angielski
 
 🟡 Żółty – Restart GUI
 
-🔵 Niebieski – Wyjście
+🔵 Niebieski – Sprawdź aktualizacje wtyczki
 
 ☕ Wsparcie
+Jeżeli wtyczka jest dla Ciebie pomocna, możesz wesprzeć jej rozwój, stawiając autorowi kawę. Link znajdziesz w kodzie QR w interfejsie wtyczki.
 
-Jeżeli wtyczka jest dla Ciebie pomocna, możesz wesprzeć rozwój autora:
+Autor: Paweł Pawełek (msisystem@t.pl)
+
+Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
 Kod QR w interfejsie → Buy me a coffee
 
 Autor: Paweł Pawełek (msisystem@t.pl)
@@ -102,6 +99,3 @@ Autor: Paweł Pawełek (msisystem@t.pl)
 Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
 
 ![Wesprzyj rozwój wtyczki](Kod_QR_buycoffee.png)
-
-
-Instalacja Telnet: wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
