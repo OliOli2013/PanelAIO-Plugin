@@ -71,8 +71,6 @@ Wbudowany kod QR ze linkiem wsparcia autora.
 💻 Instalacja
 Połącz się z dekoderem przez terminal (np. PuTTY lub Telnet) i wykonaj poniższą komendę:
 
-Bash
-
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
 Po instalacji zalecany jest restart Enigma2.
 
