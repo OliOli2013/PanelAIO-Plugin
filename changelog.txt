@@ -1,10 +1,11 @@
-[1.9r3] - 03.10.2025
+[2.0]
+- Naprawiono krytyczny błąd (BSOD/GSOD) na nowszych systemach z Pythonem 3.11+.
+- Naprawiono zawieszanie się tunera po zakończeniu "Super Konfiguratora".
+- Usunięto błąd "Modal open" podczas pierwszego uruchomienia wtyczki.
+- Dodano alternatywną instalację Oscam, gdy nie ma go w oficjalnym feedzie.
 
-- [Super Konfigurator]
-  - Gruntowna przebudowa i uproszczenie działania.
-  - Usunięto podział na instalację "z piconami" i "bez" - obie opcje (Podstawowa i Pełna) teraz domyślnie instalują picony.
-
-- [Picony]
-  - Dodano nowy, domyślny pakiet picon: Transparent dla satelity Hot Bird 13°E.
-  - Zaktualizowano nazwę w menu, aby odzwierciedlała nowy pakiet.
-  - Poprawiono instalator, aby picony rozpakowywały się do prawidłowego katalogu (usunięto problem zagnieżdżonego folderu /picon/picon).
+[1.9r3]
+Data wydania: 03.10.2025
+- [Super Konfigurator] Gruntowna przebudowa i uproszczenie działania.
+- [Picony] Dodano nowy, domyślny pakiet picon Transparent (Hot Bird 13°E).
+- [Picony] Poprawiono instalator, aby picony rozpakowywały się do prawidłowego katalogu.
