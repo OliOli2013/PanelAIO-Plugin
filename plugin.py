@@ -340,20 +340,12 @@ class WizardProgressScreen(Screen):
             print("[PanelAIO] Błąd podczas przeładowywania list w wizardzie:", e)
         self._wizard_run_next_step()
 
-    # ###########################################
-    # ###     POPRAWKA ZAWIESZANIA SIĘ        ###
-    # ###########################################
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText("Instalacja zakończona!\n\nZa chwilę nastąpi restart interfejsu GUI...")
-        # Używamy callLater, aby dać czas na wyświetlenie wiadomości, a następnie zamykamy okno i dopiero potem restartujemy
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        # Najpierw zamykamy okno kreatora, a dopiero potem otwieramy okno restartu
         self.close(self.session.open(TryQuitMainloop, 3))
-    # ###########################################
-    # ###          KONIEC POPRAWKI            ###
-    # ###########################################
 
 class Panel(Screen):
     skin = """
@@ -381,7 +373,6 @@ class Panel(Screen):
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
-        self.onLayoutFinish.append(self.initial_setup)
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
@@ -395,9 +386,19 @@ class Panel(Screen):
             "left": self.left,
             "right": self.right
         }, -1)
+        # ###########################################
+        # ###    POPRAWKA BŁĘDU "MODAL OPEN"      ###
+        # ###########################################
+        # onLayoutFinish jest zbyt wczesne. Przenosimy logikę do onShown,
+        # które jest wywoływane, gdy okno jest już w pełni widoczne.
+        self.onShown.append(self.initial_setup)
 
     def initial_setup(self):
-        self.check_dependencies()
+        # Opóźniamy sprawdzanie zależności o ułamek sekundy, aby uniknąć błędu "Modal open".
+        reactor.callLater(0.2, self.check_dependencies)
+    # ###########################################
+    # ###          KONIEC POPRAWKI            ###
+    # ###########################################
 
     def check_dependencies(self):
         try:
