@@ -386,24 +386,19 @@ class Panel(Screen):
             "left": self.left,
             "right": self.right
         }, -1)
-        # ###########################################
-        # ###    POPRAWKA BŁĘDU "MODAL OPEN"      ###
-        # ###########################################
-        # onLayoutFinish jest zbyt wczesne. Przenosimy logikę do onShown,
-        # które jest wywoływane, gdy okno jest już w pełni widoczne.
         self.onShown.append(self.initial_setup)
 
     def initial_setup(self):
-        # Opóźniamy sprawdzanie zależności o ułamek sekundy, aby uniknąć błędu "Modal open".
         reactor.callLater(0.2, self.check_dependencies)
-    # ###########################################
-    # ###          KONIEC POPRAWKI            ###
-    # ###########################################
 
+    # ###########################################
+    # ### NOWA, POPRAWIONA WERSJA TEJ FUNKCJI ###
+    # ###########################################
     def check_dependencies(self):
         try:
             from shutil import which
         except ImportError:
+            # Fallback for older Python versions
             def which(cmd):
                 path = os.getenv('PATH')
                 for p in path.split(os.path.pathsep):
@@ -411,50 +406,37 @@ class Panel(Screen):
                     if os.path.exists(p) and os.access(p, os.X_OK):
                         return p
                 return None
-        required_packages = [
-            {'name': 'curl', 'check_cmd': 'curl', 'ipk_url': 'http://archive.openvision.tech/10.2/vusolo2/3rdparty/curl_7.88.1-r0_armv7ahf-vfp-neon.ipk', 'ip_addr': '195.154.243.19', 'host': 'archive.openvision.tech'},
-            {'name': 'tar', 'check_cmd': 'tar', 'ipk_url': 'http://archive.openvision.tech/10.2/vusolo2/3rdparty/tar_1.34-r0_armv7ahf-vfp-neon.ipk', 'ip_addr': '195.154.243.19', 'host': 'archive.openvision.tech'},
-            {'name': 'unzip', 'check_cmd': 'unzip', 'ipk_url': 'http://archive.openvision.tech/10.2/vusolo2/3rdparty/unzip_6.0-r8_armv7ahf-vfp-neon.ipk', 'ip_addr': '195.154.243.19', 'host': 'archive.openvision.tech'}
-        ]
-        missing_packages = [pkg for pkg in required_packages if not which(pkg['check_cmd'])]
+
+        required_packages = ['curl', 'tar', 'unzip']
+        missing_packages = [pkg for pkg in required_packages if not which(pkg)]
+        
         if not missing_packages:
+            # Wszystkie zależności są zainstalowane, ładujemy wtyczkę
             self.set_lang('PL')
             self._focus()
             return
-        install_cmds = ["echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'"]
-        for pkg in missing_packages:
-            ipk_name = os.path.basename(pkg['ipk_url'])
-            tmp_path = os.path.join("/tmp", ipk_name)
-            wget_cmd = "wget --no-check-certificate --header=\"Host: {host}\" {url} -O {tmp_path}".format(
-                host=pkg['host'],
-                url=pkg['ipk_url'].replace(pkg['host'], pkg['ip_addr']),
-                tmp_path=tmp_path
-            )
-            install_cmd = "opkg install {}".format(tmp_path)
-            install_cmds.append("echo '--- Instalowanie {} ---'".format(pkg['name']))
-            install_cmds.append(wget_cmd)
-            install_cmds.append(install_cmd)
-        install_cmds.append("echo 'Instalacja komponentów zakończona!' && sleep 2")
-        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed)
 
-    def on_dependencies_installed(self, *args):
-        self.sess.openWithCallback(
-            self.handle_restart_choice,
-            MessageBox,
-            """Wymagane komponenty zostały zainstalowane.
-Zalecany jest restart interfejsu graficznego, aby zakończyć konfigurację.
-Czy chcesz zrestartować teraz?""",
-            type=MessageBox.TYPE_YESNO,
-            default=True,
-            title="Instalacja zakończona"
-        )
+        # Jeśli czegoś brakuje, uruchamiamy uniwersalny instalator
+        install_cmds = [
+            "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
+            "opkg update",
+            "opkg install " + " ".join(missing_packages),
+            "echo '---------------------------------------------------'",
+            "echo 'Instalacja komponentów zakończona!'",
+            "echo 'Zalecany jest ręczny restart interfejsu (GUI).'",
+            "echo '---------------------------------------------------'",
+            "sleep 5"
+        ]
+        # Używamy callbacku, który tylko załaduje UI wtyczki, BEZ wyświetlania dodatkowych okien
+        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
-    def handle_restart_choice(self, answer):
-        if answer:
-            self.sess.open(TryQuitMainloop, 3)
-        else:
-            self.set_lang('PL')
-            self._focus()
+    def on_dependencies_installed_safe(self, *args):
+        # Ten callback jest bezpieczny - po prostu ładuje treść wtyczki po zamknięciu konsoli
+        self.set_lang('PL')
+        self._focus()
+    # ###########################################
+    # ###          KONIEC POPRAWEK            ###
+    # ###########################################
 
     def check_for_updates(self):
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
@@ -588,12 +570,6 @@ Czy chcesz zrestartować teraz?""",
 
     def _menu(self):
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
-
-    def nav_up(self):
-        self._menu().instance.moveSelection(self._menu().instance.moveUp)
-
-    def nav_down(self):
-        self._menu().instance.moveSelection(self._menu().instance.moveDown)
 
     def _focus(self):
         self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
