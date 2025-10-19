@@ -1,3 +1,8 @@
+[2.1]
+- Przyspieszono start wtyczki (ładowanie danych w tle).
+- Dodano pełne tłumaczenie "Super Konfiguratora".
+- Dodano opcję "Podstawowa Konfiguracja (bez Picon)".
+
 [2.0]
 - Naprawiono krytyczny błąd (BSOD/GSOD) na nowszych systemach z Pythonem 3.11+.
 - Naprawiono zawieszanie się tunera po zakończeniu "Super Konfiguratora".
