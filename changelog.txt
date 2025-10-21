@@ -1,3 +1,8 @@
+[2.2]
+- Poprawiono funkcję Diagnostyki Sieci (teraz używa speedtest-cli i poprawnie pokazuje IP tunera).
+- Poprawiono wczytywanie list kanałów z repozytorium GitHub.
+- Zmieniono wersję na 2.2.
+
 [2.1]
 - Przyspieszono start wtyczki (ładowanie danych w tle).
 - Dodano pełne tłumaczenie "Super Konfiguratora".
