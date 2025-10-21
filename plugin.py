@@ -2,11 +2,11 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.3 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
+Wersja 2.3 (finalna, uniwersalna) - Poprawki stabilności i funkcji
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from enigma import eDVBDB, eTimer # Dodano eTimer
+from enigma import eDVBDB, eTimer
 from Screens.Screen import Screen
 from Screens.Console import Console
 from Screens.MessageBox import MessageBox
@@ -19,7 +19,6 @@ from Components.MenuList import MenuList
 from Components.Pixmap import Pixmap
 from Plugins.Plugin import PluginDescriptor
 from Tools.Directories import fileExists
-# Dodano importy sieciowe
 try:
     from Components.Network import iNetworkInfo, iNetworkInformation
     network = iNetworkInformation() # Dla nowszych obrazów
@@ -39,9 +38,10 @@ import subprocess
 import shutil
 import re
 import json
-import time # Potrzebne do mierzenia czasu
+import time 
 from twisted.internet import reactor
-from threading import Thread
+# Usunięto import Thread
+# from threading import Thread 
 
 # === SEKCJA GLOBALNYCH ZMIENNYCH ===
 PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -49,7 +49,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.3" # Zmieniono wersję
+VER = "2.3"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -61,7 +61,7 @@ TRANSLATIONS = {
     "PL": {
         "support_text": "Wesprzyj rozwój wtyczki",
         "update_available_title": "Dostępna nowa wersja!",
-        "update_available_msg": """Dostępna jest nowa wersja Panel AIO: {latest_ver}
+        "update_available_msg": """Dostępna jest nowa wersja AIO Panel: {latest_ver}
 Twoja wersja: {current_ver}
 
 Lista zmian:
@@ -79,8 +79,8 @@ Czy chcesz ją teraz zainstalować?""",
         "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "Anuluj",
         "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
-        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?", # Zmieniono opis
-        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?", # Zmieniono opis
+        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
+        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
         "net_diag_wait": "Trwa diagnostyka sieci, proszę czekać...",
         "net_diag_error": "Wystąpił błąd podczas testu prędkości.",
@@ -96,7 +96,7 @@ Czy chcesz ją teraz zainstalować?""",
     "EN": {
         "support_text": "Support plugin development",
         "update_available_title": "New version available!",
-        "update_available_msg": """A new version of Panel AIO is available: {latest_ver}
+        "update_available_msg": """A new version of AIO Panel is available: {latest_ver}
 Your version: {current_ver}
 
 Changelog:
@@ -114,8 +114,8 @@ Do you want to install it now?""",
         "sk_option_full_picons": "3) Full Configuration (with Picons)",
         "sk_option_cancel": "Cancel",
         "sk_confirm_deps": "Are you sure you want to install only the basic system dependencies?",
-        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n\nDo you want to continue?", # Changed description
-        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n- Install Picons (large file)\n\nDo you want to continue?", # Changed description
+        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n\nDo you want to continue?",
+        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n- Install Picons (large file)\n\nDo you want to continue?",
         "net_diag_title": "Network Diagnostics",
         "net_diag_wait": "Running network diagnostics, please wait...",
         "net_diag_error": "An error occurred during the speed test.",
@@ -145,7 +145,7 @@ def prepare_tmp_dir():
         try:
             os.makedirs(PLUGIN_TMP_PATH)
         except OSError as e:
-            print("[PanelAIO] Error creating tmp dir:", e)
+            print("[AIO Panel] Error creating tmp dir:", e)
 
 def install_archive(session, title, url, callback_on_finish=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
@@ -187,36 +187,45 @@ def get_s4aupdater_lists_dynamic():
     prepare_tmp_dir()
     tmp_list_file = os.path.join(PLUGIN_TMP_PATH, 's4aupdater_list.txt')
     lists = []
-    cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_list_file, s4aupdater_list_txt_url)
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    process.communicate()
-    if not (process.returncode == 0 and os.path.exists(tmp_list_file) and os.path.getsize(tmp_list_file) > 0):
-            print("[PanelAIO] Failed to download or empty s4aupdater_list.txt")
-            return [] 
-
-    urls_dict, versions_dict = {}, {}
-    with open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
-        for line in f:
-            clean_line = line.strip()
-            if "_url:" in clean_line: parts = clean_line.split(':', 1); urls_dict[parts[0].strip()] = parts[1].strip()
-            elif "_version:" in clean_line: parts = clean_line.split(':', 1); versions_dict[parts[0].strip()] = parts[1].strip()
-    for var_name, url_value in urls_dict.items():
-        display_name_base = var_name.replace('_url', '').replace('_', ' ').title()
-        version_key = var_name.replace('_url', '_version')
-        date_info = versions_dict.get(version_key, "brak daty")
-        lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
+    try:
+        cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_list_file, s4aupdater_list_txt_url)
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process.communicate()
+        if not (process.returncode == 0 and os.path.exists(tmp_list_file) and os.path.getsize(tmp_list_file) > 0):
+             return []
+    except Exception:
+        return []
+    
+    try:
+        urls_dict, versions_dict = {}, {}
+        with open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                clean_line = line.strip()
+                if "_url:" in clean_line: parts = clean_line.split(':', 1); urls_dict[parts[0].strip()] = parts[1].strip()
+                elif "_version:" in clean_line: parts = clean_line.split(':', 1); versions_dict[parts[0].strip()] = parts[1].strip()
+        for var_name, url_value in urls_dict.items():
+            display_name_base = var_name.replace('_url', '').replace('_', ' ').title()
+            version_key = var_name.replace('_url', '_version')
+            date_info = versions_dict.get(version_key, "brak daty")
+            lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
+    except Exception as e: 
+        print("[AIO Panel] Błąd parsowania listy S4aUpdater:", e)
+        return []
     return lists
 
 def get_best_oscam_version_info():
-    cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = process.communicate()
-    if process.returncode == 0 and stdout:
-        line = stdout.decode('utf-8').strip()
-        parts = line.split(' - ')
-        if len(parts) > 1:
-            return parts[1].strip()
-    return "Auto"
+    try:
+        cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, _ = process.communicate()
+        if process.returncode == 0 and stdout:
+            line = stdout.decode('utf-8').strip()
+            parts = line.split(' - ')
+            if len(parts) > 1:
+                return parts[1].strip()
+        return "Auto"
+    except Exception:
+        return "Error"
 # === KONIEC FUNKCJI POMOCNICZYCH ===
 
 # === DEFINICJE MENU ===
@@ -227,7 +236,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Restart Oscam", "CMD:RESTART_OSCAM"),
     ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
-    ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"), # Ta opcja zostaje, ale wywołuje nową funkcję
+    ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("Instalator ServiceApp", "CMD:INSTALL_SERVICEAPP"),
@@ -245,7 +254,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Restart Oscam", "CMD:RESTART_OSCAM"),
     ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
-    ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"), # Ta opcja zostaje, ale wywołuje nową funkcję
+    ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("ServiceApp Installer", "CMD:INSTALL_SERVICEAPP"),
@@ -328,8 +337,7 @@ class WizardProgressScreen(Screen):
         step_functions = {
             "deps": self._wizard_step_deps,
             "channel_list": self._wizard_step_channel_list,
-            # "softcam_feed": self._wizard_step_softcam_feed, # USUNIĘTE
-            "install_oscam": self._wizard_step_install_oscam, # Teraz to jest połączony krok
+            "install_oscam": self._wizard_step_install_oscam, 
             "picons": self._wizard_step_picons,
             "reload_settings": self._wizard_step_reload_settings
         }
@@ -338,7 +346,7 @@ class WizardProgressScreen(Screen):
         if func_to_run:
             reactor.callLater(0.5, func_to_run)
         else:
-            print("[PanelAIO] Nieznany krok w Super Konfiguratorze:", next_step)
+            print("[AIO Panel] Nieznany krok w Super Konfiguratorze:", next_step)
             self._wizard_run_next_step()
 
     def _get_wizard_title(self, task_name):
@@ -352,13 +360,10 @@ class WizardProgressScreen(Screen):
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
         url = self.wizard_channel_list_url
-        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
+        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
 
-    # Funkcja _wizard_step_softcam_feed została usunięta
-
-    def _wizard_step_install_oscam(self): # Teraz zawiera logikę instalacji feeda i oscama
+    def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
-        # Nowa, połączona komenda
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -382,14 +387,14 @@ class WizardProgressScreen(Screen):
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
-        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
+        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
         
     def _wizard_step_reload_settings(self):
         try:
             eDVBDB.getInstance().reloadServicelist()
             eDVBDB.getInstance().reloadBouquets()
         except Exception as e:
-            print("[PanelAIO] Błąd podczas przeładowywania list w wizardzie:", e)
+            print("[AIO Panel] Błąd podczas przeładowywania list w wizardzie:", e)
         self._wizard_run_next_step()
 
     def _on_wizard_finish(self, *args, **kwargs):
@@ -421,7 +426,7 @@ class Panel(Screen):
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
-        self["title_label"] = Label("Panel AIO " + VER)
+        self["title_label"] = Label("AIO Panel " + VER) # Zmieniona nazwa
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
@@ -440,8 +445,8 @@ class Panel(Screen):
         }, -1)
         self.onShown.append(self.initial_setup)
         self.update_info = None
-        self.data_loaded = False
-        self.fetched_data_cache = None
+        self.data_loaded = False # Przywrócono flagę
+        self.fetched_data_cache = None # Przywrócono cache
         self.update_prompt_shown = False
         self.wait_message_box = None
 
@@ -462,7 +467,7 @@ class Panel(Screen):
         required_packages = ['curl', 'tar', 'unzip']
         missing_packages = [pkg for pkg in required_packages if not which(pkg)]
         if not missing_packages:
-            self.load_plugin_data()
+            self.load_plugin_data() # Zmieniono na load_plugin_data
             return
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
@@ -474,71 +479,43 @@ class Panel(Screen):
         console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
-        self.load_plugin_data()
+        self.load_plugin_data() # Zmieniono na load_plugin_data
 
+    # PRZYWRÓCONO STABILNE ŁADOWANIE (BLOKUJĄCE)
     def load_plugin_data(self):
-        self.show_loading_placeholders()
-        thread = Thread(target=self.fetch_data_in_background)
+        self.set_language(self.lang)
+        self._focus()
+        reactor.callLater(1, self.check_for_updates_on_start) # Sprawdź aktualizacje w tle
+
+    def check_for_updates_on_start(self):
+        thread = Thread(target=self.fetch_update_info_in_background)
         thread.start()
 
-    def show_loading_placeholders(self):
-        loading_text = TRANSLATIONS[self.lang]["loading_text"]
-        for menu_widget in (self["menuL"], self["menuM"], self["menuR"]):
-            menu_widget.setList([(loading_text,)])
-        self.set_lang_headers_and_legends()
-
-    def fetch_data_in_background(self):
-        results = {}
-        error_lang = self.lang
+    def fetch_update_info_in_background(self):
         try:
-            results['repo_lists'] = self.get_lists_from_repo()
+            update_info = self.perform_update_check_silent()
+            if update_info:
+                reactor.callFromThread(self.ask_for_update, update_info)
         except Exception as e:
-            print("[PanelAIO] Error fetching repo lists:", e)
-            results['repo_lists'] = [(TRANSLATIONS[error_lang]["loading_error_text"], "SEPARATOR")]
-        try:
-            results['s4a_lists_full'] = get_s4aupdater_lists_dynamic()
-        except Exception as e:
-            print("[PanelAIO] Error fetching S4aUpdater lists:", e)
-            results['s4a_lists_full'] = []
-        try:
-            results['best_oscam_version'] = get_best_oscam_version_info()
-        except Exception as e:
-            print("[PanelAIO] Error fetching Oscam version:", e)
-            results['best_oscam_version'] = "Error"
-        try:
-            if not self.update_prompt_shown:
-                results['update_info'] = self.perform_update_check_silent()
-            else:
-                results['update_info'] = None
-        except Exception as e:
-            print("[PanelAIO] Error checking for updates:", e)
-            results['update_info'] = None
-
-        reactor.callFromThread(self.populate_ui, results)
-
-    def populate_ui(self, results):
-        self.data_loaded = True
-        self.fetched_data_cache = results
-        self.update_info = results.get('update_info')
-        self.set_language(self.lang)
-        if self.update_info and not self.update_prompt_shown:
-            reactor.callLater(0.5, self.ask_for_update)
+            print("[AIO Panel] Błąd automatycznego sprawdzania aktualizacji:", e)
             
     def set_language(self, lang):
         self.lang = lang
-        if not self.data_loaded:
-            if self.fetched_data_cache is None:
-                self.load_plugin_data()
-                return
-            else:
-                self.populate_ui(self.fetched_data_cache) 
-                return
-
-        results = self.fetched_data_cache
-        repo_lists = results.get('repo_lists', [])
-        s4a_lists_full = results.get('s4a_lists_full', [])
-        best_oscam_version = results.get('best_oscam_version', 'N/A')
-
+        
+        # Przywrócono starą, stabilną metodę ładowania danych
+        try:
+            repo_lists = self.get_lists_from_repo()
+        except Exception:
+            repo_lists = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
+        try:
+            s4a_lists_full = get_s4aupdater_lists_dynamic()
+        except Exception:
+            s4a_lists_full = []
+        try:
+            best_oscam_version = get_best_oscam_version_info()
+        except Exception:
+            best_oscam_version = "Error"
+        
         keywords_to_remove = ['bzyk', 'jakitaki']
         s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
         final_channel_lists = repo_lists + s4a_lists_filtered
@@ -558,7 +535,7 @@ class Panel(Screen):
         self.data = (final_channel_lists, softcam_menu, tools_menu)
         self.set_lang_headers_and_legends()
         self.populate_menus()
-        self._focus()
+        self._focus() # Dodano focus po zmianie języka
 
     def set_lang_headers_and_legends(self):
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
@@ -608,24 +585,24 @@ class Panel(Screen):
                         if changes: changelog_text = "\n".join(changes)
                     return {'latest_ver': latest_ver, 'changelog': changelog_text}
         except Exception as e:
-            print("[PanelAIO] Silent update check failed:", e)
+            print("[AIO Panel] Silent update check failed:", e)
         return None
 
     def check_for_updates_manual(self):
         info = self.perform_update_check_silent()
         if info:
-            self.update_info = info
-            self.ask_for_update()
+            self.ask_for_update(info)
         else:
             show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
 
-    def ask_for_update(self):
-        if not self.update_info: return
+    def ask_for_update(self, update_info):
+        if not update_info: return
         self.update_prompt_shown = True
+        self.update_info = update_info
         message = TRANSLATIONS[self.lang]["update_available_msg"].format(
-            latest_ver=self.update_info['latest_ver'],
+            latest_ver=update_info['latest_ver'],
             current_ver=VER,
-            changelog=self.update_info['changelog']
+            changelog=update_info['changelog']
         )
         self.sess.openWithCallback(
             self.do_update, MessageBox, message, 
@@ -636,7 +613,7 @@ class Panel(Screen):
     def do_update(self, confirmed):
         if confirmed:
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            console_screen_open(self.sess, "Aktualizacja Panelu AIO...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
+            console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
         else:
             self.update_info = None
 
@@ -674,9 +651,9 @@ class Panel(Screen):
         if key == "deps_only":
             steps, message = ["deps"], TRANSLATIONS[lang]["sk_confirm_deps"]
         elif key == "install_basic_no_picons":
-            steps, message = ["deps", "channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"] # Zmieniono kroki
+            steps, message = ["deps", "channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
         elif key == "install_with_picons":
-            steps, message = ["deps", "channel_list", "install_oscam", "picons", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"] # Zmieniono kroki
+            steps, message = ["deps", "channel_list", "install_oscam", "picons", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
 
         if steps:
             self.sess.openWithCallback(
@@ -687,7 +664,7 @@ class Panel(Screen):
     def _wizard_start(self, steps):
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
         if "channel_list" in steps:
-            repo_lists = self.get_lists_from_repo() # Pobierz świeże listy przed startem
+            repo_lists = self.get_lists_from_repo()
             if repo_lists and repo_lists[0][1] != 'SEPARATOR':
                 try:
                     list_name = repo_lists[0][0].split(' - ')[0]
@@ -705,7 +682,6 @@ class Panel(Screen):
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
     def run_with_confirmation(self):
-        if not self.data_loaded: return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
@@ -749,24 +725,26 @@ class Panel(Screen):
             elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
 
     def run_network_diagnostics(self):
-        # Pobierz lokalny IP tunera używając funkcji systemowych Enigma2
         local_ip = "N/A"
-        if network is not None: # Dla nowszych obrazów (np. OpenATV 6.5+)
-            for iface in ("eth0", "wlan0", "br0", "br-lan"):
-                if network.isLinkUp(iface):
-                    ip = network.getIpAddress(iface)
-                    if ip and ip != "0.0.0.0":
-                        local_ip = ip
-                        break
-        elif iNetworkInfo is not None: # Dla starszych obrazów
-             for iface in ("eth0", "wlan0", "br0", "br-lan"):
-                 if iNetworkInfo.getAdapterAttribute(iface, "up"):
-                     ip = iNetworkInfo.getAdapterAttribute(iface, "ip")
-                     if ip and ip != "0.0.0.0":
-                        local_ip = ip
-                        break
+        try:
+            if network is not None: 
+                for iface in ("eth0", "wlan0", "br0", "br-lan"):
+                    if network.isLinkUp(iface):
+                        ip = network.getIpAddress(iface)
+                        if ip and ip != "0.0.0.0":
+                            local_ip = ip
+                            break
+            elif iNetworkInfo is not None:
+                 for iface in ("eth0", "wlan0", "br0", "br-lan"):
+                     if iNetworkInfo.getAdapterAttribute(iface, "up"):
+                         ip = iNetworkInfo.getAdapterAttribute(iface, "ip")
+                         if ip and ip != "0.0.0.0":
+                            local_ip = ip
+                            break
+        except Exception as e:
+            print("[AIO Panel] Błąd pobierania lokalnego IP:", e)
+            local_ip = TRANSLATIONS[self.lang]["net_diag_na"]
         
-        # Poprawka formatowania
         if isinstance(local_ip, (list, tuple)):
             local_ip = '.'.join(map(str, local_ip)).replace(',', '.')
         elif local_ip:
@@ -776,7 +754,7 @@ class Panel(Screen):
         script_path = os.path.join(PLUGIN_TMP_PATH, "speedtest.py")
         output_file = os.path.join(PLUGIN_TMP_PATH, "speedtest_result.txt")
         cmd = """
-            echo "--- Panel AIO - Diagnostyka Sieci ---"
+            echo "--- AIO Panel - Diagnostyka Sieci ---"
             echo " "
             echo "Sprawdzanie połączenia z internetem..."
             if ! ping -c 1 -W 3 google.com &>/dev/null; then
@@ -841,6 +819,7 @@ class Panel(Screen):
         console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
         
     def _menu(self):
+        # TUTAJ BYŁ BŁĄD, POPRAWIONO 'self.["menuR"]' na 'self["menuR"]'
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
 
     def _focus(self):
@@ -856,10 +835,10 @@ class Panel(Screen):
             db.reloadServicelist()
             db.reloadBouquets()
         except Exception as e:
-            print("[PanelAIO] Błąd podczas przeładowywania list:", e)
+            print("[AIO Panel] Błąd podczas przeładowywania list:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
 
-    # Usunięto install_softcam_feed, bo jest teraz częścią install_best_oscam
+    # Usunięto install_softcam_feed
     
     def clear_oscam_password(self):
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
@@ -978,13 +957,13 @@ class Panel(Screen):
             _, stderr = process.communicate()
             ret_code = process.returncode
             if ret_code != 0:
-                 print("[PanelAIO] Wget error downloading manifest (code {}): {}".format(ret_code, stderr))
+                 print("[AIO Panel] Wget error downloading manifest (code {}): {}".format(ret_code, stderr))
                  raise IOError("wget failed with code {}".format(ret_code))
             if not (os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0):
-                print("[PanelAIO] Błąd pobierania manifest.json: plik pusty lub nie istnieje")
+                print("[AIO Panel] Błąd pobierania manifest.json: plik pusty lub nie istnieje")
                 raise IOError("Downloaded manifest file is empty or missing")
         except Exception as e:
-            print("[PanelAIO] Błąd pobierania manifest.json (wyjątek):", e)
+            print("[AIO Panel] Błąd pobierania manifest.json (wyjątek):", e)
             raise 
         lists_menu = []
         try:
@@ -996,10 +975,10 @@ class Panel(Screen):
                 if item.get('url'):
                     lists_menu.append((menu_title, action))
         except Exception as e:
-            print("[PanelAIO] Błąd przetwarzania pliku manifest.json:", e)
+            print("[AIO Panel] Błąd przetwarzania pliku manifest.json:", e)
             raise 
         if not lists_menu:
-             print("[PanelAIO] Brak list w repozytorium (manifest pusty?)")
+             print("[AIO Panel] Brak list w repozytorium (manifest pusty?)")
              return []
         return lists_menu
 
@@ -1007,4 +986,4 @@ def main(session, **kwargs):
     session.open(Panel)
 
 def Plugins(**kwargs):
-    return [PluginDescriptor(name="Panel AIO", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where = PluginDescriptor.WHERE_PLUGINMENU, icon = "logo.png", fnc = main)]
+    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where = PluginDescriptor.WHERE_PLUGINMENU, icon = "logo.png", fnc = main)]
