@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.2 (finalna, uniwersalna) - Poprawki diagnostyki i wczytywania list
+Wersja 2.3 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -13,7 +13,6 @@ from Screens.MessageBox import MessageBox
 from Screens.Standby import TryQuitMainloop
 from Screens.ChoiceBox import ChoiceBox
 from Screens.InputBox import InputBox
-# Usunięto InfoBar
 from Components.ActionMap import ActionMap
 from Components.Label import Label
 from Components.MenuList import MenuList
@@ -41,7 +40,7 @@ import shutil
 import re
 import json
 import time # Potrzebne do mierzenia czasu
-from twisted.internet import reactor # Usunięto threads
+from twisted.internet import reactor
 from threading import Thread
 
 # === SEKCJA GLOBALNYCH ZMIENNYCH ===
@@ -50,7 +49,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.2"
+VER = "2.3" # Zmieniono wersję
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -80,8 +79,8 @@ Czy chcesz ją teraz zainstalować?""",
         "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "Anuluj",
         "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
-        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n\nCzy chcesz kontynuować?",
-        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed\n- Instalacja Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
+        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?", # Zmieniono opis
+        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?", # Zmieniono opis
         "net_diag_title": "Diagnostyka Sieci",
         "net_diag_wait": "Trwa diagnostyka sieci, proszę czekać...",
         "net_diag_error": "Wystąpił błąd podczas testu prędkości.",
@@ -115,8 +114,8 @@ Do you want to install it now?""",
         "sk_option_full_picons": "3) Full Configuration (with Picons)",
         "sk_option_cancel": "Cancel",
         "sk_confirm_deps": "Are you sure you want to install only the basic system dependencies?",
-        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed\n- Install Oscam\n\nDo you want to continue?",
-        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed\n- Install Oscam\n- Install Picons (large file)\n\nDo you want to continue?",
+        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n\nDo you want to continue?", # Changed description
+        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n- Install Picons (large file)\n\nDo you want to continue?", # Changed description
         "net_diag_title": "Network Diagnostics",
         "net_diag_wait": "Running network diagnostics, please wait...",
         "net_diag_error": "An error occurred during the speed test.",
@@ -228,7 +227,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Restart Oscam", "CMD:RESTART_OSCAM"),
     ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
-    ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"), # Ta opcja zostaje, ale wywołuje nową funkcję
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("Instalator ServiceApp", "CMD:INSTALL_SERVICEAPP"),
@@ -246,7 +245,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Restart Oscam", "CMD:RESTART_OSCAM"),
     ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
-    ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"), # Ta opcja zostaje, ale wywołuje nową funkcję
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("ServiceApp Installer", "CMD:INSTALL_SERVICEAPP"),
@@ -265,7 +264,7 @@ TOOLS_AND_ADDONS_PL = [
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
     ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
-    ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
+    # ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # USUNIĘTE
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
@@ -283,7 +282,7 @@ TOOLS_AND_ADDONS_EN = [
     ("--- System Tools ---", "SEPARATOR"),
     ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
-    ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"),
+    # ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # REMOVED
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
@@ -329,8 +328,8 @@ class WizardProgressScreen(Screen):
         step_functions = {
             "deps": self._wizard_step_deps,
             "channel_list": self._wizard_step_channel_list,
-            "softcam_feed": self._wizard_step_softcam_feed,
-            "install_oscam": self._wizard_step_install_oscam,
+            # "softcam_feed": self._wizard_step_softcam_feed, # USUNIĘTE
+            "install_oscam": self._wizard_step_install_oscam, # Teraz to jest połączony krok
             "picons": self._wizard_step_picons,
             "reload_settings": self._wizard_step_reload_settings
         }
@@ -355,25 +354,28 @@ class WizardProgressScreen(Screen):
         url = self.wizard_channel_list_url
         install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
 
-    def _wizard_step_softcam_feed(self):
-        title = self._get_wizard_title("Instalacja Softcam Feed")
-        console_screen_open(self.session, title, ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"], callback=self._wizard_run_next_step, close_on_finish=True)
+    # Funkcja _wizard_step_softcam_feed została usunięta
 
-    def _wizard_step_install_oscam(self):
-        title = self._get_wizard_title("Instalacja Oscam")
+    def _wizard_step_install_oscam(self): # Teraz zawiera logikę instalacji feeda i oscama
+        title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
+        # Nowa, połączona komenda
         cmd = """
-            echo "Aktualizuję listę pakietów...";
-            opkg update ;
-            echo "Wyszukuję najlepszą wersję Oscam w feedach...";
-            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ;
+            echo "Instalowanie/Aktualizowanie Softcam Feed..."
+            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
+            echo "Aktualizuję listę pakietów..."
+            opkg update
+            echo "Wyszukuję najlepszą wersję Oscam w feedach..."
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
             if [ -n "$PKG_NAME" ]; then
-                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..." ;
-                opkg install $PKG_NAME ;
+                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
+                opkg install $PKG_NAME
             else
-                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach.";
-                echo "Próbuję instalacji z alternatywnego źródła (Levi45)...";
-                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi45/oscam-emulator/main/installer.sh -O - | /bin/sh;
+                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
+                echo "Próbuję instalacji z alternatywnego źródła (Levi45)..."
+                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
             fi
+            echo "Instalacja Oscam zakończona."
+            sleep 3
         """
         console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
@@ -672,9 +674,9 @@ class Panel(Screen):
         if key == "deps_only":
             steps, message = ["deps"], TRANSLATIONS[lang]["sk_confirm_deps"]
         elif key == "install_basic_no_picons":
-            steps, message = ["deps", "channel_list", "softcam_feed", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
+            steps, message = ["deps", "channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"] # Zmieniono kroki
         elif key == "install_with_picons":
-            steps, message = ["deps", "channel_list", "softcam_feed", "install_oscam", "picons", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
+            steps, message = ["deps", "channel_list", "install_oscam", "picons", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"] # Zmieniono kroki
 
         if steps:
             self.sess.openWithCallback(
@@ -720,7 +722,7 @@ class Panel(Screen):
     def execute_action(self, name, action):
         title = name
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) # Domyślnie zamykaj konsolę
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
         elif action.startswith("archive:"):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("CMD:"):
@@ -737,7 +739,7 @@ class Panel(Screen):
             elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam(close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True)
+            #elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True) # Usunięte
             elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password()
             elif command_key == "CLEAR_FTP_PASS": self.clear_ftp_password()
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -764,11 +766,11 @@ class Panel(Screen):
                         local_ip = ip
                         break
         
-        # Poprawka formatowania, jeśli system zwrócił listę/tuple zamiast stringa
+        # Poprawka formatowania
         if isinstance(local_ip, (list, tuple)):
             local_ip = '.'.join(map(str, local_ip)).replace(',', '.')
         elif local_ip:
-            local_ip = str(local_ip).strip("[]' ") # Usuń potencjalne nawiasy/apostrofy
+            local_ip = str(local_ip).strip("[]' ")
             
         na_text = TRANSLATIONS[self.lang]["net_diag_na"]
         script_path = os.path.join(PLUGIN_TMP_PATH, "speedtest.py")
@@ -781,7 +783,7 @@ class Panel(Screen):
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                 echo "!!! {no_connection} !!!"
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 1 # Zakończ, jeśli nie ma połączenia
+                exit 1 
             fi
             
             echo "Pobieranie publicznego adresu IP..."
@@ -789,18 +791,15 @@ class Panel(Screen):
             
             echo "Uruchamianie testu prędkości (może to potrwać minutę)..."
             
-            # Pobierz speedtest.py jeśli nie istnieje
             if [ ! -f "{script_path}" ]; then
                 echo "Pobieranie narzędzia speedtest-cli..."
                 wget -O "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py &>/dev/null
                 chmod +x "{script_path}"
             fi
             
-            # Uruchom speedtest z ignorowaniem warningów, zapisz wynik do pliku
             python -W ignore "{script_path}" --simple > "{output_file}" 2>/dev/null
             EXIT_CODE=$?
             
-            # Odczytaj wyniki z pliku
             if [ $EXIT_CODE -eq 0 ] && [ -s "{output_file}" ]; then
                 PING_SPEEDTEST=$(grep 'Ping:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
                 DOWNLOAD_SPEED=$(grep 'Download:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
@@ -813,13 +812,11 @@ class Panel(Screen):
                 UPLOAD_SPEED="{na}"
             fi
             
-            # Usuń plik tymczasowy
             rm -f "{output_file}"
 
-            # Formatowanie wyniku
             echo " "
             echo "-------------------------------------------"
-            echo " {local_ip_label} {local_ip_val}" # Użyj przekazanej zmiennej
+            echo " {local_ip_label} {local_ip_val}" 
             echo " {ip_label} $PUBLIC_IP"
             echo " {ping_label} $PING_SPEEDTEST"
             echo " {download_label} $DOWNLOAD_SPEED"
@@ -831,7 +828,7 @@ class Panel(Screen):
         """.format(
             no_connection=TRANSLATIONS[self.lang]["net_diag_no_connection"],
             local_ip_label=TRANSLATIONS[self.lang]["net_diag_local_ip"],
-            local_ip_val=local_ip if local_ip else na_text, # Przekaż sformatowane IP
+            local_ip_val=local_ip if local_ip else na_text, 
             ip_label=TRANSLATIONS[self.lang]["net_diag_ip"],
             ping_label=TRANSLATIONS[self.lang]["net_diag_ping"],
             download_label=TRANSLATIONS[self.lang]["net_diag_download"],
@@ -841,7 +838,6 @@ class Panel(Screen):
             output_file=output_file,
             error_msg=TRANSLATIONS[self.lang]["net_diag_error"]
         )
-        # Uruchom w konsoli, która NIE zamknie się automatycznie
         console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
         
     def _menu(self):
@@ -863,8 +859,7 @@ class Panel(Screen):
             print("[PanelAIO] Błąd podczas przeładowywania list:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
 
-    def install_softcam_feed(self, callback=None, close_on_finish=False):
-        console_screen_open(self.sess, "Instalacja Feeda Softcam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"], callback=callback, close_on_finish=close_on_finish)
+    # Usunięto install_softcam_feed, bo jest teraz częścią install_best_oscam
     
     def clear_oscam_password(self):
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
@@ -952,21 +947,26 @@ class Panel(Screen):
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
     def install_best_oscam(self, callback=None, close_on_finish=False):
+        # Nowa, połączona komenda
         cmd = """
-            echo "Aktualizuję listę pakietów...";
-            opkg update ;
-            echo "Wyszukuję najlepszą wersję Oscam w feedach...";
-            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1) ;
+            echo "Instalowanie/Aktualizowanie Softcam Feed..."
+            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
+            echo "Aktualizuję listę pakietów..."
+            opkg update
+            echo "Wyszukuję najlepszą wersję Oscam w feedach..."
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
             if [ -n "$PKG_NAME" ]; then
-                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..." ;
-                opkg install $PKG_NAME ;
+                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
+                opkg install $PKG_NAME
             else
-                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach.";
-                echo "Próbuję instalacji z alternatywnego źródła (Levi45)...";
-                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi4s/oscam-emulator/main/installer.sh -O - | /bin/sh;
+                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
+                echo "Próbuję instalacji z alternatywnego źródła (Levi45)..."
+                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
             fi
+            echo "Instalacja Oscam zakończona."
+            sleep 3
         """
-        console_screen_open(self.sess, "Inteligentny Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
+        console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
     def get_lists_from_repo(self):
         manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
