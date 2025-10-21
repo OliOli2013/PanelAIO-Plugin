@@ -238,15 +238,15 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
-    ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"), # <-- DODANA LINIA
-    ("Instalator ServiceApp", "CMD:INSTALL_SERVICEAPP"),
+    ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
+    ("AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:" + E2IPLAYER_INSTALL_CMD),
-    ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("S4aUpdater", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("JediMakerXtream", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("YouTube", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
+    ("YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
 ]
 
 SOFTCAM_AND_PLUGINS_EN = [
@@ -257,15 +257,15 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
-    ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"), # <-- DODANA LINIA
-    ("ServiceApp Installer", "CMD:INSTALL_SERVICEAPP"),
+    ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
+    ("AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("E2iPlayer Master - Install/Update", "bash_raw:" + E2IPLAYER_INSTALL_CMD),
-    ("EPG Import", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("S4aUpdater", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("JediMakerXtream", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("YouTube", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
+    ("YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
 ]
 
 TOOLS_AND_ADDONS_PL = [
@@ -274,6 +274,7 @@ TOOLS_AND_ADDONS_PL = [
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
     ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
+    # ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # USUNIĘTE
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
@@ -291,6 +292,7 @@ TOOLS_AND_ADDONS_EN = [
     ("--- System Tools ---", "SEPARATOR"),
     ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
+    # ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # REMOVED
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
