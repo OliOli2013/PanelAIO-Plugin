@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.3 (finalna, uniwersalna) - Poprawki stabilności i funkcji
+Wersja 2.3 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -40,8 +40,7 @@ import re
 import json
 import time 
 from twisted.internet import reactor
-# Usunięto import Thread
-# from threading import Thread 
+from threading import Thread
 
 # === SEKCJA GLOBALNYCH ZMIENNYCH ===
 PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -239,6 +238,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
+    ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"), # <-- DODANA LINIA
     ("Instalator ServiceApp", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
@@ -257,6 +257,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
+    ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"), # <-- DODANA LINIA
     ("ServiceApp Installer", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("AJPanel", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
@@ -273,7 +274,6 @@ TOOLS_AND_ADDONS_PL = [
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
     ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
-    # ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # USUNIĘTE
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
@@ -291,7 +291,6 @@ TOOLS_AND_ADDONS_EN = [
     ("--- System Tools ---", "SEPARATOR"),
     ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
-    # ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # REMOVED
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
@@ -426,7 +425,7 @@ class Panel(Screen):
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
-        self["title_label"] = Label("AIO Panel " + VER) # Zmieniona nazwa
+        self["title_label"] = Label("AIO Panel " + VER)
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
@@ -445,8 +444,8 @@ class Panel(Screen):
         }, -1)
         self.onShown.append(self.initial_setup)
         self.update_info = None
-        self.data_loaded = False # Przywrócono flagę
-        self.fetched_data_cache = None # Przywrócono cache
+        self.data_loaded = False 
+        self.fetched_data_cache = None 
         self.update_prompt_shown = False
         self.wait_message_box = None
 
@@ -467,7 +466,7 @@ class Panel(Screen):
         required_packages = ['curl', 'tar', 'unzip']
         missing_packages = [pkg for pkg in required_packages if not which(pkg)]
         if not missing_packages:
-            self.load_plugin_data() # Zmieniono na load_plugin_data
+            self.load_plugin_data()
             return
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
@@ -479,13 +478,14 @@ class Panel(Screen):
         console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
-        self.load_plugin_data() # Zmieniono na load_plugin_data
+        self.load_plugin_data()
 
-    # PRZYWRÓCONO STABILNE ŁADOWANIE (BLOKUJĄCE)
     def load_plugin_data(self):
+        # Przywrócono stabilne, blokujące ładowanie
         self.set_language(self.lang)
         self._focus()
-        reactor.callLater(1, self.check_for_updates_on_start) # Sprawdź aktualizacje w tle
+        # Sprawdź aktualizacje w tle PO załadowaniu wtyczki
+        reactor.callLater(1, self.check_for_updates_on_start)
 
     def check_for_updates_on_start(self):
         thread = Thread(target=self.fetch_update_info_in_background)
@@ -502,18 +502,20 @@ class Panel(Screen):
     def set_language(self, lang):
         self.lang = lang
         
-        # Przywrócono starą, stabilną metodę ładowania danych
         try:
             repo_lists = self.get_lists_from_repo()
-        except Exception:
+        except Exception as e:
+            print("[AIO Panel] Błąd pobierania list repo:", e)
             repo_lists = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
         try:
             s4a_lists_full = get_s4aupdater_lists_dynamic()
-        except Exception:
+        except Exception as e:
+            print("[AIO Panel] Błąd pobierania list S4a:", e)
             s4a_lists_full = []
         try:
             best_oscam_version = get_best_oscam_version_info()
-        except Exception:
+        except Exception as e:
+            print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
             best_oscam_version = "Error"
         
         keywords_to_remove = ['bzyk', 'jakitaki']
@@ -535,7 +537,7 @@ class Panel(Screen):
         self.data = (final_channel_lists, softcam_menu, tools_menu)
         self.set_lang_headers_and_legends()
         self.populate_menus()
-        self._focus() # Dodano focus po zmianie języka
+        self._focus()
 
     def set_lang_headers_and_legends(self):
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
@@ -819,7 +821,6 @@ class Panel(Screen):
         console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
         
     def _menu(self):
-        # TUTAJ BYŁ BŁĄD, POPRAWIONO 'self.["menuR"]' na 'self["menuR"]'
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
 
     def _focus(self):
