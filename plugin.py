@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (poprawka stabilności po instalacji)
+Wersja 2.4 (stabilność aktualizacji)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -38,7 +38,7 @@ import subprocess
 import shutil
 import re
 import json
-import time 
+import time
 from twisted.internet import reactor
 from threading import Thread
 
@@ -132,12 +132,17 @@ Do you want to install it now?""",
 
 # === FUNKCje POMOCNICZE ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
+    # Używamy callLater, aby uniknąć problemów z modalnością
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-    if callback: c_dialog.onClose.append(callback)
+    # Używamy callLater, aby uniknąć problemów z modalnością przy otwieraniu konsoli
+    def open_console():
+        c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+        if callback: c_dialog.onClose.append(callback)
+    reactor.callLater(0.1, open_console)
+
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
@@ -207,7 +212,7 @@ def get_s4aupdater_lists_dynamic():
             version_key = var_name.replace('_url', '_version')
             date_info = versions_dict.get(version_key, "brak daty")
             lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
-    except Exception as e: 
+    except Exception as e:
         print("[AIO Panel] Błąd parsowania listy S4aUpdater:", e)
         return []
     return lists
@@ -338,7 +343,7 @@ class WizardProgressScreen(Screen):
         step_functions = {
             "deps": self._wizard_step_deps,
             "channel_list": self._wizard_step_channel_list,
-            "install_oscam": self._wizard_step_install_oscam, 
+            "install_oscam": self._wizard_step_install_oscam,
             "picons": self._wizard_step_picons,
             "reload_settings": self._wizard_step_reload_settings
         }
@@ -447,8 +452,8 @@ class Panel(Screen):
         }, -1)
         self.onShown.append(self.initial_setup)
         self.update_info = None
-        self.data_loaded = False 
-        self.fetched_data_cache = None 
+        self.data_loaded = False
+        self.fetched_data_cache = None
         self.update_prompt_shown = False
         self.wait_message_box = None
 
@@ -619,15 +624,17 @@ class Panel(Screen):
                     current_ver_tuple = tuple(map(int, (clean_ver.split('.'))))
                     latest_ver_tuple = tuple(map(int, (clean_latest_ver.split('.'))))
                     
+                    # Sprawdź czy wersja na serwerze jest > niż lokalna
                     if latest_ver_tuple > current_ver_tuple:
                         is_update = True
                 except (ValueError, TypeError):
                      print("[AIO Panel] Błąd parsowania wersji: {} vs {}. Używam prostego porównania.".format(VER, latest_ver_str))
                      # Fallback do prostego porównania, jeśli parsowanie zawiedzie
                      if latest_ver_str != VER:
-                         is_update = True
-                # === KONIEC NOWEJ LOGIKI ===
-
+                        # Dodatkowe sprawdzenie, czy latest_ver_str nie jest pusty
+                        if latest_ver_str:
+                            is_update = True # Potraktuj jako update, jeśli są różne i niepuste
+                         
                 if is_update:
                     changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
@@ -636,14 +643,16 @@ class Panel(Screen):
                         found_version_section, changes = False, []
                         for line in lines:
                             line = line.strip()
-                            if line == "[{}]".format(latest_ver_str):
+                            # Użyj oryginalnego stringu z pliku version.txt do znalezienia sekcji w changelogu
+                            if line == "[{}]".format(latest_ver_str): 
                                 found_version_section = True
                                 continue
                             if found_version_section:
                                 if line.startswith("[") and line.endswith("]"): break
                                 if line: changes.append(line)
                         if changes: changelog_text = "\n".join(changes)
-                    return {'latest_ver': latest_ver_str, 'changelog': changelog_text}
+                    # Zwróć oryginalny string z pliku version.txt
+                    return {'latest_ver': latest_ver_str, 'changelog': changelog_text} 
         except Exception as e:
             print("[AIO Panel] Silent update check failed:", e)
         return None
@@ -657,41 +666,41 @@ class Panel(Screen):
 
     def ask_for_update(self, update_info):
         if not update_info: return
-        self.update_prompt_shown = True
+        self.update_prompt_shown = True # Ustaw flagę, aby nie pytać ponownie
         self.update_info = update_info
         message = TRANSLATIONS[self.lang]["update_available_msg"].format(
             latest_ver=update_info['latest_ver'],
             current_ver=VER,
             changelog=update_info['changelog']
         )
-        self.sess.openWithCallback(
+        # Używamy callLater, aby uniknąć problemów z modalnością
+        reactor.callLater(0.2, lambda: self.sess.openWithCallback(
             self.do_update, MessageBox, message, 
             title=TRANSLATIONS[self.lang]["update_available_title"], 
             type=MessageBox.TYPE_YESNO
-        )
+        ))
 
     def do_update(self, confirmed):
         if confirmed:
-            update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
+            # Użyjemy nowej funkcji, która zostanie wywołana z opóźnieniem
+            reactor.callLater(0.1, self._start_update_console)
         else:
             self.update_info = None
 
-    def on_update_finished(self, *args):
-        # Używamy reactor.callLater, aby odczekać chwilę i wywołać okno
-        # w "bezpiecznym" kontekście, już po pełnym zamknięciu konsoli.
-        # To rozwiązuje błąd "Modal open are allowed only from a screen which is modal!"
-        reactor.callLater(0.2, self._show_restart_message_after_update)
+    def _start_update_console(self):
+        # Ta funkcja jest teraz wywoływana przez reactor.callLater
+        update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
+        # Zmieniono callback na nową funkcję informacyjną
+        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished_show_info, close_on_finish=True)
 
-    def _show_restart_message_after_update(self):
-        # Ta funkcja jest wywoływana z głównej pętli, a nie bezpośrednio z callbacku zamykania okna
-        self.sess.openWithCallback(
-            lambda *x: self.restart_gui(), 
-            MessageBox, 
-            "Aktualizacja zakończona. Interfejs zostanie teraz zrestartowany.", 
-            type=MessageBox.TYPE_INFO, 
-            timeout=5
-        )
+    def on_update_finished_show_info(self, *args):
+        # Ta funkcja jest wywoływana po zamknięciu konsoli aktualizacji
+        # Zamiast restartu, pokazujemy tylko informację
+        message = "Aktualizacja pobrana.\n\nAby zakończyć, zrestartuj GUI (żółty przycisk)."
+        # Używamy bezpiecznego show_message_compat
+        show_message_compat(self.sess, message, timeout=15) # Dłuższy czas na przeczytanie
+
+    # Usunięto funkcję _show_restart_message_after_update, bo już jej nie potrzebujemy
     
     def run_super_setup_wizard(self):
         lang = self.lang
@@ -736,7 +745,7 @@ class Panel(Screen):
                 try:
                     list_name = repo_lists[0][0].split(' - ')[0]
                     channel_list_url = repo_lists[0][1].split(':', 1)[1]
-                except (IndexError, AttributeError): channel_list_url = '' 
+                except (IndexError, AttributeError): channel_list_url = ''
             if not channel_list_url:
                 self.sess.open(MessageBox, "Nie udało się pobrać adresu listy kanałów.", type=MessageBox.TYPE_ERROR); return
         if "picons" in steps:
@@ -765,7 +774,7 @@ class Panel(Screen):
     def execute_action(self, name, action):
         title = name
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=self.show_manual_restart_message, close_on_finish=True) 
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=self.show_manual_restart_message, close_on_finish=True)
         elif action.startswith("archive:"):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("CMD:"):
@@ -779,7 +788,7 @@ class Panel(Screen):
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
                 console_screen_open(self.sess, title, [cmd], callback=self.show_manual_restart_message, close_on_finish=True)
-            elif command_key == "INSTALL_BEST_OSCAM": 
+            elif command_key == "INSTALL_BEST_OSCAM":
                 self.install_best_oscam(callback=self.show_manual_restart_message, close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
@@ -795,7 +804,7 @@ class Panel(Screen):
     def run_network_diagnostics(self):
         local_ip = "N/A"
         try:
-            if network is not None: 
+            if network is not None:
                 for iface in ("eth0", "wlan0", "br0", "br-lan"):
                     if network.isLinkUp(iface):
                         ip = network.getIpAddress(iface)
@@ -829,7 +838,7 @@ class Panel(Screen):
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                 echo "!!! {no_connection} !!!"
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 1 
+                exit 1
             fi
             
             echo "Pobieranie publicznego adresu IP..."
@@ -862,7 +871,7 @@ class Panel(Screen):
 
             echo " "
             echo "-------------------------------------------"
-            echo " {local_ip_label} {local_ip_val}" 
+            echo " {local_ip_label} {local_ip_val}"
             echo " {ip_label} $PUBLIC_IP"
             echo " {ping_label} $PING_SPEEDTEST"
             echo " {download_label} $DOWNLOAD_SPEED"
@@ -874,7 +883,7 @@ class Panel(Screen):
         """.format(
             no_connection=TRANSLATIONS[self.lang]["net_diag_no_connection"],
             local_ip_label=TRANSLATIONS[self.lang]["net_diag_local_ip"],
-            local_ip_val=local_ip if local_ip else na_text, 
+            local_ip_val=local_ip if local_ip else na_text,
             ip_label=TRANSLATIONS[self.lang]["net_diag_ip"],
             ping_label=TRANSLATIONS[self.lang]["net_diag_ping"],
             download_label=TRANSLATIONS[self.lang]["net_diag_download"],
@@ -899,6 +908,7 @@ class Panel(Screen):
     
     def show_manual_restart_message(self, *args):
         message = "Operacja zakończona.\n\nAby zmiany odniosły skutek, zrestartuj GUI (żółty przycisk)."
+        # Używamy bezpiecznego show_message_compat
         show_message_compat(self.sess, message, timeout=10)
 
     def reload_settings_python(self, *args):
@@ -1038,7 +1048,7 @@ class Panel(Screen):
                 raise IOError("Downloaded manifest file is empty or missing")
         except Exception as e:
             print("[AIO Panel] Błąd pobierania manifest.json (wyjątek):", e)
-            raise 
+            raise
         lists_menu = []
         try:
             with open(tmp_json_path, 'r', encoding='utf-8') as f:
@@ -1050,7 +1060,7 @@ class Panel(Screen):
                     lists_menu.append((menu_title, action))
         except Exception as e:
             print("[AIO Panel] Błąd przetwarzania pliku manifest.json:", e)
-            raise 
+            raise
         if not lists_menu:
              print("[AIO Panel] Brak list w repozytorium (manifest pusty?)")
              return []
