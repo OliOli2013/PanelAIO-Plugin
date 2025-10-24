@@ -721,7 +721,6 @@ class Panel(Screen):
         # Używamy callLater, aby uniknąć problemów z modalnością
         reactor.callLater(0.2, lambda: self.sess.openWithCallback(
             self.do_update, MessageBox, message,
-            title=TRANSLATIONS[self.lang]["update_available_title"],
             type=MessageBox.TYPE_YESNO
         ))
 
@@ -783,7 +782,7 @@ class Panel(Screen):
         if steps:
             self.sess.openWithCallback(
                 lambda confirmed: self._wizard_start(steps) if confirmed else None,
-                MessageBox, message, type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
+                MessageBox, message, type=MessageBox.TYPE_YESNO
             )
             
     def _wizard_start(self, steps):
@@ -1346,4 +1345,10 @@ def main(session, **kwargs):
     session.open(Panel)
 
 def Plugins(**kwargs):
-    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where = PluginDescriptor.WHERE_PLUGINMENU, icon = "logo.png", fnc = main)]
+    return [PluginDescriptor(
+        name="AIO Panel",
+        description="Panel AIO",
+        where=PluginDescriptor.WHERE_PLUGINMENU,
+        icon="logo.png",
+        fnc=main
+    )]
