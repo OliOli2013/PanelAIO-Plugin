@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (poprawka crash + składnia)
+Wersja 2.4 (poprawka stabilności po instalacji)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -765,7 +765,7 @@ class Panel(Screen):
     def execute_action(self, name, action):
         title = name
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=lambda: self.ask_for_restart("Instalacja '{}' zakończona.\nZalecany restart GUI.\n\nRestartować teraz?".format(name)), close_on_finish=True) 
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=self.show_manual_restart_message, close_on_finish=True) 
         elif action.startswith("archive:"):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("CMD:"):
@@ -778,9 +778,9 @@ class Panel(Screen):
                 console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], callback=lambda: self.ask_for_restart("Instalacja ServiceApp zakończona.\nZalecany restart GUI.\n\nRestartować teraz?"), close_on_finish=True)
+                console_screen_open(self.sess, title, [cmd], callback=self.show_manual_restart_message, close_on_finish=True)
             elif command_key == "INSTALL_BEST_OSCAM": 
-                self.install_best_oscam(callback=lambda: self.ask_for_restart("Instalacja Oscam zakończona.\nZalecany restart GUI.\n\nRestartować teraz?"), close_on_finish=True)
+                self.install_best_oscam(callback=self.show_manual_restart_message, close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             #elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True) # Usunięte
@@ -897,20 +897,17 @@ class Panel(Screen):
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
     
-    def ask_for_restart(self, message=None):
-        if message is None:
-            message = "Operacja zakończona.\nZalecany jest restart interfejsu.\n\nCzy chcesz zrestartować teraz?"
-        self.sess.openWithCallback(
-            lambda ret: self.restart_gui() if ret else None,
-            MessageBox, message, type=MessageBox.TYPE_YESNO, title="Restart GUI"
-        )
+    def show_manual_restart_message(self, *args):
+        message = "Operacja zakończona.\n\nAby zmiany odniosły skutek, zrestartuj GUI (żółty przycisk)."
+        show_message_compat(self.sess, message, timeout=10)
 
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
-            show_message_compat(self.sess, "Lista kanałów została przeładowana.", timeout=5)
+            message = "Lista kanałów została przeładowana.\nZalecany restart GUI (żółty przycisk)."
+            show_message_compat(self.sess, message, timeout=8)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
