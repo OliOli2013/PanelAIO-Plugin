@@ -501,7 +501,7 @@ class Panel(Screen):
             "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
             "sleep 5"
         ]
-        console_screen_open(self.sess, "Pierwsze uruchomienie – instalacja komponentów", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
         self.load_plugin_data()
@@ -719,38 +719,27 @@ class Panel(Screen):
             changelog=update_info['changelog']
         )
         # Używamy callLater, aby uniknąć problemów z modalnością
-        reactor.callLater(0.2, lambda: self.sess.openWithCallback(
-            self.do_update, MessageBox, message,
-            title=TRANSLATIONS[self.lang]["update_available_title"],
-            type=MessageBox.TYPE_YESNO
-        ))
+        reactor.callLater(0.2, lambda: self.sess.openWithCallback(self.do_update, MessageBox, message, type=MessageBox.TYPE_YESNO))
 
-    def do_update(self, confirmed):
-        if confirmed:
-            # Użyjemy reactor.callLater z większym opóźnieniem dla bezpieczeństwa
-            reactor.callLater(0.5, self._start_update_console)
-        else:
-            self.update_info = None
-
-    def _start_update_console(self):
-        # Zmodyfikowana komenda, dodająca echo na końcu
-        update_cmd = (
-            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh; '
-            'echo "-----------------------------------------------------"; '
-            'echo " AKTUALIZACJA ZAKONCZONA."; '
-            'echo ""; '
-            'echo " ABY ZMIANY WESZLY W ZYCIE,"; '
-            'echo " WYMAGANY JEST RESTART INTERFEJSU GUI"; '
-            'echo " (Uzyj zoltego przycisku)"; '
-            'echo "-----------------------------------------------------"; '
-            'sleep 5' # Dodajemy pauzę, żeby użytkownik zdążył przeczytać
-        )
-        # Wywołujemy konsolę BEZ żadnego callbacku po zamknięciu
-        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=True)
-        # Usunęliśmy wywołanie show_manual_restart_after_update_info stąd
-
-    # Usunęliśmy funkcję show_manual_restart_after_update_info
     
+    def do_update(self, confirmed):
+            if confirmed:
+                # Uruchom instalator w konsoli i po zakończeniu pokaż komunikat jak w v2.3
+                update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
+                console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
+            else:
+                self.update_info = None
+
+    def on_update_finished(self, *args):
+            # Komunikat zgodny z v2.3, bez parametru title=
+            self.sess.openWithCallback(
+                lambda *x: self.restart_gui(),
+                MessageBox,
+                "Aktualizacja zakończona. Interfejs zostanie teraz zrestartowany.",
+                type=MessageBox.TYPE_INFO,
+                timeout=5
+            )
+
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
@@ -783,7 +772,7 @@ class Panel(Screen):
         if steps:
             self.sess.openWithCallback(
                 lambda confirmed: self._wizard_start(steps) if confirmed else None,
-                MessageBox, message, type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
+                MessageBox, message, type=MessageBox.TYPE_YESNO
             )
             
     def _wizard_start(self, steps):
