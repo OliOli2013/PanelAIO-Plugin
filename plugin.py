@@ -501,7 +501,7 @@ class Panel(Screen):
             "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
             "sleep 5"
         ]
-        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        console_screen_open(self.sess, "Pierwsze uruchomienie – instalacja komponentów", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
         self.load_plugin_data()
@@ -721,6 +721,7 @@ class Panel(Screen):
         # Używamy callLater, aby uniknąć problemów z modalnością
         reactor.callLater(0.2, lambda: self.sess.openWithCallback(
             self.do_update, MessageBox, message,
+            title=TRANSLATIONS[self.lang]["update_available_title"],
             type=MessageBox.TYPE_YESNO
         ))
 
@@ -732,25 +733,20 @@ class Panel(Screen):
             self.update_info = None
 
     def _start_update_console(self):
-        # Komenda aktualizacji z wyraźnymi komunikatami w konsoli i bez automatycznego zamykania
+        # Zmodyfikowana komenda, dodająca echo na końcu
         update_cmd = (
-            'echo "[AIO] Rozpoczynam aktualizację z GitHub..."; '
-            'echo "[AIO] Pobieram installer.sh..."; '
-            'wget "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - '
-            '| /bin/sh; '
-            'RET=$?; echo "[AIO] Kod zakończenia: $RET"; '
+            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh; '
             'echo "-----------------------------------------------------"; '
-            'echo " AKTUALIZACJA ZAKOŃCZONA."; '
+            'echo " AKTUALIZACJA ZAKONCZONA."; '
             'echo ""; '
-            'echo " ABY ZMIANY WESZŁY W ŻYCIE,"; '
+            'echo " ABY ZMIANY WESZLY W ZYCIE,"; '
             'echo " WYMAGANY JEST RESTART INTERFEJSU GUI"; '
-            'echo " (użyj ŻÓŁTEGO przycisku w Panelu AIO)"; '
-            'echo ""; '
-            'echo " NACIŚNIJ OK LUB EXIT, ABY ZAMKNĄĆ TĘ KONSOLĘ"; '
-            'echo "-----------------------------------------------------"'
+            'echo " (Uzyj zoltego przycisku)"; '
+            'echo "-----------------------------------------------------"; '
+            'sleep 5' # Dodajemy pauzę, żeby użytkownik zdążył przeczytać
         )
-        # Otwieramy konsolę bez callbacku i BEZ auto-zamykania (użytkownik zamyka OK/EXIT)
-        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=False)
+        # Wywołujemy konsolę BEZ żadnego callbacku po zamknięciu
+        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=True)
         # Usunęliśmy wywołanie show_manual_restart_after_update_info stąd
 
     # Usunęliśmy funkcję show_manual_restart_after_update_info
