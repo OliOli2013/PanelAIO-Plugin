@@ -426,7 +426,7 @@ class WizardProgressScreen(Screen):
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        self.session.open(TryQuitMainloop, 3)
+        self.close(self.session.open(TryQuitMainloop, 3))
 
 class Panel(Screen):
     skin = """
@@ -732,20 +732,25 @@ class Panel(Screen):
             self.update_info = None
 
     def _start_update_console(self):
-        # Zmodyfikowana komenda, dodająca echo na końcu
+        # Komenda aktualizacji z wyraźnymi komunikatami w konsoli i bez automatycznego zamykania
         update_cmd = (
-            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh; '
+            'echo "[AIO] Rozpoczynam aktualizację z GitHub..."; '
+            'echo "[AIO] Pobieram installer.sh..."; '
+            'wget "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - '
+            '| /bin/sh; '
+            'RET=$?; echo "[AIO] Kod zakończenia: $RET"; '
             'echo "-----------------------------------------------------"; '
-            'echo " AKTUALIZACJA ZAKONCZONA."; '
+            'echo " AKTUALIZACJA ZAKOŃCZONA."; '
             'echo ""; '
-            'echo " ABY ZMIANY WESZLY W ZYCIE,"; '
+            'echo " ABY ZMIANY WESZŁY W ŻYCIE,"; '
             'echo " WYMAGANY JEST RESTART INTERFEJSU GUI"; '
-            'echo " (Uzyj zoltego przycisku)"; '
-            'echo "-----------------------------------------------------"; '
-            'sleep 5' # Dodajemy pauzę, żeby użytkownik zdążył przeczytać
+            'echo " (użyj ŻÓŁTEGO przycisku w Panelu AIO)"; '
+            'echo ""; '
+            'echo " NACIŚNIJ OK LUB EXIT, ABY ZAMKNĄĆ TĘ KONSOLĘ"; '
+            'echo "-----------------------------------------------------"'
         )
-        # Wywołujemy konsolę BEZ żadnego callbacku po zamknięciu
-        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=True)
+        # Otwieramy konsolę bez callbacku i BEZ auto-zamykania (użytkownik zamyka OK/EXIT)
+        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=False)
         # Usunęliśmy wywołanie show_manual_restart_after_update_info stąd
 
     # Usunęliśmy funkcję show_manual_restart_after_update_info
@@ -782,7 +787,7 @@ class Panel(Screen):
         if steps:
             self.sess.openWithCallback(
                 lambda confirmed: self._wizard_start(steps) if confirmed else None,
-                MessageBox, message, type=MessageBox.TYPE_YESNO
+                MessageBox, message, type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
             )
             
     def _wizard_start(self, steps):
