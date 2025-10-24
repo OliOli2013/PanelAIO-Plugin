@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (stabilność aktualizacji v3 - bez callbacku)
+Wersja 2.4 (stabilność aktualizacji v5 - info w konsoli)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -141,24 +141,19 @@ def console_screen_open(session, title, cmds_with_args, callback=None, close_on_
     # na przetworzenie zamknięcia poprzedniego okna przed otwarciem konsoli.
     def open_console():
         try:
-            # Jeśli jest callback, rejestrujemy go, ale tylko jeśli jest to potrzebne
-            # Dla aktualizacji usuwamy callback całkowicie
-            if title == "Aktualizacja AIO Panel...": # Bezpieczniejsze sprawdzenie
-                c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-            else:
-                 c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-                 if callback: c_dialog.onClose.append(callback)
-                 
+            # Dla aktualizacji *nie* ustawiamy callbacku
+            effective_callback = None if title == "Aktualizacja AIO Panel..." else callback
+            c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+            if effective_callback:
+                c_dialog.onClose.append(effective_callback)
+
         except Exception as e:
             print("[AIO Panel] Błąd otwierania konsoli:", e)
-            # Awaryjnie: jeśli otwarcie konsoli zawiedzie, pokaż błąd
             show_message_compat(session, "Błąd podczas uruchamiania konsoli:\n{}".format(e), MessageBox.TYPE_ERROR)
             # Jeśli był callback (i nie była to aktualizacja), spróbuj go wywołać
             if callback and title != "Aktualizacja AIO Panel...":
-                try:
-                    callback()
-                except:
-                    pass
+                try: callback()
+                except: pass
     reactor.callLater(0.1, open_console)
 
 
@@ -178,7 +173,7 @@ def install_archive(session, title, url, callback_on_finish=None):
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
-    
+
     if "picon" in title.lower():
         picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
@@ -206,7 +201,7 @@ def install_archive(session, title, url, callback_on_finish=None):
              return
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
-    
+
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
 
 def get_s4aupdater_lists_dynamic():
@@ -222,7 +217,7 @@ def get_s4aupdater_lists_dynamic():
              return []
     except Exception:
         return []
-    
+
     try:
         urls_dict, versions_dict = {}, {}
         with open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
@@ -738,23 +733,23 @@ class Panel(Screen):
             self.update_info = None
 
     def _start_update_console(self):
-        # Ta funkcja jest teraz wywoływana przez reactor.callLater
-        update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-        # Usunięto callback całkowicie dla maksymalnego bezpieczeństwa
+        # Zmodyfikowana komenda, dodająca echo na końcu
+        update_cmd = (
+            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh; '
+            'echo "-----------------------------------------------------"; '
+            'echo " AKTUALIZACJA ZAKONCZONA."; '
+            'echo ""; '
+            'echo " ABY ZMIANY WESZLY W ZYCIE,"; '
+            'echo " WYMAGANY JEST RESTART INTERFEJSU GUI"; '
+            'echo " (Uzyj zoltego przycisku)"; '
+            'echo "-----------------------------------------------------"; '
+            'sleep 5' # Dodajemy pauzę, żeby użytkownik zdążył przeczytać
+        )
+        # Wywołujemy konsolę BEZ żadnego callbacku po zamknięciu
         console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=True)
-        # Informacja o konieczności restartu wyświetli się od razu (przed zakończeniem konsoli)
-        # lub po jej zamknięciu w bezpieczniejszy sposób (jeśli to nadal powoduje crash)
-        # Testujemy wyświetlanie od razu:
-        reactor.callLater(1.0, self.show_manual_restart_after_update_info)
+        # Usunęliśmy wywołanie show_manual_restart_after_update_info stąd
 
-
-    def show_manual_restart_after_update_info(self, *args):
-         # Pokazujemy tylko informację o konieczności ręcznego restartu
-        message = "Aktualizacja została uruchomiona w tle.\nPo jej zakończeniu (okno zniknie),\n**wymagany jest ręczny restart GUI** (żółty przycisk)."
-        # Używamy bezpiecznego show_message_compat
-        show_message_compat(self.sess, message, timeout=15) # Dłuższy czas na przeczytanie
-
-    # Usunięto funkcję on_update_finished_show_info
+    # Usunęliśmy funkcję show_manual_restart_after_update_info
     
     def run_super_setup_wizard(self):
         lang = self.lang
