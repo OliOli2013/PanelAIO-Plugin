@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (stabilność aktualizacji v5 - info w konsoli)
+Wersja 2.4 (aktualizacja w tle, bez konsoli i callbacków)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -71,6 +71,7 @@ Czy chcesz ją teraz zainstalować?""",
         "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji.",
         "loading_text": "Ładowanie...",
         "loading_error_text": "Błąd wczytywania danych",
+        "update_started_info": "Aktualizacja uruchomiona w tle.\nProszę odczekać około minuty, a następnie **ręcznie zrestartować GUI** (żółty przycisk).", # NOWY TEKST
         "sk_wizard_title": "Super Konfigurator (Pierwsza Instalacja)",
         "sk_choice_title": "Super Konfigurator - Wybierz opcję",
         "sk_option_deps": "1) Zainstaluj tylko zależności (wget, tar, unzip)",
@@ -106,6 +107,7 @@ Do you want to install it now?""",
         "update_generic_error": "An error occurred while checking for updates.",
         "loading_text": "Loading...",
         "loading_error_text": "Error loading data",
+        "update_started_info": "Update started in the background.\nPlease wait about a minute, then **manually restart the GUI** (yellow button).", # NOWY TEKST
         "sk_wizard_title": "Super Setup Wizard (First Installation)",
         "sk_choice_title": "Super Setup Wizard - Select an option",
         "sk_option_deps": "1) Install dependencies only (wget, tar, unzip)",
@@ -328,7 +330,7 @@ TOOLS_AND_ADDONS_EN = [
 ]
 
 COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodatki"), "EN": ("Channel Lists", "Softcam & Plugins", "Tools & Extras")}
-# === KONIEC DEFINICJI MENU ===
+# === KONIEC DEFINICji MENU ===
 class WizardProgressScreen(Screen):
     skin = """
     <screen position="center,center" size="800,400" title="Super Konfigurator">
@@ -379,7 +381,7 @@ class WizardProgressScreen(Screen):
     def _wizard_step_deps(self):
         title = self._get_wizard_title("Instalacja zależności")
         cmd = "opkg update; opkg install wget tar unzip --force-reinstall; exit 0"
-        console_screen_open(self.session, title, [cmd], callback=None, close_on_finish=False)
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
@@ -406,7 +408,7 @@ class WizardProgressScreen(Screen):
             echo "Instalacja Oscam zakończona."
             sleep 3
         """
-        console_screen_open(self.session, title, [cmd], callback=None, close_on_finish=False)
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
@@ -426,7 +428,7 @@ class WizardProgressScreen(Screen):
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        self.close(# (wyłączone) self.session.open(TryQuitMainloop, 3)  # manualne zakończenie – bez auto-restartu)
+        self.close(self.session.open(TryQuitMainloop, 3))
 
 class Panel(Screen):
     skin = """
@@ -501,7 +503,7 @@ class Panel(Screen):
             "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
             "sleep 5"
         ]
-        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=None, close_on_finish=False)
+        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
         self.load_plugin_data()
@@ -647,26 +649,23 @@ class Panel(Screen):
                     print("[AIO Panel] Pobrany plik version.txt jest pusty.")
                     return None
                     
-                # === NOWA LOGIKA PORÓWNYWANIA WERSJI ===
+                # === Logika porównywania wersji z v2.4 ===
                 clean_ver = self._clean_version(VER)
                 clean_latest_ver = self._clean_version(latest_ver_str)
                 
                 is_update = False
                 try:
-                    # Dodatkowe zabezpieczenie przed pustymi stringami po czyszczeniu
                     if not clean_ver or not clean_latest_ver:
                          raise ValueError("Jedna z wersji jest pusta po czyszczeniu")
                          
                     current_ver_tuple = tuple(map(int, (clean_ver.split('.'))))
                     latest_ver_tuple = tuple(map(int, (clean_latest_ver.split('.'))))
                     
-                    # Sprawdź czy wersja na serwerze jest > niż lokalna
                     if latest_ver_tuple > current_ver_tuple:
                         is_update = True
                 except (ValueError, TypeError) as e:
                      print("[AIO Panel] Błąd parsowania wersji: {} vs {} ({} vs {}). Błąd: {}. Używam prostego porównania.".format(VER, latest_ver_str, clean_ver, clean_latest_ver, e))
-                     # Fallback do prostego porównania, jeśli parsowanie zawiedzie LUB wersje są puste
-                     if latest_ver_str != VER and latest_ver_str: # Sprawdź też czy latest_ver_str nie jest pusty
+                     if latest_ver_str != VER and latest_ver_str:
                         is_update = True
                          
                 if is_update:
@@ -677,7 +676,6 @@ class Panel(Screen):
                             with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
                                 lines = f.readlines()
                             found_version_section, changes = False, []
-                            # Użyj oryginalnego stringu z pliku version.txt do znalezienia sekcji w changelogu
                             search_tag = "[{}]".format(latest_ver_str)
                             for line in lines:
                                 line = line.strip()
@@ -685,12 +683,11 @@ class Panel(Screen):
                                     found_version_section = True
                                     continue
                                 if found_version_section:
-                                    if line.startswith("[") and line.endswith("]"): break # Następna sekcja wersji
+                                    if line.startswith("[") and line.endswith("]"): break
                                     if line: changes.append(line)
                             if changes: changelog_text = "\n".join(changes)
                         except Exception as e:
                              print("[AIO Panel] Błąd odczytu changelog.txt:", e)
-                    # Zwróć oryginalny string z pliku version.txt
                     return {'latest_ver': latest_ver_str, 'changelog': changelog_text}
                 else:
                     print("[AIO Panel] Brak nowej wersji ({} <= {}).".format(latest_ver_str, VER))
@@ -720,34 +717,38 @@ class Panel(Screen):
         )
         # Używamy callLater, aby uniknąć problemów z modalnością
         reactor.callLater(0.2, lambda: self.sess.openWithCallback(
-            self.do_update, MessageBox, message, type=MessageBox.TYPE_YESNO
+            self.do_update, MessageBox, message,
+            title=TRANSLATIONS[self.lang]["update_available_title"],
+            type=MessageBox.TYPE_YESNO
         ))
 
+    # ZMIENIONA FUNKCJA - URUCHAMIA AKTUALIZACJĘ W TLE
     def do_update(self, confirmed):
         if confirmed:
-            # Użyjemy reactor.callLater z większym opóźnieniem dla bezpieczeństwa
-            reactor.callLater(0.5, self._start_update_console)
+            # Użyj reactor.callLater, aby odczekać chwilę po zamknięciu MessageBox
+            reactor.callLater(0.3, self._start_background_update)
+            # Wyświetl komunikat od razu
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["update_started_info"], timeout=15)
         else:
             self.update_info = None
 
-    def _start_update_console(self):
-        # Zmodyfikowana komenda, dodająca echo na końcu
-        update_cmd = (
-            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh; '
-            'echo "-----------------------------------------------------"; '
-            'echo " AKTUALIZACJA ZAKONCZONA."; '
-            'echo ""; '
-            'echo " ABY ZMIANY WESZLY W ZYCIE,"; '
-            'echo " WYMAGANY JEST RESTART INTERFEJSU GUI"; '
-            'echo " (Uzyj zoltego przycisku)"; '
-            'echo "-----------------------------------------------------"; '
-            'sleep 5' # Dodajemy pauzę, żeby użytkownik zdążył przeczytać
+    # NOWA FUNKCJA - URUCHAMIA SKRYPT W TLE BEZ KONSOLI
+    def _start_background_update(self):
+        update_script_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
+        tmp_script_path = "/tmp/panelaio_installer.sh"
+        # Komenda pobiera skrypt, nadaje uprawnienia i uruchamia go w tle (&), przekierowując wyjście do /dev/null
+        cmd = "wget -q --no-check-certificate '{url}' -O '{tmp_script}' && chmod +x '{tmp_script}' && (sh '{tmp_script}' > /dev/null 2>&1 &)".format(
+            url=update_script_url, tmp_script=tmp_script_path
         )
-        # Wywołujemy konsolę BEZ żadnego callbacku po zamknięciu
-        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=False)
-        # Usunęliśmy wywołanie show_manual_restart_after_update_info stąd
+        try:
+            # Użyj subprocess.Popen, aby uruchomić w tle i nie czekać na zakończenie
+            subprocess.Popen(cmd, shell=True)
+            print("[AIO Panel] Uruchomiono aktualizację w tle.")
+        except Exception as e:
+            print("[AIO Panel] Błąd uruchamiania aktualizacji w tle:", e)
+            show_message_compat(self.sess, "Błąd podczas uruchamiania aktualizacji w tle!", MessageBox.TYPE_ERROR)
 
-    # Usunęliśmy funkcję show_manual_restart_after_update_info
+    # Funkcje on_update_finished i _start_update_console są już niepotrzebne i zostały usunięte
     
     def run_super_setup_wizard(self):
         lang = self.lang
@@ -835,7 +836,7 @@ class Panel(Screen):
         post_install_callback = lambda: self.show_manual_restart_message(name)
 
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1, close_on_finish=False)[1]], callback=post_install_callback, close_on_finish=True)
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=post_install_callback, close_on_finish=True)
         elif action.startswith("archive:"):
             # Dla list kanałów używamy innego callbacku
              if "picon" not in title.lower(): # Zakładamy, że reszta to listy
@@ -852,10 +853,10 @@ class Panel(Screen):
                  # Sprawdzenie czy plik istnieje
                 if not fileExists(script_path):
                      show_message_compat(self.sess, "Brak pliku update_satellites_xml.sh!", message_type=MessageBox.TYPE_ERROR); return
-                console_screen_open(self.sess, title, ["bash " + script_path], callback=None, close_on_finish=False)
+                console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], callback=None, close_on_finish=False)
+                console_screen_open(self.sess, title, [cmd], callback=post_install_callback, close_on_finish=True)
             elif command_key == "INSTALL_BEST_OSCAM":
                 self.install_best_oscam(callback=post_install_callback, close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
@@ -865,8 +866,8 @@ class Panel(Screen):
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif command_key == "RESTART_OSCAM": self.restart_oscam()
             elif command_key == "FREE_SPACE_DISPLAY": self.show_free_space()
-            elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=False)
-            elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=False)
+            elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=True)
+            elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
 
     def run_network_diagnostics(self):
         local_ip = "N/A"
@@ -972,7 +973,7 @@ class Panel(Screen):
 
     def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
-    def restart_gui(self): # (wyłączone) self.session.open(TryQuitMainloop, 3)  # manualne zakończenie – bez auto-restartu
+    def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
     
     def show_manual_restart_message(self, name_unused=None, *args): # Dodano name_unused i *args
         message = "Operacja zakończona.\n\nAby zmiany odniosły skutek, zrestartuj GUI (żółty przycisk)."
@@ -1143,7 +1144,7 @@ else
 fi
 sleep 3
 '''.format(url=url)
-        console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=False)
+        console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
 
 
     def do_clear_dvbapi(self, confirmed):
@@ -1183,12 +1184,12 @@ else
 fi
 sleep 3
 '''
-            console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=False)
+            console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=True)
 
     def clear_ftp_password(self):
         # Sprawdźmy najpierw, czy user root istnieje
         cmd = "if grep -q '^root:' /etc/passwd; then passwd -d root && echo 'Hasło FTP (root) zostało skasowane.'; else echo 'Użytkownik root nie istnieje w /etc/passwd.'; fi; sleep 3"
-        console_screen_open(self.sess, "Kasowanie hasła FTP", [cmd], close_on_finish=False)
+        console_screen_open(self.sess, "Kasowanie hasła FTP", [cmd], close_on_finish=True)
 
 
     def set_system_password(self):
@@ -1209,7 +1210,7 @@ sleep 3
         # Używamy printf dla bezpieczeństwa (unika problemów ze znakami specjalnymi w echo)
         # Dodajemy sprawdzenie, czy user root istnieje
         cmd = 'if grep -q "^root:" /etc/passwd; then (printf "%s\\n%s\\n" "{pw}" "{pw}") | passwd root && echo "Hasło dla root zostało ustawione."; else echo "Użytkownik root nie istnieje."; fi; sleep 3'.format(pw=password.replace('"', '\\"')) # Podwójne cudzysłowy w haśle
-        console_screen_open(self.sess, "Ustawianie Hasła", [cmd], close_on_finish=False)
+        console_screen_open(self.sess, "Ustawianie Hasła", [cmd], close_on_finish=True)
 
 
     def show_free_space(self):
@@ -1217,7 +1218,7 @@ sleep 3
 
     def restart_oscam(self):
         cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartuję $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; echo "Zakończono."; sleep 2;'
-        console_screen_open(self.sess, "Restart Oscam", [cmd.strip(, close_on_finish=False)], close_on_finish=True)
+        console_screen_open(self.sess, "Restart Oscam", [cmd.strip()], close_on_finish=True)
 
 
     def show_uninstall_manager(self):
@@ -1259,7 +1260,7 @@ sleep 3
     def _execute_uninstall(self, package_name):
          # Dodajemy flagę --force-remove dla pewności
          cmd = "opkg remove --force-remove {}".format(package_name)
-         console_screen_open(self.sess, "Odinstalowywanie: " + package_name, [cmd], callback=None, close_on_finish=False)
+         console_screen_open(self.sess, "Odinstalowywanie: " + package_name, [cmd], callback=self.show_manual_restart_message, close_on_finish=True)
 
 
     def install_best_oscam(self, callback=None, close_on_finish=False):
@@ -1293,7 +1294,7 @@ sleep 3
             echo "Instalacja Oscam zakończona."
             sleep 3
         """
-        console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=None, close_on_finish=False)
+        console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
     def get_lists_from_repo(self):
         manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
