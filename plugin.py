@@ -202,7 +202,7 @@ def install_archive(session, title, url, callback_on_finish=None):
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
 
-    console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
+    console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=False)
 
 def get_s4aupdater_lists_dynamic():
     s4aupdater_list_txt_url = 'http://s4aupdater.one.pl/s4aupdater_list.txt'
@@ -379,7 +379,7 @@ class WizardProgressScreen(Screen):
     def _wizard_step_deps(self):
         title = self._get_wizard_title("Instalacja zależności")
         cmd = "opkg update; opkg install wget tar unzip --force-reinstall; exit 0"
-        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=False)
 
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
@@ -406,7 +406,7 @@ class WizardProgressScreen(Screen):
             echo "Instalacja Oscam zakończona."
             sleep 3
         """
-        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=False)
 
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
@@ -501,7 +501,7 @@ class Panel(Screen):
             "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
             "sleep 5"
         ]
-        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=False)
 
     def on_dependencies_installed_safe(self, *args):
         self.load_plugin_data()
@@ -833,7 +833,7 @@ class Panel(Screen):
         post_install_callback = lambda: self.show_manual_restart_message(name)
 
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=post_install_callback, close_on_finish=True)
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=post_install_callback, close_on_finish=False)
         elif action.startswith("archive:"):
             # Dla list kanałów używamy innego callbacku
              if "picon" not in title.lower(): # Zakładamy, że reszta to listy
@@ -850,12 +850,12 @@ class Panel(Screen):
                  # Sprawdzenie czy plik istnieje
                 if not fileExists(script_path):
                      show_message_compat(self.sess, "Brak pliku update_satellites_xml.sh!", message_type=MessageBox.TYPE_ERROR); return
-                console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
+                console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=False)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], callback=post_install_callback, close_on_finish=True)
+                console_screen_open(self.sess, title, [cmd], callback=post_install_callback, close_on_finish=False)
             elif command_key == "INSTALL_BEST_OSCAM":
-                self.install_best_oscam(callback=post_install_callback, close_on_finish=True)
+                self.install_best_oscam(callback=post_install_callback, close_on_finish=False)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password()
@@ -863,8 +863,8 @@ class Panel(Screen):
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif command_key == "RESTART_OSCAM": self.restart_oscam()
             elif command_key == "FREE_SPACE_DISPLAY": self.show_free_space()
-            elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=True)
-            elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
+            elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=False)
+            elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=False)
 
     def run_network_diagnostics(self):
         local_ip = "N/A"
@@ -1141,7 +1141,7 @@ else
 fi
 sleep 3
 '''.format(url=url)
-        console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
+        console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=False)
 
 
     def do_clear_dvbapi(self, confirmed):
@@ -1181,12 +1181,12 @@ else
 fi
 sleep 3
 '''
-            console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=True)
+            console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=False)
 
     def clear_ftp_password(self):
         # Sprawdźmy najpierw, czy user root istnieje
         cmd = "if grep -q '^root:' /etc/passwd; then passwd -d root && echo 'Hasło FTP (root) zostało skasowane.'; else echo 'Użytkownik root nie istnieje w /etc/passwd.'; fi; sleep 3"
-        console_screen_open(self.sess, "Kasowanie hasła FTP", [cmd], close_on_finish=True)
+        console_screen_open(self.sess, "Kasowanie hasła FTP", [cmd], close_on_finish=False)
 
 
     def set_system_password(self):
@@ -1207,7 +1207,7 @@ sleep 3
         # Używamy printf dla bezpieczeństwa (unika problemów ze znakami specjalnymi w echo)
         # Dodajemy sprawdzenie, czy user root istnieje
         cmd = 'if grep -q "^root:" /etc/passwd; then (printf "%s\\n%s\\n" "{pw}" "{pw}") | passwd root && echo "Hasło dla root zostało ustawione."; else echo "Użytkownik root nie istnieje."; fi; sleep 3'.format(pw=password.replace('"', '\\"')) # Podwójne cudzysłowy w haśle
-        console_screen_open(self.sess, "Ustawianie Hasła", [cmd], close_on_finish=True)
+        console_screen_open(self.sess, "Ustawianie Hasła", [cmd], close_on_finish=False)
 
 
     def show_free_space(self):
@@ -1215,7 +1215,7 @@ sleep 3
 
     def restart_oscam(self):
         cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartuję $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; echo "Zakończono."; sleep 2;'
-        console_screen_open(self.sess, "Restart Oscam", [cmd.strip()], close_on_finish=True)
+        console_screen_open(self.sess, "Restart Oscam", [cmd.strip()], close_on_finish=False)
 
 
     def show_uninstall_manager(self):
@@ -1257,7 +1257,7 @@ sleep 3
     def _execute_uninstall(self, package_name):
          # Dodajemy flagę --force-remove dla pewności
          cmd = "opkg remove --force-remove {}".format(package_name)
-         console_screen_open(self.sess, "Odinstalowywanie: " + package_name, [cmd], callback=self.show_manual_restart_message, close_on_finish=True)
+         console_screen_open(self.sess, "Odinstalowywanie: " + package_name, [cmd], callback=self.show_manual_restart_message, close_on_finish=False)
 
 
     def install_best_oscam(self, callback=None, close_on_finish=False):
