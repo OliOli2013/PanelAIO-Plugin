@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (stabilność aktualizacji v2)
+Wersja 2.4 (stabilność aktualizacji v3 - bez callbacku)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -141,19 +141,26 @@ def console_screen_open(session, title, cmds_with_args, callback=None, close_on_
     # na przetworzenie zamknięcia poprzedniego okna przed otwarciem konsoli.
     def open_console():
         try:
-            c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-            if callback: c_dialog.onClose.append(callback)
+            # Jeśli jest callback, rejestrujemy go, ale tylko jeśli jest to potrzebne
+            # Dla aktualizacji usuwamy callback całkowicie
+            if title == "Aktualizacja AIO Panel...": # Bezpieczniejsze sprawdzenie
+                c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+            else:
+                 c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+                 if callback: c_dialog.onClose.append(callback)
+                 
         except Exception as e:
             print("[AIO Panel] Błąd otwierania konsoli:", e)
             # Awaryjnie: jeśli otwarcie konsoli zawiedzie, pokaż błąd
             show_message_compat(session, "Błąd podczas uruchamiania konsoli:\n{}".format(e), MessageBox.TYPE_ERROR)
-            # Jeśli był callback, spróbuj go wywołać, aby nie blokować przepływu
-            if callback:
+            # Jeśli był callback (i nie była to aktualizacja), spróbuj go wywołać
+            if callback and title != "Aktualizacja AIO Panel...":
                 try:
                     callback()
                 except:
                     pass
     reactor.callLater(0.1, open_console)
+
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
@@ -539,6 +546,7 @@ class Panel(Screen):
     def _on_data_fetched(self, lang, fetched_data):
         # Ta funkcja działa w głównym wątku
         self["loading_label"].hide()
+        self.data_loaded = True # Ustaw flagę, że dane załadowane
         
         repo_lists = fetched_data['repo_lists']
         s4a_lists_full = fetched_data['s4a_lists_full']
@@ -593,6 +601,7 @@ class Panel(Screen):
             
     def set_language(self, lang):
         self.lang = lang
+        self.data_loaded = False # Resetuj flagę przed ładowaniem
         self.load_plugin_data() # Użyj nowej, wątkowej metody ładowania
         
     def set_lang_headers_and_legends(self):
@@ -731,17 +740,21 @@ class Panel(Screen):
     def _start_update_console(self):
         # Ta funkcja jest teraz wywoływana przez reactor.callLater
         update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-        # Zmieniono callback na nową funkcję informacyjną
-        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished_show_info, close_on_finish=True)
+        # Usunięto callback całkowicie dla maksymalnego bezpieczeństwa
+        console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=True)
+        # Informacja o konieczności restartu wyświetli się od razu (przed zakończeniem konsoli)
+        # lub po jej zamknięciu w bezpieczniejszy sposób (jeśli to nadal powoduje crash)
+        # Testujemy wyświetlanie od razu:
+        reactor.callLater(1.0, self.show_manual_restart_after_update_info)
 
-    def on_update_finished_show_info(self, *args):
-        # Ta funkcja jest wywoływana po zamknięciu konsoli aktualizacji
-        # Pokazujemy tylko informację o konieczności ręcznego restartu
-        message = "Aktualizacja pobrana.\n\nAby zakończyć, zrestartuj GUI (żółty przycisk)."
+
+    def show_manual_restart_after_update_info(self, *args):
+         # Pokazujemy tylko informację o konieczności ręcznego restartu
+        message = "Aktualizacja została uruchomiona w tle.\nPo jej zakończeniu (okno zniknie),\n**wymagany jest ręczny restart GUI** (żółty przycisk)."
         # Używamy bezpiecznego show_message_compat
         show_message_compat(self.sess, message, timeout=15) # Dłuższy czas na przeczytanie
 
-    # Usunięto funkcję _show_restart_message_after_update
+    # Usunięto funkcję on_update_finished_show_info
     
     def run_super_setup_wizard(self):
         lang = self.lang
@@ -825,7 +838,7 @@ class Panel(Screen):
     
     def execute_action(self, name, action):
         title = name
-        # Zdefiniuj callback, który zostanie wywołany po zamknięciu konsoli
+        # Zdefiniuj callback, który zostanie wywołany po zamknięciu konsoli (poza aktualizacją)
         post_install_callback = lambda: self.show_manual_restart_message(name)
 
         if action.startswith("bash_raw:"):
@@ -1188,10 +1201,10 @@ sleep 3
     def set_system_password(self):
         # Używamy InputBox do pobrania hasła
         self.sess.openWithCallback(
-            self._set_system_password_execute, 
-            InputBox, 
-            title="Nowe hasło dla użytkownika root:", 
-            text="", 
+            self._set_system_password_execute,
+            InputBox,
+            title="Nowe hasło dla użytkownika root:",
+            text="",
             type=InputBox.TYPE_PASSWORD
         )
 
@@ -1232,8 +1245,8 @@ sleep 3
 
             self.sess.openWithCallback(
                  self.on_package_selected_for_uninstall,
-                 ChoiceBox, 
-                 title="Wybierz pakiet do odinstalowania", 
+                 ChoiceBox,
+                 title="Wybierz pakiet do odinstalowania",
                  list=package_list
             )
         except Exception as e:
@@ -1244,9 +1257,9 @@ sleep 3
          if choice:
              package_name = choice[0]
              self.sess.openWithCallback(
-                 lambda confirmed: self._execute_uninstall(package_name) if confirmed else None, 
-                 MessageBox, 
-                 "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(package_name), 
+                 lambda confirmed: self._execute_uninstall(package_name) if confirmed else None,
+                 MessageBox,
+                 "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(package_name),
                  type=MessageBox.TYPE_YESNO
              )
 
