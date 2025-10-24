@@ -1,3 +1,8 @@
+[2.4]
+- Poprawka błędu "pustego tła" przy starcie (ładowanie w tle)
+- Poprawiona logika sprawdzania aktualizacji (v2.4 > v2.3)
+- Dodano pytanie o restart GUI po instalacji wtyczek
+
 [2.3]
 - Połączono instalację Softcam Feed i Oscam w jedną inteligentną funkcję.
 - Zaktualizowano link instalatora alternatywnego (Levi45).
