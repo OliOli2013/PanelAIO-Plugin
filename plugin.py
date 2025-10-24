@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (przywrócony mechanizm update z v2.3)
+Wersja 2.4 (info o update tylko w konsoli - zgodnie z opisem v2.3)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -132,14 +132,30 @@ Do you want to install it now?""",
 
 # === FUNKCje POMOCNICZE ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
-    # Wersja z v2.3 - używa reactor.callLater
+    # Używamy callLater, aby uniknąć problemów z modalnością
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
-    # Wersja z v2.3 - otwiera konsolę bezpośrednio
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-    if callback: c_dialog.onClose.append(callback)
+    # Używamy callLater (nawet z minimalnym opóźnieniem), aby dać pętli zdarzeń szansę
+    # na przetworzenie zamknięcia poprzedniego okna przed otwarciem konsoli.
+    def open_console():
+        try:
+            # Dla aktualizacji *nie* ustawiamy callbacku
+            effective_callback = None if title == "Aktualizacja AIO Panel..." else callback
+            c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+            if effective_callback:
+                c_dialog.onClose.append(effective_callback)
+
+        except Exception as e:
+            print("[AIO Panel] Błąd otwierania konsoli:", e)
+            show_message_compat(session, "Błąd podczas uruchamiania konsoli:\n{}".format(e), MessageBox.TYPE_ERROR)
+            # Jeśli był callback (i nie była to aktualizacja), spróbuj go wywołać
+            if callback and title != "Aktualizacja AIO Panel...":
+                try: callback()
+                except: pass
+    reactor.callLater(0.1, open_console)
+
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
@@ -704,16 +720,16 @@ class Panel(Screen):
             type=MessageBox.TYPE_YESNO
         ))
 
-    # Przywrócona funkcja do_update z v2.3
+    # WERSJA FUNKCJI Z v2.3
     def do_update(self, confirmed):
         if confirmed:
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            # Wywołujemy konsolę z callbackiem on_update_finished
+            # Wywołujemy konsolę z callbackiem on_update_finished, tak jak w v2.3
             console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
         else:
             self.update_info = None
 
-    # Przywrócona funkcja on_update_finished z v2.3
+    # WERSJA FUNKCJI Z v2.3
     def on_update_finished(self, *args):
         # Ta funkcja jest teraz wywoływana po zamknięciu konsoli
         self.sess.openWithCallback(
@@ -724,7 +740,6 @@ class Panel(Screen):
             timeout=5
         )
 
-    # Usunięte funkcje _start_update_console i show_manual_restart_after_update_info
     
     def run_super_setup_wizard(self):
         lang = self.lang
