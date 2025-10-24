@@ -426,7 +426,7 @@ class WizardProgressScreen(Screen):
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        self.close(self.session.open(TryQuitMainloop, 3))
+        self.session.open(TryQuitMainloop, 3)
 
 class Panel(Screen):
     skin = """
@@ -1345,10 +1345,4 @@ def main(session, **kwargs):
     session.open(Panel)
 
 def Plugins(**kwargs):
-    return [PluginDescriptor(
-        name="AIO Panel",
-        description="Panel AIO",
-        where=PluginDescriptor.WHERE_PLUGINMENU,
-        icon="logo.png",
-        fnc=main
-    )]
+    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where = PluginDescriptor.WHERE_PLUGINMENU, icon = "logo.png", fnc = main)]
