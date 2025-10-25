@@ -28,29 +28,12 @@ wget -q "$BASE_URL/update_satellites_xml.sh" -O "$PLUGIN_DIR/update_satellites_x
 wget -q "$BASE_URL/reload_bouquets.sh" -O "$PLUGIN_DIR/reload_bouquets.sh"
 wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$PLUGIN_DIR/Kod_QR_buycoffee.png"
 
-# --- NOWA SEKCJA: Naprawa plików ---
-echo "--> Weryfikuję i naprawiam uprawnienia oraz format plików..."
-
-# Spróbuj zainstalować dos2unix, jeśli go nie ma
-if ! command -v dos2unix > /dev/null 2>&1; then
-    echo "--> Próbuję doinstalować 'dos2unix'..."
-    opkg update
-    opkg install dos2unix
-fi
-
-# Użyj dos2unix na wszystkich skryptach, jeśli jest dostępny
-if command -v dos2unix > /dev/null 2>&1; then
-    echo "--> Konwertuję format plików na Unix..."
-    dos2unix "$PLUGIN_DIR"/*.sh
-fi
-
-# Zawsze nadawaj uprawnienia do wykonania
+# --- Zmodyfikowana Sekcja: Ustawianie uprawnień ---
 echo "--> Ustawiam uprawnienia do wykonania dla skryptów .sh..."
 chmod +x "$PLUGIN_DIR"/*.sh
-
-# --- KONIEC NOWEJ SEKCJI ---
+# Usunięto sprawdzanie i instalację dos2unix
 
 echo ">>> Instalacja PanelAIO zakończona pomyślnie!"
-echo ">>> Proszę zrestartować Enigma2, aby zmiany były widoczne."
+echo ">>> Proszę ZAMKNĄĆ to okno i RĘCZNIE zrestartować Enigma2 (GUI), aby zmiany były widoczne."
 
 exit 0
