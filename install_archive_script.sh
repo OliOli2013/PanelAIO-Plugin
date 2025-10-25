@@ -1,93 +1,94 @@
 #!/bin/sh
-set -e # Zakończ skrypt, jeśli którekolwiek polecenie zwróci błąd
 
-echo "--- START install_archive_script.sh ---"
-echo "Argumenty: \$1='$1' \$2='$2' \$3='$3'"
+# Skrypt do instalacji archiwum listy kanałów lub piconów z Panelu AIO
+# Argumenty: $1 - ścieżka do archiwum, $2 - typ archiwum (zip lub tar.gz)
 
-DOWNLOADED_FILE_PATH="$1"
+ARCHIVE_PATH="$1"
 ARCHIVE_TYPE="$2"
-ERROR_MSG="$3"
+E2_DIR="/etc/enigma2"
+PICONS_DIR="/usr/share/enigma2/picon" # Zakładamy domyślną ścieżkę picon
 
-TMP_EXTRACT_DIR="/tmp/list_extract_tmp"
+echo ">>> Rozpoczynam instalację archiwum: $ARCHIVE_PATH"
+echo ">>> Typ archiwum: $ARCHIVE_TYPE"
 
-echo "DEBUG: Tworzę/czyszczę katalog tymczasowy: $TMP_EXTRACT_DIR (25%)..."
-rm -rf "$TMP_EXTRACT_DIR" && mkdir -p "$TMP_EXTRACT_DIR" || { echo "KRYTYCZNY BŁĄD: Nie udało się utworzyć $TMP_EXTRACT_DIR!"; exit 1; }
-echo "DEBUG: Katalog tymczasowy gotowy."
-
-if [ "$ARCHIVE_TYPE" = "zip" ]; then
-    echo "DEBUG: Rozpakowuję archiwum ZIP: $DOWNLOADED_FILE_PATH do $TMP_EXTRACT_DIR..."
-    if ! command -v unzip >/dev/null 2>&1; then
-        echo "KRYTYCZNY BŁĄD: Narzędzie 'unzip' nie jest dostępne."
-        exit 1
-    fi
-    unzip -o "$DOWNLOADED_FILE_PATH" -d "$TMP_EXTRACT_DIR" || { echo "KRYTYCZNY BŁĄD: Nie udało się rozpakować ZIP! $ERROR_MSG"; exit 1; }
-elif [ "$ARCHIVE_TYPE" = "tar.gz" ]; then
-    echo "DEBUG: Rozpakowuję archiwum TAR.GZ: $DOWNLOADED_FILE_PATH do $TMP_EXTRACT_DIR..."
-    if ! command -v tar >/dev/null 2>&1; then
-        echo "KRYTYCZNY BŁĄD: Narzędzie 'tar' nie jest dostępne."
-        exit 1
-    fi
-    tar -xzf "$DOWNLOADED_FILE_PATH" -C "$TMP_EXTRACT_DIR" || { echo "KRYTYCZNY BŁĄD: Nie udało się rozpakować TAR.GZ! $ERROR_MSG"; exit 1; }
-else
-    echo "KRYTYCZNY BŁĄD: Nieobsługiwany format archiwum '$ARCHIVE_TYPE'."; exit 1;
-fi
-echo "DEBUG: Rozpakowywanie zakończone. Zawartość $TMP_EXTRACT_DIR:"
-ls -R "$TMP_EXTRACT_DIR"
-
-echo "DEBUG: Wyszukuję pliki list kanałów (50%)..."
-
-# --- NOWA, POPRAWIONA LOGIKA WYSZUKIWANIA PLIKÓW ---
-SOURCE_DIR=""
-FOUND_LAMEDB_PATH=$(find "$TMP_EXTRACT_DIR" -name "lamedb" -type f -print -quit)
-
-if [ -n "$FOUND_LAMEDB_PATH" ]; then
-    SOURCE_DIR=$(dirname "$FOUND_LAMEDB_PATH")
-    echo "DEBUG: Znaleziono główny katalog z listą kanałów: $SOURCE_DIR"
-else
-    echo "KRYTYCZNY BŁĄD: Nie znaleziono pliku 'lamedb' w rozpakowanym archiwum. Anuluję."
+# Sprawdzenie, czy plik istnieje
+if [ ! -f "$ARCHIVE_PATH" ]; then
+    echo "!!! BŁĄD: Plik archiwum nie istnieje: $ARCHIVE_PATH"
     exit 1
 fi
-# --- KONIEC NOWEJ LOGIKI ---
 
-echo "DEBUG: Rozpoczynam kopiowanie plików..."
-TARGET_ENIGMA2_DIR="/etc/enigma2"
-TARGET_TUXBOX_DIR="/etc/tuxbox"
-
-# Kopiowanie wszystkich plików z znalezionego katalogu źródłowego
-echo "DEBUG: Kopiowanie plików z '$SOURCE_DIR' do '$TARGET_ENIGMA2_DIR/' oraz '$TARGET_TUXBOX_DIR/'..."
-cp -rf "$SOURCE_DIR"/* "$TARGET_ENIGMA2_DIR/" || echo "OSTRZEŻENIE: Wystąpiły problemy podczas kopiowania plików do $TARGET_ENIGMA2_DIR"
-
-# Plik satellites.xml ma swoje specjalne miejsce
-if [ -f "$SOURCE_DIR/satellites.xml" ]; then
-    cp -f "$SOURCE_DIR/satellites.xml" "$TARGET_TUXBOX_DIR/" || echo "OSTRZEŻENIE: Nie udało się skopiować satellites.xml"
+# --- Sekcja czyszczenia STARYCH plików listy kanałów ---
+# Wykonujemy tylko jeśli to NIE jest archiwum piconów
+# Zakładamy, że archiwa picon mają 'picon' w nazwie (mało precyzyjne, ale powinno działać)
+if ! echo "$ARCHIVE_PATH" | grep -qi "picon"; then
+    echo "--> Wykryto instalację listy kanałów. Czyszczę stare pliki..."
+    # Usuwamy pliki lamedb oraz wszystkie pliki bukietów
+    # UWAGA: To usunie WSZYSTKIE bukiety, w tym te stworzone przez użytkownika!
+    rm -f "$E2_DIR/lamedb" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/lamedb5" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/blacklist" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/whitelist" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/bouquets.tv" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/bouquets.radio" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/userbouquet.*.tv" >> /tmp/aio_install.log 2>&1
+    rm -f "$E2_DIR/userbouquet.*.radio" >> /tmp/aio_install.log 2>&1
+    echo "--> Zakończono czyszczenie."
+else
+    echo "--> Wykryto instalację piconów. Pomijam czyszczenie list kanałów."
 fi
+# --- Koniec sekcji czyszczenia ---
 
-echo "DEBUG: Kopiowanie plików zakończone. Przeładowuję bukiety (75%)..."
-RELOAD_SCRIPT_PATH="$(dirname "$0")/reload_bouquets.sh"
-echo "DEBUG: Wyznaczona ścieżka do reload_bouquets.sh: '$RELOAD_SCRIPT_PATH'"
 
-if [ -f "$RELOAD_SCRIPT_PATH" ]; then
-    echo "DEBUG: Plik reload_bouquets.sh istnieje w '$RELOAD_SCRIPT_PATH'."
-    if [ -x "$RELOAD_SCRIPT_PATH" ]; then
-        echo "DEBUG: Próba uruchomienia '$RELOAD_SCRIPT_PATH'..."
-        if "$RELOAD_SCRIPT_PATH"; then
-            echo "DEBUG: reload_bouquets.sh zakończony pomyślnie (kod wyjścia $?)."
-        else
-            echo "BŁĄD: Skrypt reload_bouquets.sh zwrócił błąd (kod wyjścia $?) podczas wykonywania!"
+# Rozpakowywanie archiwum
+echo "--> Rozpakowuję archiwum..."
+if [ "$ARCHIVE_TYPE" = "zip" ]; then
+    # Sprawdź czy to picony
+    if echo "$ARCHIVE_PATH" | grep -qi "picon"; then
+        echo "--> Rozpakowuję picony (zip) do $PICONS_DIR..."
+        mkdir -p "$PICONS_DIR"
+        unzip -o -q "$ARCHIVE_PATH" -d "$PICONS_DIR"
+        # Dodatkowa logika przenoszenia, jeśli picony są w podkatalogu 'picon' w zipie
+        if [ -d "$PICONS_DIR/picon" ]; then
+            echo "--> Przenoszę picony z podkatalogu..."
+            mv -f "$PICONS_DIR/picon/"* "$PICONS_DIR/" >> /tmp/aio_install.log 2>&1
+            rmdir "$PICONS_DIR/picon" >> /tmp/aio_install.log 2>&1
         fi
     else
-        echo "KRYTYCZNY BŁĄD: Skrypt reload_bouquets.sh '$RELOAD_SCRIPT_PATH' nie ma uprawnień do wykonywania!"
-        echo "Nadaj uprawnienia: chmod +x '$RELOAD_SCRIPT_PATH'"
+        echo "--> Rozpakowuję listę kanałów (zip) do $E2_DIR..."
+        unzip -o -q "$ARCHIVE_PATH" -d "$E2_DIR"
+    fi
+elif [ "$ARCHIVE_TYPE" = "tar.gz" ]; then
+     # Sprawdź czy to picony (mniej prawdopodobne dla tar.gz, ale dodajemy)
+    if echo "$ARCHIVE_PATH" | grep -qi "picon"; then
+        echo "--> Rozpakowuję picony (tar.gz) do $PICONS_DIR..."
+        mkdir -p "$PICONS_DIR"
+        tar -xzf "$ARCHIVE_PATH" -C "$PICONS_DIR"
+        # Logika dla podkatalogu 'picon' w tar.gz (jeśli potrzebna)
+        # Można dodać podobne sprawdzenie i mv jak dla zip
+    else
+        echo "--> Rozpakowuję listę kanałów (tar.gz) do $E2_DIR..."
+        tar -xzf "$ARCHIVE_PATH" -C "$E2_DIR"
     fi
 else
-    echo "KRYTYCZNY BŁĄD: Skrypt reload_bouquets.sh '$RELOAD_SCRIPT_PATH' nie został znaleziony!"
+    echo "!!! BŁĄD: Nieznany typ archiwum: $ARCHIVE_TYPE"
+    rm -f "$ARCHIVE_PATH" # Usuń pobrane archiwum w razie błędu
+    exit 1
 fi
 
-echo "DEBUG: Usuwam pliki tymczasowe (90%)..."
-rm -rf "$TMP_EXTRACT_DIR"
-rm -f "$DOWNLOADED_FILE_PATH"
-echo "DEBUG: Pliki tymczasowe usunięte."
+# Sprawdzenie wyniku rozpakowania
+if [ $? -eq 0 ]; then
+    echo "--> Archiwum rozpakowane pomyślnie."
+else
+    echo "!!! BŁĄD: Wystąpił błąd podczas rozpakowywania archiwum."
+    rm -f "$ARCHIVE_PATH" # Usuń pobrane archiwum w razie błędu
+    exit 1
+fi
 
-echo "--- KONIEC install_archive_script.sh ---"
-echo "Instalacja listy kanałów zakończona. Zalecany restart GUI, jeśli listy nie są widoczne!"
+# Usuń pobrane archiwum po udanym rozpakowaniu
+echo "--> Usuwam pobrane archiwum..."
+rm -f "$ARCHIVE_PATH"
+
+echo ">>> Instalacja zakończona."
+sleep 3 # Krótka pauza, aby użytkownik zdążył zobaczyć komunikat
+
 exit 0
