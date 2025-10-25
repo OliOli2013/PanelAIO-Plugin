@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (aktualizacja w tle, bez konsoli i callbacków)
+Wersja 2.4 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -38,7 +38,7 @@ import subprocess
 import shutil
 import re
 import json
-import time
+import time 
 from twisted.internet import reactor
 from threading import Thread
 
@@ -71,14 +71,13 @@ Czy chcesz ją teraz zainstalować?""",
         "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji.",
         "loading_text": "Ładowanie...",
         "loading_error_text": "Błąd wczytywania danych",
-        "update_started_info": "Aktualizacja uruchomiona w tle.\nProszę odczekać około minuty, a następnie **ręcznie zrestartować GUI** (żółty przycisk).", # NOWY TEKST
         "sk_wizard_title": "Super Konfigurator (Pierwsza Instalacja)",
         "sk_choice_title": "Super Konfigurator - Wybierz opcję",
         "sk_option_deps": "1) Zainstaluj tylko zależności (wget, tar, unzip)",
         "sk_option_basic_no_picons": "2) Podstawowa Konfiguracja (bez Picon)",
         "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "Anuluj",
-        "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
+        "sk_confirm_deps": "Czy na pewno chcesz zainstalować only podstawowe zależności systemowe?",
         "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
         "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
@@ -107,7 +106,6 @@ Do you want to install it now?""",
         "update_generic_error": "An error occurred while checking for updates.",
         "loading_text": "Loading...",
         "loading_error_text": "Error loading data",
-        "update_started_info": "Update started in the background.\nPlease wait about a minute, then **manually restart the GUI** (yellow button).", # NOWY TEKST
         "sk_wizard_title": "Super Setup Wizard (First Installation)",
         "sk_choice_title": "Super Setup Wizard - Select an option",
         "sk_option_deps": "1) Install dependencies only (wget, tar, unzip)",
@@ -134,30 +132,12 @@ Do you want to install it now?""",
 
 # === FUNKCje POMOCNICZE ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
-    # Używamy callLater, aby uniknąć problemów z modalnością
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    # Używamy callLater (nawet z minimalnym opóźnieniem), aby dać pętli zdarzeń szansę
-    # na przetworzenie zamknięcia poprzedniego okna przed otwarciem konsoli.
-    def open_console():
-        try:
-            # Dla aktualizacji *nie* ustawiamy callbacku
-            effective_callback = None if title == "Aktualizacja AIO Panel..." else callback
-            c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
-            if effective_callback:
-                c_dialog.onClose.append(effective_callback)
-
-        except Exception as e:
-            print("[AIO Panel] Błąd otwierania konsoli:", e)
-            show_message_compat(session, "Błąd podczas uruchamiania konsoli:\n{}".format(e), MessageBox.TYPE_ERROR)
-            # Jeśli był callback (i nie była to aktualizacja), spróbuj go wywołać
-            if callback and title != "Aktualizacja AIO Panel...":
-                try: callback()
-                except: pass
-    reactor.callLater(0.1, open_console)
-
+    c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+    if callback: c_dialog.onClose.append(callback)
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
@@ -175,7 +155,7 @@ def install_archive(session, title, url, callback_on_finish=None):
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
-
+    
     if "picon" in title.lower():
         picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
@@ -196,14 +176,9 @@ def install_archive(session, title, url, callback_on_finish=None):
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
-        # Sprawdzenie czy plik istnieje, bo może go nie być
-        if not fileExists(install_script_path):
-             show_message_compat(session, "Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
-             if callback_on_finish: callback_on_finish()
-             return
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
         full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
-
+    
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
 
 def get_s4aupdater_lists_dynamic():
@@ -219,7 +194,7 @@ def get_s4aupdater_lists_dynamic():
              return []
     except Exception:
         return []
-
+    
     try:
         urls_dict, versions_dict = {}, {}
         with open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
@@ -232,7 +207,7 @@ def get_s4aupdater_lists_dynamic():
             version_key = var_name.replace('_url', '_version')
             date_info = versions_dict.get(version_key, "brak daty")
             lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
-    except Exception as e:
+    except Exception as e: 
         print("[AIO Panel] Błąd parsowania listy S4aUpdater:", e)
         return []
     return lists
@@ -330,7 +305,7 @@ TOOLS_AND_ADDONS_EN = [
 ]
 
 COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodatki"), "EN": ("Channel Lists", "Softcam & Plugins", "Tools & Extras")}
-# === KONIEC DEFINICji MENU ===
+# === KONIEC DEFINICJI MENU ===
 class WizardProgressScreen(Screen):
     skin = """
     <screen position="center,center" size="800,400" title="Super Konfigurator">
@@ -363,7 +338,7 @@ class WizardProgressScreen(Screen):
         step_functions = {
             "deps": self._wizard_step_deps,
             "channel_list": self._wizard_step_channel_list,
-            "install_oscam": self._wizard_step_install_oscam,
+            "install_oscam": self._wizard_step_install_oscam, 
             "picons": self._wizard_step_picons,
             "reload_settings": self._wizard_step_reload_settings
         }
@@ -444,7 +419,6 @@ class Panel(Screen):
         <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
         <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
-        <widget name="loading_label" position="center,center" size="800,300" font="Regular;32" halign="center" valign="center" transparent="1" zPosition="10" />
     </screen>""".format(PLUGIN_QR_CODE_PATH)
 
     def __init__(self, session):
@@ -454,7 +428,7 @@ class Panel(Screen):
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
-        for name in ("headL", "headM", "headR", "legend", "loading_label"): self[name] = Label()
+        for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
@@ -472,10 +446,13 @@ class Panel(Screen):
         }, -1)
         self.onShown.append(self.initial_setup)
         self.update_info = None
-        self.data_loaded = False
-        self.fetched_data_cache = None
+        self.data_loaded = False 
+        self.fetched_data_cache = None 
         self.update_prompt_shown = False
         self.wait_message_box = None
+        
+        # Ustaw stan ładowania natychmiast
+        self.set_language(self.lang)
 
     def initial_setup(self):
         reactor.callLater(0.2, self.check_dependencies)
@@ -494,7 +471,7 @@ class Panel(Screen):
         required_packages = ['curl', 'tar', 'unzip']
         missing_packages = [pkg for pkg in required_packages if not which(pkg)]
         if not missing_packages:
-            self.load_plugin_data()
+            self.start_async_data_load() # Przejdź do ładowania danych
             return
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
@@ -506,84 +483,53 @@ class Panel(Screen):
         console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
-        self.load_plugin_data()
+        self.start_async_data_load() # Przejdź do ładowania danych po instalacji
 
-    def load_plugin_data(self):
-        # Pokaż ekran ładowania i ukryj menu
-        self["loading_label"].setText(TRANSLATIONS[self.lang]["loading_text"])
-        self["loading_label"].show()
-        for name in ("menuL", "menuM", "menuR", "headL", "headM", "headR"): self[name].hide()
-        
-        # Uruchom pobieranie danych w osobnym wątku
-        thread = Thread(target=self._fetch_all_data_thread, args=(self.lang,))
+    def start_async_data_load(self):
+        # Ustaw stan ładowania na wypadek, gdyby nie był jeszcze ustawiony
+        self.set_language(self.lang)
+        # Rozpocznij pobieranie danych w tle
+        thread = Thread(target=self._background_data_loader)
         thread.start()
-
-    def _fetch_all_data_thread(self, lang):
-        # Ta funkcja działa w tle
-        fetched_data = {}
+        # Rozpocznij sprawdzanie aktualizacji w tle (równolegle)
+        reactor.callLater(1, self.check_for_updates_on_start)
+        
+    def _background_data_loader(self):
+        # Ta funkcja działa w osobnym wątku
+        repo_lists, s4a_lists_full, best_oscam_version = [], [], "N/A"
         try:
-            fetched_data['repo_lists'] = self.get_lists_from_repo()
+            repo_lists = self.get_lists_from_repo()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list repo:", e)
-            fetched_data['repo_lists'] = [(TRANSLATIONS[lang]["loading_error_text"], "SEPARATOR")]
+            repo_lists = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
         try:
-            fetched_data['s4a_lists_full'] = get_s4aupdater_lists_dynamic()
+            s4a_lists_full = get_s4aupdater_lists_dynamic()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list S4a:", e)
-            fetched_data['s4a_lists_full'] = []
         try:
-            fetched_data['best_oscam_version'] = get_best_oscam_version_info()
+            best_oscam_version = get_best_oscam_version_info()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
-            fetched_data['best_oscam_version'] = "Error"
+            best_oscam_version = "Error"
         
-        # Wywołaj funkcję w głównym wątku, aby zaktualizować GUI
-        reactor.callFromThread(self._on_data_fetched, lang, fetched_data)
-
-    def _on_data_fetched(self, lang, fetched_data):
-        # Ta funkcja działa w głównym wątku
-        self["loading_label"].hide()
-        self.data_loaded = True # Ustaw flagę, że dane załadowane
+        # Zapisz pobrane dane w pamięci podręcznej
+        self.fetched_data_cache = {
+            "repo_lists": repo_lists,
+            "s4a_lists_full": s4a_lists_full,
+            "best_oscam_version": best_oscam_version
+        }
         
-        repo_lists = fetched_data['repo_lists']
-        s4a_lists_full = fetched_data['s4a_lists_full']
-        best_oscam_version = fetched_data['best_oscam_version']
+        # Przekaż sygnał do głównego wątku, że dane są gotowe
+        reactor.callFromThread(self._on_data_loaded)
         
-        keywords_to_remove = ['bzyk', 'jakitaki']
-        s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
-        final_channel_lists = repo_lists + s4a_lists_filtered
-        
-        softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
-        tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
-
-        for i, (name, action) in enumerate(softcam_menu):
-            if action == "CMD:INSTALL_BEST_OSCAM":
-                oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
-                softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
-        
-        for i, (name, action) in enumerate(tools_menu):
-            if action == "CMD:SUPER_SETUP_WIZARD":
-                tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
-
-        self.data = (final_channel_lists, softcam_menu, tools_menu)
-        self.set_lang_headers_and_legends()
-        self.populate_menus()
-        
-        # Pokaż menu
-        for name in ("menuL", "menuM", "menuR", "headL", "headM", "headR"): self[name].show()
-
+    def _on_data_loaded(self):
+        # Ta funkcja działa z powrotem w głównym wątku
+        self.data_loaded = True
+        # Zastosuj pobrane dane do interfejsu, używając bieżącego języka
+        self.set_language(self.lang)
         self._focus()
-        
-        # Sprawdź aktualizacje PO załadowaniu interfejsu
-        if not self.update_prompt_shown: # Sprawdź tylko przy pierwszym załadowaniu
-             # Opóźnienie, aby uniknąć kolizji z ładowaniem danych
-            reactor.callLater(1.5, self.check_for_updates_on_start)
 
     def check_for_updates_on_start(self):
-        # Sprawdź tylko raz przy starcie, a nie przy każdej zmianie języka
-        if self.update_prompt_shown:
-            return
-        self.update_prompt_shown = True # Ustaw flagę
         thread = Thread(target=self.fetch_update_info_in_background)
         thread.start()
 
@@ -591,16 +537,60 @@ class Panel(Screen):
         try:
             update_info = self.perform_update_check_silent()
             if update_info:
-                # Wywołaj ask_for_update w głównym wątku
                 reactor.callFromThread(self.ask_for_update, update_info)
         except Exception as e:
             print("[AIO Panel] Błąd automatycznego sprawdzania aktualizacji:", e)
             
     def set_language(self, lang):
         self.lang = lang
-        self.data_loaded = False # Resetuj flagę przed ładowaniem
-        self.load_plugin_data() # Użyj nowej, wątkowej metody ładowania
+        self.set_lang_headers_and_legends()
         
+        if not self.data_loaded:
+            # Jeśli dane nie są jeszcze załadowane, pokaż "Ładowanie..."
+            loading_text = TRANSLATIONS[self.lang]["loading_text"]
+            self["menuL"].setList([(loading_text, "SEPARATOR")])
+            self["menuM"].setList([(loading_text, "SEPARATOR")])
+            self["menuR"].setList([(loading_text, "SEPARATOR")])
+            self._focus()
+            return
+
+        # Dane są załadowane, przetwórz je i wypełnij menu
+        try:
+            # Pobierz dane z pamięci podręcznej
+            repo_lists = self.fetched_data_cache.get("repo_lists", [])
+            s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
+            best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
+
+            if not repo_lists:
+                repo_lists = [(TRANSLATIONS[lang]["loading_error_text"], "SEPARATOR")]
+            
+            keywords_to_remove = ['bzyk', 'jakitaki']
+            s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
+            final_channel_lists = repo_lists + s4a_lists_filtered
+            
+            softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
+            tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
+
+            for i, (name, action) in enumerate(softcam_menu):
+                if action == "CMD:INSTALL_BEST_OSCAM":
+                    oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
+                    softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+            
+            for i, (name, action) in enumerate(tools_menu):
+                if action == "CMD:SUPER_SETUP_WIZARD":
+                    tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
+
+            self.data = (final_channel_lists, softcam_menu, tools_menu)
+            self.populate_menus()
+            
+        except Exception as e:
+            print("[AIO Panel] Błąd podczas przetwarzania danych dla set_language:", e)
+            self["menuL"].setList([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")])
+            self["menuM"].setList([])
+            self["menuR"].setList([])
+        
+        self._focus()
+
     def set_lang_headers_and_legends(self):
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
             head_widget.setText(COL_TITLES[self.lang][i])
@@ -613,19 +603,8 @@ class Panel(Screen):
             if data_list:
                 menu_widget.setList([str(item[0]) for item in data_list])
             else:
-                 # Wyświetl błąd tylko jeśli dane *już* zostały załadowane (uniknięcie migotania)
-                 if self.data_loaded:
-                    menu_widget.setList([(TRANSLATIONS[self.lang]["loading_error_text"],)])
-                 else:
-                     menu_widget.setList([]) # Pusta lista podczas ładowania
+                menu_widget.setList([(TRANSLATIONS[self.lang]["loading_error_text"],)])
 
-
-    def _clean_version(self, v):
-        # Wyszukuje pierwszy znak, który nie jest cyfrą ani kropką, i obcina resztę
-        match = re.search(r'[^0-9.]', v)
-        if match:
-            v = v[:match.start()]
-        return v.strip('.')
 
     def perform_update_check_silent(self):
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
@@ -637,66 +616,43 @@ class Panel(Screen):
         try:
             cmd_ver = "wget --no-check-certificate -O {} {}".format(tmp_version_path, version_url)
             cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
-            # Używamy subprocess.call dla pewności, że komendy się zakończą
-            subprocess.call(cmd_ver, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            subprocess.call(cmd_log, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.Popen(cmd_ver, shell=True).wait()
+            subprocess.Popen(cmd_log, shell=True).wait()
 
             if os.path.exists(tmp_version_path) and os.path.getsize(tmp_version_path) > 0:
                 with open(tmp_version_path, 'r') as f:
-                    latest_ver_str = f.read().strip()
+                    latest_ver = f.read().strip()
                 
-                if not latest_ver_str:
-                    print("[AIO Panel] Pobrany plik version.txt jest pusty.")
-                    return None
-                    
-                # === Logika porównywania wersji z v2.4 ===
-                clean_ver = self._clean_version(VER)
-                clean_latest_ver = self._clean_version(latest_ver_str)
+                # --- START POPRAWIONEJ LOGIKI AKTUALIZACJI ---
+                def parse_version(v_str):
+                    v_str_clean = v_str.split('-')[0] # "2.4-test" -> "2.4"
+                    try:
+                        return [int(part) for part in v_str_clean.split('.')] # "2.4" -> [2, 4]
+                    except Exception:
+                        return [0] # Fallback
                 
-                is_update = False
-                try:
-                    if not clean_ver or not clean_latest_ver:
-                         raise ValueError("Jedna z wersji jest pusta po czyszczeniu")
-                         
-                    current_ver_tuple = tuple(map(int, (clean_ver.split('.'))))
-                    latest_ver_tuple = tuple(map(int, (clean_latest_ver.split('.'))))
-                    
-                    if latest_ver_tuple > current_ver_tuple:
-                        is_update = True
-                except (ValueError, TypeError) as e:
-                     print("[AIO Panel] Błąd parsowania wersji: {} vs {} ({} vs {}). Błąd: {}. Używam prostego porównania.".format(VER, latest_ver_str, clean_ver, clean_latest_ver, e))
-                     if latest_ver_str != VER and latest_ver_str:
-                        is_update = True
-                         
-                if is_update:
-                    print("[AIO Panel] Znaleziono nową wersję: {} (bieżąca: {})".format(latest_ver_str, VER))
+                current_ver_parts = parse_version(VER)
+                latest_ver_parts = parse_version(latest_ver)
+
+                if latest_ver_parts > current_ver_parts: # Porównanie list, np. [2, 4] > [2, 3]
+                # --- KONIEC POPRAWIONEJ LOGIKI AKTUALIZACJI ---
                     changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
-                        try:
-                            with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
-                                lines = f.readlines()
-                            found_version_section, changes = False, []
-                            search_tag = "[{}]".format(latest_ver_str)
-                            for line in lines:
-                                line = line.strip()
-                                if line == search_tag:
-                                    found_version_section = True
-                                    continue
-                                if found_version_section:
-                                    if line.startswith("[") and line.endswith("]"): break
-                                    if line: changes.append(line)
-                            if changes: changelog_text = "\n".join(changes)
-                        except Exception as e:
-                             print("[AIO Panel] Błąd odczytu changelog.txt:", e)
-                    return {'latest_ver': latest_ver_str, 'changelog': changelog_text}
-                else:
-                    print("[AIO Panel] Brak nowej wersji ({} <= {}).".format(latest_ver_str, VER))
-                    
-            else:
-                 print("[AIO Panel] Nie udało się pobrać pliku version.txt lub jest pusty.")
-
+                        with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                        found_version_section, changes = False, []
+                        for line in lines:
+                            line = line.strip()
+                            if line == "[{}]".format(latest_ver):
+                                found_version_section = True
+                                continue
+                            if found_version_section:
+                                if line.startswith("[") and line.endswith("]"): break
+                                if line: changes.append(line)
+                        if changes: changelog_text = "\n".join(changes)
+                    return {'latest_ver': latest_ver, 'changelog': changelog_text}
         except Exception as e:
-            print("[AIO Panel] Silent update check failed (Exception):", e)
+            print("[AIO Panel] Silent update check failed:", e)
         return None
 
     def check_for_updates_manual(self):
@@ -708,49 +664,40 @@ class Panel(Screen):
 
     def ask_for_update(self, update_info):
         if not update_info: return
-        # Nie ustawiamy tutaj flagi update_prompt_shown, aby ręczne sprawdzenie działało zawsze
+        self.update_prompt_shown = True
         self.update_info = update_info
         message = TRANSLATIONS[self.lang]["update_available_msg"].format(
             latest_ver=update_info['latest_ver'],
             current_ver=VER,
             changelog=update_info['changelog']
         )
-        # Używamy callLater, aby uniknąć problemów z modalnością
-        reactor.callLater(0.2, lambda: self.sess.openWithCallback(
-            self.do_update, MessageBox, message,
-            title=TRANSLATIONS[self.lang]["update_available_title"],
+        self.sess.openWithCallback(
+            self.do_update, MessageBox, message, 
+            title=TRANSLATIONS[self.lang]["update_available_title"], 
             type=MessageBox.TYPE_YESNO
-        ))
+        )
 
-    # ZMIENIONA FUNKCJA - URUCHAMIA AKTUALIZACJĘ W TLE
     def do_update(self, confirmed):
         if confirmed:
-            # Użyj reactor.callLater, aby odczekać chwilę po zamknięciu MessageBox
-            reactor.callLater(0.3, self._start_background_update)
-            # Wyświetl komunikat od razu
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["update_started_info"], timeout=15)
+            update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
+            console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=self.on_update_finished, close_on_finish=True)
         else:
             self.update_info = None
 
-    # NOWA FUNKCJA - URUCHAMIA SKRYPT W TLE BEZ KONSOLI
-    def _start_background_update(self):
-        update_script_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
-        tmp_script_path = "/tmp/panelaio_installer.sh"
-        # Komenda pobiera skrypt, nadaje uprawnienia i uruchamia go w tle (&), przekierowując wyjście do /dev/null
-        cmd = "wget -q --no-check-certificate '{url}' -O '{tmp_script}' && chmod +x '{tmp_script}' && (sh '{tmp_script}' > /dev/null 2>&1 &)".format(
-            url=update_script_url, tmp_script=tmp_script_path
+    def on_update_finished(self, *args):
+        self.sess.openWithCallback(
+            lambda *x: self.restart_gui(), 
+            MessageBox, 
+            "Aktualizacja zakończona. Interfejs zostanie teraz zrestartowany.", 
+            type=MessageBox.TYPE_INFO, 
+            timeout=5
         )
-        try:
-            # Użyj subprocess.Popen, aby uruchomić w tle i nie czekać na zakończenie
-            subprocess.Popen(cmd, shell=True)
-            print("[AIO Panel] Uruchomiono aktualizację w tle.")
-        except Exception as e:
-            print("[AIO Panel] Błąd uruchamiania aktualizacji w tle:", e)
-            show_message_compat(self.sess, "Błąd podczas uruchamiania aktualizacji w tle!", MessageBox.TYPE_ERROR)
-
-    # Funkcje on_update_finished i _start_update_console są już niepotrzebne i zostały usunięte
     
     def run_super_setup_wizard(self):
+        if not self.data_loaded:
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
+            return
+            
         lang = self.lang
         options = [
             (TRANSLATIONS[lang]["sk_option_deps"], "deps_only"),
@@ -788,34 +735,28 @@ class Panel(Screen):
     def _wizard_start(self, steps):
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
         if "channel_list" in steps:
-            # Upewnij się, że lista jest pobierana ponownie, a nie z cache
-            try:
-                repo_lists = self.get_lists_from_repo()
-            except Exception as e:
-                print("[AIO Panel] Błąd pobierania list w _wizard_start:", e)
-                self.sess.open(MessageBox, "Nie udało się pobrać listy dostępnych list kanałów.", type=MessageBox.TYPE_ERROR); return
-
+            # Użyj danych z pamięci podręcznej zamiast ponownego pobierania
+            repo_lists = self.fetched_data_cache.get("repo_lists", [])
             if repo_lists and repo_lists[0][1] != 'SEPARATOR':
                 try:
                     list_name = repo_lists[0][0].split(' - ')[0]
                     channel_list_url = repo_lists[0][1].split(':', 1)[1]
-                except (IndexError, AttributeError): channel_list_url = ''
+                except (IndexError, AttributeError): channel_list_url = '' 
             if not channel_list_url:
-                self.sess.open(MessageBox, "Nie udało się pobrać adresu domyślnej listy kanałów.", type=MessageBox.TYPE_ERROR); return
+                self.sess.open(MessageBox, "Nie udało się pobrać adresu listy kanałów.", type=MessageBox.TYPE_ERROR); return
         if "picons" in steps:
-            # Szukaj w aktualnej liście menu (PL lub EN)
-            current_tools_menu = TOOLS_AND_ADDONS_PL if self.lang == 'PL' else TOOLS_AND_ADDONS_EN
-            for name, action in current_tools_menu:
-                 # Bardziej elastyczne dopasowanie nazwy
-                if ("picon" in name.lower() or "picony" in name.lower()) and action.startswith("archive:"):
+            for name, action in (TOOLS_AND_ADDONS_PL):
+                if name.startswith("Pobierz Picony"):
                     try: picon_url = action.split(':', 1)[1]; break
                     except (IndexError, AttributeError): picon_url = ''
             if not picon_url:
                 self.sess.open(MessageBox, "Nie udało się odnaleźć adresu picon.", type=MessageBox.TYPE_ERROR); return
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
-
     def run_with_confirmation(self):
+        if not self.data_loaded:
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
+            return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
@@ -824,25 +765,17 @@ class Panel(Screen):
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
-             # Użyj callLater dla MessageBox potwierdzenia
-             reactor.callLater(0.1, lambda: self.sess.openWithCallback(
+            self.sess.openWithCallback(
                 lambda ret: self.execute_action(name, action) if ret else None,
                 MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
-             ))
+            )
     
     def execute_action(self, name, action):
         title = name
-        # Zdefiniuj callback, który zostanie wywołany po zamknięciu konsoli (poza aktualizacją)
-        post_install_callback = lambda: self.show_manual_restart_message(name)
-
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=post_install_callback, close_on_finish=True)
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
         elif action.startswith("archive:"):
-            # Dla list kanałów używamy innego callbacku
-             if "picon" not in title.lower(): # Zakładamy, że reszta to listy
-                 install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
-             else: # Dla piconów tylko pokazujemy wiadomość
-                 install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=lambda: show_message_compat(self.sess, "Picony zainstalowane.", timeout=5))
+            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
             if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
@@ -850,17 +783,14 @@ class Panel(Screen):
             elif command_key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
             elif command_key == "UPDATE_SATELLITES_XML":
                 script_path = os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")
-                 # Sprawdzenie czy plik istnieje
-                if not fileExists(script_path):
-                     show_message_compat(self.sess, "Brak pliku update_satellites_xml.sh!", message_type=MessageBox.TYPE_ERROR); return
                 console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], callback=post_install_callback, close_on_finish=True)
-            elif command_key == "INSTALL_BEST_OSCAM":
-                self.install_best_oscam(callback=post_install_callback, close_on_finish=True)
+                console_screen_open(self.sess, title, [cmd], close_on_finish=True)
+            elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam(close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
+            #elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True) # Usunięte
             elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password()
             elif command_key == "CLEAR_FTP_PASS": self.clear_ftp_password()
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -872,7 +802,7 @@ class Panel(Screen):
     def run_network_diagnostics(self):
         local_ip = "N/A"
         try:
-            if network is not None:
+            if network is not None: 
                 for iface in ("eth0", "wlan0", "br0", "br-lan"):
                     if network.isLinkUp(iface):
                         ip = network.getIpAddress(iface)
@@ -906,7 +836,7 @@ class Panel(Screen):
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                 echo "!!! {no_connection} !!!"
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 1
+                exit 1 
             fi
             
             echo "Pobieranie publicznego adresu IP..."
@@ -920,8 +850,7 @@ class Panel(Screen):
                 chmod +x "{script_path}"
             fi
             
-            # Poprawka dla Pythona 3 (ignorowanie ostrzeżeń)
-            python3 -W ignore "{script_path}" --simple > "{output_file}" 2>/dev/null || python -W ignore "{script_path}" --simple > "{output_file}" 2>/dev/null
+            python -W ignore "{script_path}" --simple > "{output_file}" 2>/dev/null
             EXIT_CODE=$?
             
             if [ $EXIT_CODE -eq 0 ] && [ -s "{output_file}" ]; then
@@ -936,11 +865,11 @@ class Panel(Screen):
                 UPLOAD_SPEED="{na}"
             fi
             
-            rm -f "{output_file}" "{script_path}" # Czyścimy też skrypt
+            rm -f "{output_file}"
 
             echo " "
             echo "-------------------------------------------"
-            echo " {local_ip_label} {local_ip_val}"
+            echo " {local_ip_label} {local_ip_val}" 
             echo " {ip_label} $PUBLIC_IP"
             echo " {ping_label} $PING_SPEEDTEST"
             echo " {download_label} $DOWNLOAD_SPEED"
@@ -952,7 +881,7 @@ class Panel(Screen):
         """.format(
             no_connection=TRANSLATIONS[self.lang]["net_diag_no_connection"],
             local_ip_label=TRANSLATIONS[self.lang]["net_diag_local_ip"],
-            local_ip_val=local_ip if local_ip else na_text,
+            local_ip_val=local_ip if local_ip else na_text, 
             ip_label=TRANSLATIONS[self.lang]["net_diag_ip"],
             ping_label=TRANSLATIONS[self.lang]["net_diag_ping"],
             download_label=TRANSLATIONS[self.lang]["net_diag_download"],
@@ -974,19 +903,11 @@ class Panel(Screen):
     def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
-    
-    def show_manual_restart_message(self, name_unused=None, *args): # Dodano name_unused i *args
-        message = "Operacja zakończona.\n\nAby zmiany odniosły skutek, zrestartuj GUI (żółty przycisk)."
-        # Używamy bezpiecznego show_message_compat
-        show_message_compat(self.sess, message, timeout=10)
-
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
-            message = "Lista kanałów została przeładowana.\nZalecany restart GUI (żółty przycisk)."
-            show_message_compat(self.sess, message, timeout=8)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
@@ -999,40 +920,22 @@ class Panel(Screen):
             process = subprocess.Popen(cmd_find, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, _ = process.communicate()
             config_dirs = [line.strip() for line in stdout.decode('utf-8').splitlines() if line.strip()]
-            if not config_dirs: config_dirs.append("/etc/tuxbox/config") # Domyślna ścieżka
-            
-            # Dodaj /etc/tuxbox/config jeśli nie znaleziono nic innego, a istnieje
-            if not config_dirs and os.path.isdir("/etc/tuxbox/config"):
-                config_dirs.append("/etc/tuxbox/config")
-                
+            if not config_dirs: config_dirs.append("/etc/tuxbox/config")
             found = False
-            modified = False # Flaga czy cokolwiek zmieniono
             for d in config_dirs:
                 conf_path = os.path.join(d, "oscam.conf")
                 if fileExists(conf_path):
-                    found = True # Znaleziono przynajmniej jeden plik oscam.conf
-                    try:
-                        with open(conf_path, "r", encoding='utf-8', errors='ignore') as f: lines = f.readlines()
-                        # Używamy re do bardziej elastycznego sprawdzania httppwd
-                        new_lines = [line for line in lines if not re.match(r"^\s*httppwd\s*=", line.strip(), re.IGNORECASE)]
-                        if len(new_lines) < len(lines):
-                            with open(conf_path, "w", encoding='utf-8', errors='ignore') as f: f.writelines(new_lines)
-                            modified = True
-                            print("[AIO Panel] Usunięto httppwd z:", conf_path)
-                    except Exception as e:
-                         print("[AIO Panel] Błąd przetwarzania {}: {}".format(conf_path, e))
-
-            if modified:
-                show_message_compat(self.sess, "Hasło Oscam WebIf zostało skasowane.")
-                # Dodatkowo restartujemy Oscama po zmianie
-                self.restart_oscam()
-            elif found:
-                 show_message_compat(self.sess, "Nie znaleziono linii 'httppwd' w plikach oscam.conf.")
+                    with open(conf_path, "r") as f: lines = f.readlines()
+                    new_lines = [line for line in lines if not line.strip().lower().startswith("httppwd")]
+                    if len(new_lines) < len(lines):
+                        with open(conf_path, "w") as f: f.writelines(new_lines)
+                        found = True
+            if found:
+                show_message_compat(self.sess, "Hasło Oscam zostało skasowane.")
             else:
-                show_message_compat(self.sess, "Nie znaleziono pliku oscam.conf w oczekiwanych lokalizacjach.")
+                show_message_compat(self.sess, "Nie znaleziono hasła Oscam.")
         except Exception as e:
-            show_message_compat(self.sess, "Błąd podczas kasowania hasła Oscam: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-
+            show_message_compat(self.sess, "Błąd: {}".format(e), message_type=MessageBox.TYPE_ERROR)
 
     def manage_dvbapi(self):
         dvbapi_options = [
@@ -1063,205 +966,38 @@ class Panel(Screen):
         if url: self.process_dvbapi_download(url)
 
     def process_dvbapi_download(self, url):
-        # Bardziej rozbudowana komenda bash dla pewności
-        cmd = '''
-URL="{url}"
-echo "Szukam katalogów konfiguracyjnych Oscam..."
-CONFIG_DIRS=$(find /etc/tuxbox/config /usr/keys /var/keys -maxdepth 2 -name oscam.conf -exec dirname {{}} \\; 2>/dev/null | sort -u)
-
-# Dodaj domyślne ścieżki, jeśli istnieją, a nie zostały znalezione przez find
-for DPATH in /etc/tuxbox/config /usr/keys /var/keys; do
-    if [ -d "$DPATH" ] && ! echo "$CONFIG_DIRS" | grep -q "$DPATH"; then
-        CONFIG_DIRS="$CONFIG_DIRS"$'\n'"$DPATH"
-    fi
-done
-
-# Jeśli nadal nic, użyj /etc/tuxbox/config jako absolutnego fallbacku
-if [ -z "$CONFIG_DIRS" ]; then
-    echo "Nie znaleziono istniejących konfiguracji, używam /etc/tuxbox/config"
-    CONFIG_DIRS="/etc/tuxbox/config"
-    mkdir -p "$CONFIG_DIRS" # Utwórz, jeśli nie istnieje
-fi
-
-echo "Przetwarzam katalogi:"
-echo "$CONFIG_DIRS"
-echo ""
-
-SUCCESS=0
-for DIR in $CONFIG_DIRS; do
-    if [ -z "$DIR" ]; then continue; fi
-    echo "Próba w katalogu: $DIR"
-    DVBAPI_PATH="$DIR/oscam.dvbapi"
-    DVBAPI_BAK="$DIR/oscam.dvbapi.bak"
-    DVBAPI_TMP="$DIR/oscam.dvbapi.tmp"
-    
-    # Kopia zapasowa, jeśli plik istnieje
-    if [ -f "$DVBAPI_PATH" ]; then
-        echo "   Tworzę kopię zapasową: $DVBAPI_BAK"
-        cp "$DVBAPI_PATH" "$DVBAPI_BAK"
-    fi
-    
-    echo "   Pobieram plik z URL..."
-    wget -q --no-check-certificate --timeout=30 -O "$DVBAPI_TMP" "$URL"
-    WGET_RET=$?
-    
-    if [ $WGET_RET -eq 0 ] && [ -s "$DVBAPI_TMP" ]; then
-        echo "   Pobieranie udane. Sprawdzam zawartość..."
-        # Bardziej liberalne sprawdzenie - czy plik nie jest HTMLem i ma > 10 znaków
-        if ! grep -qi '<html' "$DVBAPI_TMP" && [ $(wc -c < "$DVBAPI_TMP") -gt 10 ]; then
-            echo "   Zawartość wygląda OK. Zastępuję plik."
-            mv "$DVBAPI_TMP" "$DVBAPI_PATH"
-            rm -f "$DVBAPI_BAK" # Usuń backup jeśli się udało
-            SUCCESS=1
-        else
-            echo "   BŁĄD: Pobrany plik wygląda na nieprawidłowy (np. HTML) lub jest za krótki."
-            rm -f "$DVBAPI_TMP"
-            # Przywróć backup, jeśli istniał
-            if [ -f "$DVBAPI_BAK" ]; then mv "$DVBAPI_BAK" "$DVBAPI_PATH"; fi
-        fi
-    else
-        echo "   BŁĄD: Pobieranie nie powiodło się (kod: $WGET_RET) lub plik jest pusty."
-        rm -f "$DVBAPI_TMP"
-        # Przywróć backup, jeśli istniał
-        if [ -f "$DVBAPI_BAK" ]; then mv "$DVBAPI_BAK" "$DVBAPI_PATH"; fi
-    fi
-    echo ""
-done
-
-if [ $SUCCESS -eq 1 ]; then
-    echo "Plik oscam.dvbapi został zaktualizowany."
-    echo "Restartuję Oscam..."
-    for i in softcam.oscam oscam softcam; do
-        INIT_SCRIPT="/etc/init.d/$i"
-        if [ -f "$INIT_SCRIPT" ]; then
-            echo "   Znaleziono skrypt: $INIT_SCRIPT. Restartuję..."
-            $INIT_SCRIPT restart
-            break
-        fi
-    done
-else
-    echo "Nie udało się zaktualizować pliku oscam.dvbapi w żadnym katalogu."
-fi
-sleep 3
-'''.format(url=url)
+        cmd = 'URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; fi; else [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done'.format(url=url)
         console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
-
 
     def do_clear_dvbapi(self, confirmed):
         if confirmed:
-            cmd = '''
-echo "Szukam katalogów konfiguracyjnych Oscam..."
-CONFIG_DIRS=$(find /etc/tuxbox/config /usr/keys /var/keys -maxdepth 2 -name oscam.conf -exec dirname {} \\; 2>/dev/null | sort -u)
-# Dodaj domyślne ścieżki, jeśli istnieją
-for DPATH in /etc/tuxbox/config /usr/keys /var/keys; do [ -d "$DPATH" ] && ! echo "$CONFIG_DIRS" | grep -q "$DPATH" && CONFIG_DIRS="$CONFIG_DIRS"$'\n'"$DPATH"; done
-if [ -z "$CONFIG_DIRS" ]; then CONFIG_DIRS="/etc/tuxbox/config"; fi
-
-echo "Przetwarzam katalogi:"
-echo "$CONFIG_DIRS"
-
-CLEARED=0
-for DIR in $CONFIG_DIRS; do
-    if [ -z "$DIR" ]; then continue; fi
-    DVBAPI_PATH="$DIR/oscam.dvbapi"
-    if [ -f "$DVBAPI_PATH" ]; then
-        echo "   Czyszczę plik: $DVBAPI_PATH"
-        # Opcjonalnie: zrób backup przed wyczyszczeniem
-        # cp "$DVBAPI_PATH" "$DVBAPI_PATH.bak_$(date +%Y%m%d_%H%M%S)"
-        echo "" > "$DVBAPI_PATH"
-        CLEARED=1
-    fi
-done
-
-if [ $CLEARED -eq 1 ]; then
-    echo "Plik(i) oscam.dvbapi został(y) wyczyszczony."
-    echo "Restartuję Oscam..."
-    for i in softcam.oscam oscam softcam; do
-        INIT_SCRIPT="/etc/init.d/$i"
-        if [ -f "$INIT_SCRIPT" ]; then $INIT_SCRIPT restart; break; fi
-    done
-else
-    echo "Nie znaleziono pliku oscam.dvbapi do wyczyszczenia."
-fi
-sleep 3
-'''
+            cmd = 'CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do DVBAPI_PATH="$DIR/oscam.dvbapi"; if [ -f "$DVBAPI_PATH" ]; then cp "$DVBAPI_PATH" "$DVBAPI_PATH.bak"; echo "" > "$DVBAPI_PATH"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done'
             console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=True)
 
     def clear_ftp_password(self):
-        # Sprawdźmy najpierw, czy user root istnieje
-        cmd = "if grep -q '^root:' /etc/passwd; then passwd -d root && echo 'Hasło FTP (root) zostało skasowane.'; else echo 'Użytkownik root nie istnieje w /etc/passwd.'; fi; sleep 3"
-        console_screen_open(self.sess, "Kasowanie hasła FTP", [cmd], close_on_finish=True)
-
+        console_screen_open(self.sess, "Kasowanie hasła FTP", ["passwd -d root"], close_on_finish=True)
 
     def set_system_password(self):
-        # Używamy InputBox do pobrania hasła
-        self.sess.openWithCallback(
-            self._set_system_password_execute,
-            InputBox,
-            title="Nowe hasło dla użytkownika root:",
-            text="",
-            type=InputBox.TYPE_PASSWORD
-        )
-
-    def _set_system_password_execute(self, password):
-        # Sprawdzamy czy hasło nie jest puste
-        if password is None or password == "":
-             show_message_compat(self.sess, "Anulowano ustawianie hasła.", MessageBox.TYPE_INFO, timeout=5)
-             return
-        # Używamy printf dla bezpieczeństwa (unika problemów ze znakami specjalnymi w echo)
-        # Dodajemy sprawdzenie, czy user root istnieje
-        cmd = 'if grep -q "^root:" /etc/passwd; then (printf "%s\\n%s\\n" "{pw}" "{pw}") | passwd root && echo "Hasło dla root zostało ustawione."; else echo "Użytkownik root nie istnieje."; fi; sleep 3'.format(pw=password.replace('"', '\\"')) # Podwójne cudzysłowy w haśle
-        console_screen_open(self.sess, "Ustawianie Hasła", [cmd], close_on_finish=True)
-
+        self.sess.openWithCallback(lambda p: console_screen_open(self.sess, "Ustawianie Hasła", ["(echo {}; echo {}) | passwd".format(p, p)], close_on_finish=True) if p else None, InputBox, title="Wpisz nowe hasło dla konta root:")
 
     def show_free_space(self):
         console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False) # Pozostaw otwarte
 
     def restart_oscam(self):
-        cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartuję $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; echo "Zakończono."; sleep 2;'
+        cmd = 'for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 2;'
         console_screen_open(self.sess, "Restart Oscam", [cmd.strip()], close_on_finish=True)
-
 
     def show_uninstall_manager(self):
         try:
-            # Używamy bardziej niezawodnego sposobu listowania pakietów
-            cmd = "opkg list-installed | cut -d ' ' -f 1 | sort"
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            if process.returncode != 0:
-                 raise OSError("Błąd opkg: {}".format(stderr.decode('utf-8', errors='ignore')))
-                 
-            packages = [line.strip() for line in stdout.decode('utf-8', errors='ignore').splitlines() if line.strip()]
-            if not packages:
-                 show_message_compat(self.sess, "Nie znaleziono zainstalowanych pakietów.", MessageBox.TYPE_INFO); return
-
-            # Tworzymy listę krotek dla ChoiceBox
-            package_list = [(p,) for p in packages]
-
-            self.sess.openWithCallback(
-                 self.on_package_selected_for_uninstall,
-                 ChoiceBox,
-                 title="Wybierz pakiet do odinstalowania",
-                 list=package_list
-            )
+            process = subprocess.Popen("opkg list-installed", shell=True, stdout=subprocess.PIPE)
+            stdout, _ = process.communicate()
+            packages = sorted([line.split(' - ')[0] for line in stdout.decode('utf-8', errors='ignore').splitlines() if ' - ' in line])
+            def on_package_selected(choice):
+                if choice:
+                    self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]], close_on_finish=True) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
+            self.sess.open(ChoiceBox, title="Wybierz pakiet do odinstalowania", list=[(p,) for p in packages])
         except Exception as e:
-            print("[AIO Panel] Błąd Menadżera Deinstalacji:", e)
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
-
-    def on_package_selected_for_uninstall(self, choice):
-         if choice:
-             package_name = choice[0]
-             self.sess.openWithCallback(
-                 lambda confirmed: self._execute_uninstall(package_name) if confirmed else None,
-                 MessageBox,
-                 "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(package_name),
-                 type=MessageBox.TYPE_YESNO
-             )
-
-    def _execute_uninstall(self, package_name):
-         # Dodajemy flagę --force-remove dla pewności
-         cmd = "opkg remove --force-remove {}".format(package_name)
-         console_screen_open(self.sess, "Odinstalowywanie: " + package_name, [cmd], callback=self.show_manual_restart_message, close_on_finish=True)
-
 
     def install_best_oscam(self, callback=None, close_on_finish=False):
         # Nowa, połączona komenda
@@ -1271,18 +1007,7 @@ sleep 3
             echo "Aktualizuję listę pakietów..."
             opkg update
             echo "Wyszukuję najlepszą wersję Oscam w feedach..."
-            # Szukamy bardziej ogólnie, ale priorytetyzujemy ipv4only
-            PKG_IPV4=$(opkg list | grep 'oscam.*ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
-            PKG_ANY=$(opkg list | grep '^oscam' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
-
-            if [ -n "$PKG_IPV4" ]; then
-                PKG_NAME="$PKG_IPV4"
-            elif [ -n "$PKG_ANY" ]; then
-                 PKG_NAME="$PKG_ANY"
-            else
-                 PKG_NAME=""
-            fi
-            
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
             if [ -n "$PKG_NAME" ]; then
                 echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
                 opkg install $PKG_NAME
@@ -1302,44 +1027,34 @@ sleep 3
         prepare_tmp_dir()
         try:
             cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_json_path, manifest_url)
-            # Używamy subprocess.call dla pewności, że komenda się zakończy
-            ret_code = subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, stderr = process.communicate()
+            ret_code = process.returncode
             if ret_code != 0:
-                 print("[AIO Panel] Wget error downloading manifest (code {})".format(ret_code))
+                 print("[AIO Panel] Wget error downloading manifest (code {}): {}".format(ret_code, stderr))
                  raise IOError("wget failed with code {}".format(ret_code))
             if not (os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0):
                 print("[AIO Panel] Błąd pobierania manifest.json: plik pusty lub nie istnieje")
                 raise IOError("Downloaded manifest file is empty or missing")
         except Exception as e:
             print("[AIO Panel] Błąd pobierania manifest.json (wyjątek):", e)
-            # Zwróć pustą listę zamiast rzucać wyjątek dalej, aby uniknąć crashu w GUI
-            return []
-            
+            raise 
         lists_menu = []
         try:
             with open(tmp_json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            # Sprawdź czy data jest listą
-            if isinstance(data, list):
-                for item in data:
-                    # Sprawdź czy item jest słownikiem i ma klucz 'url'
-                    if isinstance(item, dict) and item.get('url'):
-                        menu_title = "{} - {} ({})".format(item.get('name', 'Brak nazwy'), item.get('author', 'Anonim'), item.get('version', 'b/d'))
-                        action = "archive:{}".format(item['url'])
-                        lists_menu.append((menu_title, action))
-            else:
-                 print("[AIO Panel] Błąd: manifest.json nie zawiera listy.")
-                 
-        except json.JSONDecodeError as e:
-             print("[AIO Panel] Błąd dekodowania pliku manifest.json:", e)
+            for item in data:
+                menu_title = "{} - {} ({})".format(item.get('name', 'Brak nazwy'), item.get('author', ''), item.get('version', ''))
+                action = "archive:{}".format(item.get('url', ''))
+                if item.get('url'):
+                    lists_menu.append((menu_title, action))
         except Exception as e:
             print("[AIO Panel] Błąd przetwarzania pliku manifest.json:", e)
-        
-        # Zawsze zwracaj listę, nawet jeśli jest pusta
+            raise 
         if not lists_menu:
-             print("[AIO Panel] Nie znaleziono poprawnych list w manifest.json")
+             print("[AIO Panel] Brak list w repozytorium (manifest pusty?)")
+             return []
         return lists_menu
-
 
 def main(session, **kwargs):
     session.open(Panel)
