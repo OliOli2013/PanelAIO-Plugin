@@ -139,8 +139,10 @@ def console_screen_open(session, title, cmds_with_args, callback=None, close_on_
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
     # Upewnienie się, że Console jest otwierane w głównym wątku, jeśli jest wywoływane z wątku pobierania danych
     if reactor.running:
+        # Poprawka: Użycie nazwanych argumentów dla Console
         reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback) if callback else session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
     else:
+        # Poprawka: Użycie nazwanych argumentów dla Console
         c_dialog = session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish)
         if callback: c_dialog.onClose.append(callback)
 
@@ -180,11 +182,18 @@ def install_archive(session, title, url, callback_on_finish=None):
     elif archive_type == "ipk":
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
+        # Upewnij się, że skrypt install_archive_script.sh istnieje i jest wykonywalny
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
+        if not os.path.exists(install_script_path):
+             show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
+             if callback_on_finish: callback_on_finish()
+             return
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
-        full_command = "{} && {} && {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
+        # Przekazanie ścieżki do skryptu jako polecenia bash
+        full_command = "{} && {} && bash {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
     
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
+
 
 # Funkcja pomocnicza, która wykonuje się w osobnym wątku
 def _get_s4aupdater_lists_dynamic_sync():
@@ -406,7 +415,14 @@ class WizardProgressScreen(Screen):
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
         url = self.wizard_channel_list_url
+        # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
+        start_msg_pl = "Rozpoczynam instalację listy:\n'{}'...".format(self.wizard_channel_list_name)
+        start_msg_en = "Starting channel list installation:\n'{}'...".format(self.wizard_channel_list_name)
+        start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, type=MessageBox.TYPE_INFO, timeout=5)
+        # Uruchom instalację
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
+
 
     def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
@@ -433,6 +449,12 @@ class WizardProgressScreen(Screen):
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
+        # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
+        start_msg_pl = "Rozpoczynam instalację picon..."
+        start_msg_en = "Starting picon installation..."
+        start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, type=MessageBox.TYPE_INFO, timeout=5)
+        # Uruchom instalację
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
         
     def _wizard_step_reload_settings(self):
@@ -741,8 +763,8 @@ class Panel(Screen):
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
             
             # Pokaż informację ZANIM uruchomisz konsolę
-            info_msg_pl = "Rozpoczynam aktualizację w tle.\n\nOkno konsoli zaraz zniknie.\n\nPo kilku chwilach zrestartuj RĘCZNIE GUI, aby zakończyć aktualizację.\n(Postęp można śledzić w /tmp/PanelAIO_Update.log)"
-            info_msg_en = "Starting update in the background.\n\nThe console window will disappear shortly.\n\nAfter a few moments, restart the GUI MANUALLY to complete the update.\n(Progress can be tracked in /tmp/PanelAIO_Update.log)"
+            info_msg_pl = "Rozpoczynam aktualizację w tle.\n\nOkno konsoli zaraz zniknie.\n\nPo ok. minucie zrestartuj RĘCZNIE GUI, aby zakończyć aktualizację.\n(Postęp można śledzić w /tmp/PanelAIO_Update.log)"
+            info_msg_en = "Starting update in the background.\n\nThe console window will disappear shortly.\n\nAfter ~1 minute, restart the GUI MANUALLY to complete the update.\n(Progress can be tracked in /tmp/PanelAIO_Update.log)"
             info_msg = info_msg_pl if self.lang == 'PL' else info_msg_en
             self.sess.open(MessageBox, info_msg, type=MessageBox.TYPE_INFO, timeout=15) # Pokaż przez 15 sekund
 
@@ -848,8 +870,23 @@ class Panel(Screen):
         title = name
         if action.startswith("bash_raw:"):
             console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
+        
+        # === POPRAWKA: Dodano komunikat przed instalacją archiwum ===
         elif action.startswith("archive:"):
-            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
+            try:
+                list_url = action.split(':', 1)[1]
+                # Pokaż natychmiastowy komunikat o rozpoczęciu
+                start_msg_pl = "Rozpoczynam instalację:\n'{}'...".format(title)
+                start_msg_en = "Starting installation:\n'{}'...".format(title)
+                start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
+                show_message_compat(self.sess, start_msg, type=MessageBox.TYPE_INFO, timeout=5) # Pokaż przez 5 sekund
+
+                # Uruchom instalację w oknie Console (tytuł już zawiera nazwę listy)
+                # Użyj pełnego 'title' jako tytułu okna Console dla lepszej informacji
+                install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
+            except IndexError:
+                 show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", type=MessageBox.TYPE_ERROR)
+        
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
             if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
