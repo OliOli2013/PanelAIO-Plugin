@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
+Wersja 2.4 (finalna, uniwersalna) - Poprawki ładowania i aktualizacji
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -77,7 +77,7 @@ Czy chcesz ją teraz zainstalować?""",
         "sk_option_basic_no_picons": "2) Podstawowa Konfiguracja (bez Picon)",
         "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "Anuluj",
-        "sk_confirm_deps": "Czy na pewno chcesz zainstalować only podstawowe zależności systemowe?",
+        "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
         "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
         "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
@@ -450,9 +450,6 @@ class Panel(Screen):
         self.fetched_data_cache = None 
         self.update_prompt_shown = False
         self.wait_message_box = None
-        
-        # Ustaw stan ładowania natychmiast
-        self.set_language(self.lang)
 
     def initial_setup(self):
         reactor.callLater(0.2, self.check_dependencies)
@@ -471,7 +468,7 @@ class Panel(Screen):
         required_packages = ['curl', 'tar', 'unzip']
         missing_packages = [pkg for pkg in required_packages if not which(pkg)]
         if not missing_packages:
-            self.start_async_data_load() # Przejdź do ładowania danych
+            self.load_plugin_data()
             return
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
@@ -483,51 +480,45 @@ class Panel(Screen):
         console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
-        self.start_async_data_load() # Przejdź do ładowania danych po instalacji
+        self.load_plugin_data()
 
-    def start_async_data_load(self):
-        # Ustaw stan ładowania na wypadek, gdyby nie był jeszcze ustawiony
-        self.set_language(self.lang)
-        # Rozpocznij pobieranie danych w tle
-        thread = Thread(target=self._background_data_loader)
+    def load_plugin_data(self):
+        # Ustawia etykiety, legendy i "Ładowanie..." w menu
+        self.set_language(self.lang) 
+        # Uruchom pobieranie danych w tle
+        thread = Thread(target=self.fetch_all_data_in_background)
         thread.start()
-        # Rozpocznij sprawdzanie aktualizacji w tle (równolegle)
-        reactor.callLater(1, self.check_for_updates_on_start)
-        
-    def _background_data_loader(self):
-        # Ta funkcja działa w osobnym wątku
-        repo_lists, s4a_lists_full, best_oscam_version = [], [], "N/A"
+
+    def fetch_all_data_in_background(self):
         try:
             repo_lists = self.get_lists_from_repo()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list repo:", e)
             repo_lists = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
+        
         try:
             s4a_lists_full = get_s4aupdater_lists_dynamic()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list S4a:", e)
+            s4a_lists_full = []
+        
         try:
             best_oscam_version = get_best_oscam_version_info()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
             best_oscam_version = "Error"
         
-        # Zapisz pobrane dane w pamięci podręcznej
-        self.fetched_data_cache = {
-            "repo_lists": repo_lists,
-            "s4a_lists_full": s4a_lists_full,
-            "best_oscam_version": best_oscam_version
-        }
-        
-        # Przekaż sygnał do głównego wątku, że dane są gotowe
-        reactor.callFromThread(self._on_data_loaded)
-        
-    def _on_data_loaded(self):
-        # Ta funkcja działa z powrotem w głównym wątku
+        self.fetched_data_cache = (repo_lists, s4a_lists_full, best_oscam_version)
+        reactor.callFromThread(self.on_data_loaded)
+
+    def on_data_loaded(self):
         self.data_loaded = True
-        # Zastosuj pobrane dane do interfejsu, używając bieżącego języka
+        # Teraz wywołaj set_language ponownie, aby przetworzyć i wyświetlić dane
         self.set_language(self.lang)
-        self._focus()
+        
+        # Teraz, gdy UI jest gotowe, sprawdź aktualizacje
+        if not self.update_prompt_shown:
+            self.check_for_updates_on_start()
 
     def check_for_updates_on_start(self):
         thread = Thread(target=self.fetch_update_info_in_background)
@@ -543,26 +534,17 @@ class Panel(Screen):
             
     def set_language(self, lang):
         self.lang = lang
-        self.set_lang_headers_and_legends()
+        self.set_lang_headers_and_legends() # Ustaw nagłówki i legendy od razu
         
         if not self.data_loaded:
-            # Jeśli dane nie są jeszcze załadowane, pokaż "Ładowanie..."
-            loading_text = TRANSLATIONS[self.lang]["loading_text"]
-            self["menuL"].setList([(loading_text, "SEPARATOR")])
-            self["menuM"].setList([(loading_text, "SEPARATOR")])
-            self["menuR"].setList([(loading_text, "SEPARATOR")])
-            self._focus()
-            return
-
-        # Dane są załadowane, przetwórz je i wypełnij menu
-        try:
-            # Pobierz dane z pamięci podręcznej
-            repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
-            best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
-
-            if not repo_lists:
-                repo_lists = [(TRANSLATIONS[lang]["loading_error_text"], "SEPARATOR")]
+            # Dane nie są jeszcze załadowane, pokaż "Ładowanie..."
+            loading_text = TRANSLATIONS[self.lang].get("loading_text", "Loading...")
+            for menu_widget in (self["menuL"], self["menuM"], self["menuR"]):
+                menu_widget.setList([(loading_text,)])
+            self._focus() # Ustaw fokus nawet na ekranie ładowania
+        else:
+            # Dane są załadowane, użyj ich
+            repo_lists, s4a_lists_full, best_oscam_version = self.fetched_data_cache
             
             keywords_to_remove = ['bzyk', 'jakitaki']
             s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
@@ -581,15 +563,9 @@ class Panel(Screen):
                     tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
 
             self.data = (final_channel_lists, softcam_menu, tools_menu)
+            # set_lang_headers_and_legends() już wywołane na górze
             self.populate_menus()
-            
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas przetwarzania danych dla set_language:", e)
-            self["menuL"].setList([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")])
-            self["menuM"].setList([])
-            self["menuR"].setList([])
-        
-        self._focus()
+            self._focus()
 
     def set_lang_headers_and_legends(self):
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
@@ -623,19 +599,21 @@ class Panel(Screen):
                 with open(tmp_version_path, 'r') as f:
                     latest_ver = f.read().strip()
                 
-                # --- START POPRAWIONEJ LOGIKI AKTUALIZACJI ---
-                def parse_version(v_str):
-                    v_str_clean = v_str.split('-')[0] # "2.4-test" -> "2.4"
+                # --- START POPRAWKI LOGIKI WERSJI ---
+                is_newer = False
+                if latest_ver:
                     try:
-                        return [int(part) for part in v_str_clean.split('.')] # "2.4" -> [2, 4]
-                    except Exception:
-                        return [0] # Fallback
-                
-                current_ver_parts = parse_version(VER)
-                latest_ver_parts = parse_version(latest_ver)
+                        # Porównywanie krotek (tuple) poprawnie obsłuży wersje typu 2.10 > 2.9
+                        current_ver_tuple = tuple(map(int, VER.split('.')))
+                        latest_ver_tuple = tuple(map(int, latest_ver.split('.')))
+                        is_newer = latest_ver_tuple > current_ver_tuple
+                    except Exception as e:
+                        print("[AIO Panel] Błąd parsowania wersji: {} vs {}. Używam prostego porównania.".format(latest_ver, VER))
+                        # Fallback do starej logiki, jeśli parsowanie zawiedzie
+                        is_newer = latest_ver != VER 
+                # --- KONIEC POPRAWKI LOGIKI WERSJI ---
 
-                if latest_ver_parts > current_ver_parts: # Porównanie list, np. [2, 4] > [2, 3]
-                # --- KONIEC POPRAWIONEJ LOGIKI AKTUALIZACJI ---
+                if is_newer:
                     changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
                         with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
@@ -694,10 +672,6 @@ class Panel(Screen):
         )
     
     def run_super_setup_wizard(self):
-        if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
-            return
-            
         lang = self.lang
         options = [
             (TRANSLATIONS[lang]["sk_option_deps"], "deps_only"),
@@ -733,10 +707,13 @@ class Panel(Screen):
             )
             
     def _wizard_start(self, steps):
+        if not self.data_loaded or not self.fetched_data_cache:
+             self.sess.open(MessageBox, "Dane wtyczki nie są jeszcze załadowane. Spróbuj ponownie za chwilę.", type=MessageBox.TYPE_ERROR); return
+
+        repo_lists, _, _ = self.fetched_data_cache
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
+
         if "channel_list" in steps:
-            # Użyj danych z pamięci podręcznej zamiast ponownego pobierania
-            repo_lists = self.fetched_data_cache.get("repo_lists", [])
             if repo_lists and repo_lists[0][1] != 'SEPARATOR':
                 try:
                     list_name = repo_lists[0][0].split(' - ')[0]
@@ -755,7 +732,7 @@ class Panel(Screen):
 
     def run_with_confirmation(self):
         if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], timeout=3)
             return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
@@ -1022,7 +999,7 @@ class Panel(Screen):
         console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
     def get_lists_from_repo(self):
-        manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
+        manifest_url = "https.raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
         tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
         prepare_tmp_dir()
         try:
