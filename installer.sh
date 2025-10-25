@@ -1,5 +1,5 @@
 #!/bin/sh
-# Skrypt instalacyjny dla wtyczki PanelAIO (v4 - background execution)
+# Skrypt instalacyjny dla wtyczki PanelAIO (v6 - precyzyjniejsze instrukcje)
 
 # --- Konfiguracja ---
 PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
@@ -49,21 +49,36 @@ do_background_update() {
     echo "--> Ustawiam uprawnienia do wykonania dla skryptów .sh..." >> "$LOG_FILE"
     chmod +x "$PLUGIN_DIR"/*.sh >> "$LOG_FILE" 2>&1
 
-    # Usuń katalog tymczasowy (już niepotrzebny) - Można go zostawić do debugowania usuwając poniższą linię
-    # rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
+    # Dodaj krótką pauzę, aby upewnić się, że operacje na plikach się zakończyły
+    sleep 3
 
-    echo ">>> Aktualizacja PanelAIO w tle zakończona." >> "$LOG_FILE"
+    # Usuń katalog tymczasowy (już niepotrzebny)
+    rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
+
+    echo ">>> Aktualizacja PanelAIO w tle ZAKOŃCZONA." >> "$LOG_FILE"
     date >> "$LOG_FILE"
-    echo ">>> Proszę RĘCZNIE zrestartować Enigma2 (GUI), aby zmiany były widoczne." >> "$LOG_FILE"
+    echo ">>> Można teraz RĘCZNIE zrestartować Enigma2 (GUI)." >> "$LOG_FILE"
     exit 0
 }
 
 # --- Główna logika skryptu ---
-# Uruchom funkcję aktualizacji w tle i natychmiast zakończ główny skrypt
+# Uruchom funkcję aktualizacji w tle
 echo ">>> Uruchamiam aktualizację PanelAIO w tle..."
-echo ">>> Szczegóły będą zapisywane w $LOG_FILE"
-echo ">>> Po zakończeniu (kilkanaście sekund) zrestartuj ręcznie GUI."
 ( do_background_update ) & # Kluczowe: uruchomienie w subshellu (&) w tle
+
+# Wyświetl instrukcje dla użytkownika i zakończ
+echo "-----------------------------------------------------"
+echo ">>> Aktualizacja została uruchomiona w tle."
+echo ">>> Proces trwa od kilkunastu sekund do minuty."
+echo ">>> Po tym czasie można bezpiecznie zrestartować GUI."
+echo ""
+echo ">>> Możesz sprawdzić plik logu, aby upewnić się,"
+echo ">>> że aktualizacja się zakończyła:"
+echo ">>> $LOG_FILE"
+echo ""
+echo ">>> Zrestartuj Enigma2 (GUI),"
+echo ">>> aby zmiany zaczęły obowiązywać."
+echo "-----------------------------------------------------"
 
 # Zakończ skrypt wywołany przez Console natychmiast
 exit 0
