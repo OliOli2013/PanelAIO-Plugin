@@ -641,9 +641,9 @@ class Panel(Screen):
         self._focus()
 
     def set_lang_headers_and_legends(self):
-        # === POPRAWKA LITERÓWKI ===
+        # === POPRAWKA LITERÓWKI v2 (poprzednio źle poprawione) ===
         # Poprawiono self.["headM"] na self["headM"]
-        for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
+        for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])): # Poprawna linia
             head_widget.setText(COL_TITLES[self.lang][i])
         self["legend"].setText(LEGEND_PL if self.lang == 'PL' else LEGEND_EN)
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
@@ -896,6 +896,9 @@ class Panel(Screen):
         na_text = TRANSLATIONS[self.lang]["net_diag_na"]
         script_path = os.path.join(PLUGIN_TMP_PATH, "speedtest.py")
         output_file = os.path.join(PLUGIN_TMP_PATH, "speedtest_result.txt")
+        # === POPRAWKA LOGOWANIA BŁĘDÓW SPEEDTEST ===
+        # Zmieniono przekierowanie błędów w linii `$PYTHON_CMD ...` z `2>/dev/null` na `2>&1`
+        # Dodano `if [ $EXIT_CODE -ne 0 ]; then ... fi` do wyświetlania zawartości pliku wyjściowego w razie błędu
         cmd = """
             echo "--- AIO Panel - Diagnostyka Sieci ---"
             echo " "
@@ -930,21 +933,34 @@ class Panel(Screen):
                 PYTHON_CMD="python"
             fi
             
-            $PYTHON_CMD -W ignore "{script_path}" --simple > "{output_file}" 2>/dev/null
+            echo "Uruchamianie skryptu speedtest..."
+            $PYTHON_CMD -W ignore "{script_path}" --simple > "{output_file}" 2>&1 # Przekieruj stderr do stdout
             EXIT_CODE=$?
             
+            # Wyświetl zawartość pliku wyjściowego, jeśli wystąpił błąd
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "--- BEGIN speedtest output (code: $EXIT_CODE) ---"
+                cat "{output_file}"
+                echo "--- END speedtest output ---"
+            fi
+            
+            # Sprawdzamy kod wyjścia ORAZ czy plik wynikowy *istnieje* i *nie jest pusty*
             if [ $EXIT_CODE -eq 0 ] && [ -s "{output_file}" ]; then
                 PING_SPEEDTEST=$(grep 'Ping:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
                 DOWNLOAD_SPEED=$(grep 'Download:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
                 UPLOAD_SPEED=$(grep 'Upload:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
             else
                 echo " "
-                echo "*** {error_msg} (kod: $EXIT_CODE) ***"
+                # Wyświetlamy ogólny błąd tylko jeśli kod wyjścia jest różny od 0
+                if [ $EXIT_CODE -ne 0 ]; then
+                    echo "*** {error_msg} (kod: $EXIT_CODE) ***"
+                fi
                 PING_SPEEDTEST="{na}"
                 DOWNLOAD_SPEED="{na}"
                 UPLOAD_SPEED="{na}"
             fi
             
+            # Bezpieczniej jest czyścić plik po użyciu
             rm -f "{output_file}"
 
             echo " "
