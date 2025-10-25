@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (finalna, uniwersalna) - Poprawki ładowania i aktualizacji
+Wersja 2.4 (poprawka crash + składnia)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -419,6 +419,7 @@ class Panel(Screen):
         <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
         <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+        <widget name="loading_label" position="center,center" size="800,300" font="Regular;32" halign="center" valign="center" transparent="1" zPosition="10" />
     </screen>""".format(PLUGIN_QR_CODE_PATH)
 
     def __init__(self, session):
@@ -428,7 +429,7 @@ class Panel(Screen):
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
-        for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
+        for name in ("headL", "headM", "headR", "legend", "loading_label"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
@@ -483,44 +484,76 @@ class Panel(Screen):
         self.load_plugin_data()
 
     def load_plugin_data(self):
-        # Ustawia etykiety, legendy i "Ładowanie..." w menu
-        self.set_language(self.lang) 
-        # Uruchom pobieranie danych w tle
-        thread = Thread(target=self.fetch_all_data_in_background)
+        # Pokaż ekran ładowania i ukryj menu
+        self["loading_label"].setText(TRANSLATIONS[self.lang]["loading_text"])
+        self["loading_label"].show()
+        for name in ("menuL", "menuM", "menuR", "headL", "headM", "headR"): self[name].hide()
+        
+        # Uruchom pobieranie danych w osobnym wątku
+        thread = Thread(target=self._fetch_all_data_thread, args=(self.lang,))
         thread.start()
 
-    def fetch_all_data_in_background(self):
+    def _fetch_all_data_thread(self, lang):
+        # Ta funkcja działa w tle
+        fetched_data = {}
         try:
-            repo_lists = self.get_lists_from_repo()
+            fetched_data['repo_lists'] = self.get_lists_from_repo()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list repo:", e)
-            repo_lists = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
-        
+            fetched_data['repo_lists'] = [(TRANSLATIONS[lang]["loading_error_text"], "SEPARATOR")]
         try:
-            s4a_lists_full = get_s4aupdater_lists_dynamic()
+            fetched_data['s4a_lists_full'] = get_s4aupdater_lists_dynamic()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list S4a:", e)
-            s4a_lists_full = []
-        
+            fetched_data['s4a_lists_full'] = []
         try:
-            best_oscam_version = get_best_oscam_version_info()
+            fetched_data['best_oscam_version'] = get_best_oscam_version_info()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
-            best_oscam_version = "Error"
+            fetched_data['best_oscam_version'] = "Error"
         
-        self.fetched_data_cache = (repo_lists, s4a_lists_full, best_oscam_version)
-        reactor.callFromThread(self.on_data_loaded)
+        # Wywołaj funkcję w głównym wątku, aby zaktualizować GUI
+        reactor.callFromThread(self._on_data_fetched, lang, fetched_data)
 
-    def on_data_loaded(self):
-        self.data_loaded = True
-        # Teraz wywołaj set_language ponownie, aby przetworzyć i wyświetlić dane
-        self.set_language(self.lang)
+    def _on_data_fetched(self, lang, fetched_data):
+        # Ta funkcja działa w głównym wątku
+        self["loading_label"].hide()
         
-        # Teraz, gdy UI jest gotowe, sprawdź aktualizacje
-        if not self.update_prompt_shown:
-            self.check_for_updates_on_start()
+        repo_lists = fetched_data['repo_lists']
+        s4a_lists_full = fetched_data['s4a_lists_full']
+        best_oscam_version = fetched_data['best_oscam_version']
+        
+        keywords_to_remove = ['bzyk', 'jakitaki']
+        s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
+        final_channel_lists = repo_lists + s4a_lists_filtered
+        
+        softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
+        tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
+
+        for i, (name, action) in enumerate(softcam_menu):
+            if action == "CMD:INSTALL_BEST_OSCAM":
+                oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
+                softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+        
+        for i, (name, action) in enumerate(tools_menu):
+            if action == "CMD:SUPER_SETUP_WIZARD":
+                tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
+
+        self.data = (final_channel_lists, softcam_menu, tools_menu)
+        self.set_lang_headers_and_legends()
+        self.populate_menus()
+        
+        # Pokaż menu
+        for name in ("menuL", "menuM", "menuR", "headL", "headM", "headR"): self[name].show()
+
+        self._focus()
+        
+        # Sprawdź aktualizacje PO załadowaniu interfejsu
+        if not self.update_prompt_shown: # Sprawdź tylko przy pierwszym załadowaniu
+            reactor.callLater(1, self.check_for_updates_on_start)
 
     def check_for_updates_on_start(self):
+        self.update_prompt_shown = True # Ustaw flagę, aby nie sprawdzać ponownie po zmianie języka
         thread = Thread(target=self.fetch_update_info_in_background)
         thread.start()
 
@@ -534,39 +567,8 @@ class Panel(Screen):
             
     def set_language(self, lang):
         self.lang = lang
-        self.set_lang_headers_and_legends() # Ustaw nagłówki i legendy od razu
+        self.load_plugin_data() # Użyj nowej, wątkowej metody ładowania
         
-        if not self.data_loaded:
-            # Dane nie są jeszcze załadowane, pokaż "Ładowanie..."
-            loading_text = TRANSLATIONS[self.lang].get("loading_text", "Loading...")
-            for menu_widget in (self["menuL"], self["menuM"], self["menuR"]):
-                menu_widget.setList([(loading_text,)])
-            self._focus() # Ustaw fokus nawet na ekranie ładowania
-        else:
-            # Dane są załadowane, użyj ich
-            repo_lists, s4a_lists_full, best_oscam_version = self.fetched_data_cache
-            
-            keywords_to_remove = ['bzyk', 'jakitaki']
-            s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
-            final_channel_lists = repo_lists + s4a_lists_filtered
-            
-            softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
-            tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
-
-            for i, (name, action) in enumerate(softcam_menu):
-                if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
-                    softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
-            
-            for i, (name, action) in enumerate(tools_menu):
-                if action == "CMD:SUPER_SETUP_WIZARD":
-                    tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
-
-            self.data = (final_channel_lists, softcam_menu, tools_menu)
-            # set_lang_headers_and_legends() już wywołane na górze
-            self.populate_menus()
-            self._focus()
-
     def set_lang_headers_and_legends(self):
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
             head_widget.setText(COL_TITLES[self.lang][i])
@@ -581,6 +583,12 @@ class Panel(Screen):
             else:
                 menu_widget.setList([(TRANSLATIONS[self.lang]["loading_error_text"],)])
 
+    def _clean_version(self, v):
+        # Wyszukuje pierwszy znak, który nie jest cyfrą ani kropką, i obcina resztę
+        match = re.search(r'[^0-9.]', v)
+        if match:
+            v = v[:match.start()]
+        return v.strip('.')
 
     def perform_update_check_silent(self):
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
@@ -597,23 +605,30 @@ class Panel(Screen):
 
             if os.path.exists(tmp_version_path) and os.path.getsize(tmp_version_path) > 0:
                 with open(tmp_version_path, 'r') as f:
-                    latest_ver = f.read().strip()
+                    latest_ver_str = f.read().strip()
                 
-                # --- START POPRAWKI LOGIKI WERSJI ---
-                is_newer = False
-                if latest_ver:
-                    try:
-                        # Porównywanie krotek (tuple) poprawnie obsłuży wersje typu 2.10 > 2.9
-                        current_ver_tuple = tuple(map(int, VER.split('.')))
-                        latest_ver_tuple = tuple(map(int, latest_ver.split('.')))
-                        is_newer = latest_ver_tuple > current_ver_tuple
-                    except Exception as e:
-                        print("[AIO Panel] Błąd parsowania wersji: {} vs {}. Używam prostego porównania.".format(latest_ver, VER))
-                        # Fallback do starej logiki, jeśli parsowanie zawiedzie
-                        is_newer = latest_ver != VER 
-                # --- KONIEC POPRAWKI LOGIKI WERSJI ---
+                if not latest_ver_str:
+                    return None
+                    
+                # === NOWA LOGIKA PORÓWNYWANIA WERSJI ===
+                clean_ver = self._clean_version(VER)
+                clean_latest_ver = self._clean_version(latest_ver_str)
+                
+                is_update = False
+                try:
+                    current_ver_tuple = tuple(map(int, (clean_ver.split('.'))))
+                    latest_ver_tuple = tuple(map(int, (clean_latest_ver.split('.'))))
+                    
+                    if latest_ver_tuple > current_ver_tuple:
+                        is_update = True
+                except (ValueError, TypeError):
+                     print("[AIO Panel] Błąd parsowania wersji: {} vs {}. Używam prostego porównania.".format(VER, latest_ver_str))
+                     # Fallback do prostego porównania, jeśli parsowanie zawiedzie
+                     if latest_ver_str != VER:
+                         is_update = True
+                # === KONIEC NOWEJ LOGIKI ===
 
-                if is_newer:
+                if is_update:
                     changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
                         with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
@@ -621,14 +636,14 @@ class Panel(Screen):
                         found_version_section, changes = False, []
                         for line in lines:
                             line = line.strip()
-                            if line == "[{}]".format(latest_ver):
+                            if line == "[{}]".format(latest_ver_str):
                                 found_version_section = True
                                 continue
                             if found_version_section:
                                 if line.startswith("[") and line.endswith("]"): break
                                 if line: changes.append(line)
                         if changes: changelog_text = "\n".join(changes)
-                    return {'latest_ver': latest_ver, 'changelog': changelog_text}
+                    return {'latest_ver': latest_ver_str, 'changelog': changelog_text}
         except Exception as e:
             print("[AIO Panel] Silent update check failed:", e)
         return None
@@ -663,6 +678,13 @@ class Panel(Screen):
             self.update_info = None
 
     def on_update_finished(self, *args):
+        # Używamy reactor.callLater, aby odczekać chwilę i wywołać okno
+        # w "bezpiecznym" kontekście, już po pełnym zamknięciu konsoli.
+        # To rozwiązuje błąd "Modal open are allowed only from a screen which is modal!"
+        reactor.callLater(0.2, self._show_restart_message_after_update)
+
+    def _show_restart_message_after_update(self):
+        # Ta funkcja jest wywoływana z głównej pętli, a nie bezpośrednio z callbacku zamykania okna
         self.sess.openWithCallback(
             lambda *x: self.restart_gui(), 
             MessageBox, 
@@ -707,13 +729,9 @@ class Panel(Screen):
             )
             
     def _wizard_start(self, steps):
-        if not self.data_loaded or not self.fetched_data_cache:
-             self.sess.open(MessageBox, "Dane wtyczki nie są jeszcze załadowane. Spróbuj ponownie za chwilę.", type=MessageBox.TYPE_ERROR); return
-
-        repo_lists, _, _ = self.fetched_data_cache
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
-
         if "channel_list" in steps:
+            repo_lists = self.get_lists_from_repo()
             if repo_lists and repo_lists[0][1] != 'SEPARATOR':
                 try:
                     list_name = repo_lists[0][0].split(' - ')[0]
@@ -731,9 +749,6 @@ class Panel(Screen):
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
     def run_with_confirmation(self):
-        if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], timeout=3)
-            return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
@@ -750,7 +765,7 @@ class Panel(Screen):
     def execute_action(self, name, action):
         title = name
         if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], callback=lambda: self.ask_for_restart("Instalacja '{}' zakończona.\nZalecany restart GUI.\n\nRestartować teraz?".format(name)), close_on_finish=True) 
         elif action.startswith("archive:"):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("CMD:"):
@@ -763,8 +778,9 @@ class Panel(Screen):
                 console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], close_on_finish=True)
-            elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam(close_on_finish=True)
+                console_screen_open(self.sess, title, [cmd], callback=lambda: self.ask_for_restart("Instalacja ServiceApp zakończona.\nZalecany restart GUI.\n\nRestartować teraz?"), close_on_finish=True)
+            elif command_key == "INSTALL_BEST_OSCAM": 
+                self.install_best_oscam(callback=lambda: self.ask_for_restart("Instalacja Oscam zakończona.\nZalecany restart GUI.\n\nRestartować teraz?"), close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             #elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True) # Usunięte
@@ -880,11 +896,21 @@ class Panel(Screen):
     def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
+    
+    def ask_for_restart(self, message=None):
+        if message is None:
+            message = "Operacja zakończona.\nZalecany jest restart interfejsu.\n\nCzy chcesz zrestartować teraz?"
+        self.sess.openWithCallback(
+            lambda ret: self.restart_gui() if ret else None,
+            MessageBox, message, type=MessageBox.TYPE_YESNO, title="Restart GUI"
+        )
+
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
+            show_message_compat(self.sess, "Lista kanałów została przeładowana.", timeout=5)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
             show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
@@ -999,7 +1025,7 @@ class Panel(Screen):
         console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
     def get_lists_from_repo(self):
-        manifest_url = "https.raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
+        manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
         tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
         prepare_tmp_dir()
         try:
