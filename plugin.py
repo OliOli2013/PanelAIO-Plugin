@@ -139,9 +139,9 @@ def console_screen_open(session, title, cmds_with_args, callback=None, close_on_
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
     # Upewnienie się, że Console jest otwierane w głównym wątku, jeśli jest wywoływane z wątku pobierania danych
     if reactor.running:
-        reactor.callLater(0.1, lambda: session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback) if callback else session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish))
+        reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback) if callback else session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
     else:
-        c_dialog = session.open(Console, title, cmds_list, closeOnSuccess=close_on_finish)
+        c_dialog = session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish)
         if callback: c_dialog.onClose.append(callback)
 
 def prepare_tmp_dir():
@@ -735,17 +735,23 @@ class Panel(Screen):
             type=MessageBox.TYPE_YESNO
         )
 
+    # === POPRAWKA: Dodano informację o aktualizacji w tle ===
     def do_update(self, confirmed):
         if confirmed:
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            # ZMIANA: Usuwamy callback do on_update_finished, by nie powodować błędu po konsoli.
-            # Użytkownik sam zamknie konsolę i zrestartuje GUI.
-            console_screen_open(self.sess, "Aktualizacja AIO Panel...", [update_cmd], callback=None, close_on_finish=False) 
+            
+            # Pokaż informację ZANIM uruchomisz konsolę
+            info_msg_pl = "Rozpoczynam aktualizację w tle.\n\nOkno konsoli zaraz zniknie.\n\nPo kilku chwilach zrestartuj RĘCZNIE GUI, aby zakończyć aktualizację.\n(Postęp można śledzić w /tmp/PanelAIO_Update.log)"
+            info_msg_en = "Starting update in the background.\n\nThe console window will disappear shortly.\n\nAfter a few moments, restart the GUI MANUALLY to complete the update.\n(Progress can be tracked in /tmp/PanelAIO_Update.log)"
+            info_msg = info_msg_pl if self.lang == 'PL' else info_msg_en
+            self.sess.open(MessageBox, info_msg, type=MessageBox.TYPE_INFO, timeout=15) # Pokaż przez 15 sekund
+
+            # Uruchom instalator przez Console. Sam instalator uruchomi proces w tle i szybko się zakończy.
+            # Console powinna zamknąć się automatycznie i szybko.
+            console_screen_open(self.sess, "Aktualizacja AIO Panel (Uruchamianie w tle)...", [update_cmd], callback=None, close_on_finish=True) # Zamknij konsolę automatycznie
+            
         else:
             self.update_info = None
-
-    # ZMIANA: Usunięta funkcja on_update_finished, by uniemożliwić automatyczne wyświetlanie MessageBox i restart GUI.
-    # Użytkownik sam zamyka konsolę i restartuje GUI.
     
     def run_super_setup_wizard(self):
         if not self.data_loaded:
