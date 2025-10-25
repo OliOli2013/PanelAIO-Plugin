@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Skrypt do instalacji archiwum listy kanałów lub piconów z Panelu AIO
+# Wersja BEZ agresywnego czyszczenia plików list przed instalacją.
 # Argumenty: $1 - ścieżka do archiwum, $2 - typ archiwum (zip lub tar.gz)
 
 ARCHIVE_PATH="$1"
@@ -16,28 +17,6 @@ if [ ! -f "$ARCHIVE_PATH" ]; then
     echo "!!! BŁĄD: Plik archiwum nie istnieje: $ARCHIVE_PATH"
     exit 1
 fi
-
-# --- Sekcja czyszczenia STARYCH plików listy kanałów ---
-# Wykonujemy tylko jeśli to NIE jest archiwum piconów
-# Zakładamy, że archiwa picon mają 'picon' w nazwie (mało precyzyjne, ale powinno działać)
-if ! echo "$ARCHIVE_PATH" | grep -qi "picon"; then
-    echo "--> Wykryto instalację listy kanałów. Czyszczę stare pliki..."
-    # Usuwamy pliki lamedb oraz wszystkie pliki bukietów
-    # UWAGA: To usunie WSZYSTKIE bukiety, w tym te stworzone przez użytkownika!
-    rm -f "$E2_DIR/lamedb" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/lamedb5" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/blacklist" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/whitelist" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/bouquets.tv" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/bouquets.radio" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/userbouquet.*.tv" >> /tmp/aio_install.log 2>&1
-    rm -f "$E2_DIR/userbouquet.*.radio" >> /tmp/aio_install.log 2>&1
-    echo "--> Zakończono czyszczenie."
-else
-    echo "--> Wykryto instalację piconów. Pomijam czyszczenie list kanałów."
-fi
-# --- Koniec sekcji czyszczenia ---
-
 
 # Rozpakowywanie archiwum
 echo "--> Rozpakowuję archiwum..."
@@ -55,6 +34,7 @@ if [ "$ARCHIVE_TYPE" = "zip" ]; then
         fi
     else
         echo "--> Rozpakowuję listę kanałów (zip) do $E2_DIR..."
+        # Rozpakuj bezpośrednio do /etc/enigma2, nadpisując istniejące pliki
         unzip -o -q "$ARCHIVE_PATH" -d "$E2_DIR"
     fi
 elif [ "$ARCHIVE_TYPE" = "tar.gz" ]; then
@@ -62,12 +42,13 @@ elif [ "$ARCHIVE_TYPE" = "tar.gz" ]; then
     if echo "$ARCHIVE_PATH" | grep -qi "picon"; then
         echo "--> Rozpakowuję picony (tar.gz) do $PICONS_DIR..."
         mkdir -p "$PICONS_DIR"
-        tar -xzf "$ARCHIVE_PATH" -C "$PICONS_DIR"
+        tar -xzf "$ARCHIVE_PATH" -C "$PICONS_DIR" --overwrite
         # Logika dla podkatalogu 'picon' w tar.gz (jeśli potrzebna)
         # Można dodać podobne sprawdzenie i mv jak dla zip
     else
         echo "--> Rozpakowuję listę kanałów (tar.gz) do $E2_DIR..."
-        tar -xzf "$ARCHIVE_PATH" -C "$E2_DIR"
+        # Rozpakuj bezpośrednio do /etc/enigma2, nadpisując istniejące pliki
+        tar -xzf "$ARCHIVE_PATH" -C "$E2_DIR" --overwrite
     fi
 else
     echo "!!! BŁĄD: Nieznany typ archiwum: $ARCHIVE_TYPE"
