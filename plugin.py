@@ -38,7 +38,7 @@ import subprocess
 import shutil
 import re
 import json
-import time 
+import time
 from twisted.internet import reactor
 from threading import Thread
 
@@ -418,8 +418,13 @@ class WizardProgressScreen(Screen):
         # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
         start_msg_pl = "Rozpoczynam instalację listy:\n'{}'...".format(self.wizard_channel_list_name)
         start_msg_en = "Starting channel list installation:\n'{}'...".format(self.wizard_channel_list_name)
-        start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, type=MessageBox.TYPE_INFO, timeout=5)
+        # Błąd był w tym, że wtyczka używa self.lang, ale WizardProgressScreen go nie ma, użyjmy globalnej lang
+        # Zakładając, że Wizard jest otwierany z Panelu, self.session.current_dialog powinien być Panelem
+        parent_lang = 'PL' # Domyślnie
+        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
+            parent_lang = self.session.current_dialog.lang
+        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Poprawiony argument
         # Uruchom instalację
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
 
@@ -452,8 +457,11 @@ class WizardProgressScreen(Screen):
         # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
         start_msg_pl = "Rozpoczynam instalację picon..."
         start_msg_en = "Starting picon installation..."
-        start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, type=MessageBox.TYPE_INFO, timeout=5)
+        parent_lang = 'PL' # Domyślnie
+        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
+             parent_lang = self.session.current_dialog.lang
+        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Poprawiony argument
         # Uruchom instalację
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
         
@@ -777,7 +785,7 @@ class Panel(Screen):
     
     def run_super_setup_wizard(self):
         if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], message_type=MessageBox.TYPE_INFO, timeout=3)
             return
             
         lang = self.lang
@@ -851,7 +859,7 @@ class Panel(Screen):
 
     def run_with_confirmation(self):
         if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], type=MessageBox.TYPE_INFO, timeout=3)
+            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], message_type=MessageBox.TYPE_INFO, timeout=3)
             return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
@@ -879,13 +887,14 @@ class Panel(Screen):
                 start_msg_pl = "Rozpoczynam instalację:\n'{}'...".format(title)
                 start_msg_en = "Starting installation:\n'{}'...".format(title)
                 start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
-                show_message_compat(self.sess, start_msg, type=MessageBox.TYPE_INFO, timeout=5) # Pokaż przez 5 sekund
+                # *** POPRAWKA LITERÓWKI TUTAJ ***
+                show_message_compat(self.sess, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Pokaż przez 5 sekund
 
                 # Uruchom instalację w oknie Console (tytuł już zawiera nazwę listy)
                 # Użyj pełnego 'title' jako tytułu okna Console dla lepszej informacji
                 install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
             except IndexError:
-                 show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", type=MessageBox.TYPE_ERROR)
+                 show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
         
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
@@ -1071,9 +1080,9 @@ class Panel(Screen):
                         with open(conf_path, "w") as f: f.writelines(new_lines)
                         found = True
             if found:
-                show_message_compat(self.sess, "Hasło Oscam zostało skasowane.")
+                show_message_compat(self.sess, "Hasło Oscam zostało skasowane.", message_type=MessageBox.TYPE_INFO)
             else:
-                show_message_compat(self.sess, "Nie znaleziono hasła Oscam w plikach konfiguracyjnych.")
+                show_message_compat(self.sess, "Nie znaleziono hasła Oscam w plikach konfiguracyjnych.", message_type=MessageBox.TYPE_INFO)
         except Exception as e:
             show_message_compat(self.sess, "Błąd: {}".format(e), message_type=MessageBox.TYPE_ERROR)
 
