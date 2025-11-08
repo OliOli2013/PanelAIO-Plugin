@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.4 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
+Wersja 2.5 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.4"
+VER = "2.5"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -132,17 +132,13 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
 
 # === FUNKCje POMOCNICZE ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
-    # Użycie callLater jest bezpieczniejsze w środowisku Enigma2
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    # Upewnienie się, że Console jest otwierane w głównym wątku, jeśli jest wywoływane z wątku pobierania danych
     if reactor.running:
-        # Poprawka: Użycie nazwanych argumentów dla Console
         reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback) if callback else session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
     else:
-        # Poprawka: Użycie nazwanych argumentów dla Console
         c_dialog = session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish)
         if callback: c_dialog.onClose.append(callback)
 
@@ -182,20 +178,16 @@ def install_archive(session, title, url, callback_on_finish=None):
     elif archive_type == "ipk":
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
-        # Upewnij się, że skrypt install_archive_script.sh istnieje i jest wykonywalny
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         if not os.path.exists(install_script_path):
              show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
              if callback_on_finish: callback_on_finish()
              return
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
-        # Przekazanie ścieżki do skryptu jako polecenia bash
         full_command = "{} && {} && bash {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
     
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
 
-
-# Funkcja pomocnicza, która wykonuje się w osobnym wątku
 def _get_s4aupdater_lists_dynamic_sync():
     s4aupdater_list_txt_url = 'http://s4aupdater.one.pl/s4aupdater_list.txt'
     prepare_tmp_dir()
@@ -227,7 +219,6 @@ def _get_s4aupdater_lists_dynamic_sync():
         return []
     return lists
 
-# Funkcja pomocnicza, która wykonuje się w osobnym wątku
 def _get_best_oscam_version_info_sync():
     try:
         cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
@@ -242,7 +233,6 @@ def _get_best_oscam_version_info_sync():
     except Exception:
         return "Error"
 
-# Funkcja pomocnicza, która wykonuje się w osobnym wątku
 def _get_lists_from_repo_sync():
     manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
     tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
@@ -292,6 +282,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
+    ("E2Kodi (j00zek) - Instalator", "CMD:INSTALL_E2KODI"),
     ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -311,6 +302,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
+    ("E2Kodi (j00zek) - Installer", "CMD:INSTALL_E2KODI"),
     ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -328,7 +320,6 @@ TOOLS_AND_ADDONS_PL = [
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
     ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
-    # ("Instalacja Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # USUNIĘTE
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
@@ -346,7 +337,6 @@ TOOLS_AND_ADDONS_EN = [
     ("--- System Tools ---", "SEPARATOR"),
     ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
-    # ("Install Softcam Feed", "CMD:INSTALL_SOFTCAM_FEED"), # REMOVED
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
@@ -360,6 +350,7 @@ TOOLS_AND_ADDONS_EN = [
 
 COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodatki"), "EN": ("Channel Lists", "Softcam & Plugins", "Tools & Extras")}
 # === KONIEC DEFINICJI MENU ===
+
 class WizardProgressScreen(Screen):
     skin = """
     <screen position="center,center" size="800,400" title="Super Konfigurator">
@@ -415,19 +406,14 @@ class WizardProgressScreen(Screen):
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
         url = self.wizard_channel_list_url
-        # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
         start_msg_pl = "Rozpoczynam instalację listy:\n'{}'...".format(self.wizard_channel_list_name)
         start_msg_en = "Starting channel list installation:\n'{}'...".format(self.wizard_channel_list_name)
-        # Błąd był w tym, że wtyczka używa self.lang, ale WizardProgressScreen go nie ma, użyjmy globalnej lang
-        # Zakładając, że Wizard jest otwierany z Panelu, self.session.current_dialog powinien być Panelem
-        parent_lang = 'PL' # Domyślnie
+        parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
             parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Poprawiony argument
-        # Uruchom instalację
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
-
 
     def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
@@ -454,15 +440,13 @@ class WizardProgressScreen(Screen):
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
-        # Pokaż komunikat o rozpoczęciu przed otwarciem konsoli
         start_msg_pl = "Rozpoczynam instalację picon..."
         start_msg_en = "Starting picon installation..."
-        parent_lang = 'PL' # Domyślnie
+        parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
              parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Poprawiony argument
-        # Uruchom instalację
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
         install_archive(self.session, title, url, callback=self._wizard_run_next_step)
         
     def _wizard_step_reload_settings(self):
@@ -525,12 +509,9 @@ class Panel(Screen):
         self.fetched_data_cache = None 
         self.update_prompt_shown = False
         self.wait_message_box = None
-        
-        # Ustaw stan ładowania natychmiast
         self.set_language(self.lang)
 
     def initial_setup(self):
-        # Sprawdzenie zależności musi być synchroniczne, ale Console otwiera się w głównym wątku, więc jest OK
         reactor.callLater(0.2, self.check_dependencies)
         
     def check_dependencies(self):
@@ -547,7 +528,7 @@ class Panel(Screen):
         required_packages = ['curl', 'tar', 'unzip']
         missing_packages = [pkg for pkg in required_packages if not which(pkg)]
         if not missing_packages:
-            self.start_async_data_load() # Przejdź do ładowania danych
+            self.start_async_data_load()
             return
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
@@ -559,48 +540,39 @@ class Panel(Screen):
         console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
-        self.start_async_data_load() # Przejdź do ładowania danych po instalacji
+        self.start_async_data_load()
 
     def start_async_data_load(self):
-        # Rozpocznij pobieranie danych w tle
         thread = Thread(target=self._background_data_loader)
         thread.start()
-        # Rozpocznij sprawdzanie aktualizacji w tle (równolegle)
         reactor.callLater(1, self.check_for_updates_on_start)
         
     def _background_data_loader(self):
-        # TA FUNKCJA DZIAŁA W OSOBNYM WĄTKU!
         repo_lists, s4a_lists_full, best_oscam_version = [], [], "N/A"
         try:
-            repo_lists = _get_lists_from_repo_sync() # Używamy synchronicznej funkcji
+            repo_lists = _get_lists_from_repo_sync()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list repo:", e)
-            # W przypadku błędu ustawiamy listę błędu, by UI o tym poinformował
             repo_lists = [(TRANSLATIONS["PL"]["loading_error_text"] + " (REPO)", "SEPARATOR")] 
         try:
-            s4a_lists_full = _get_s4aupdater_lists_dynamic_sync() # Używamy synchronicznej funkcji
+            s4a_lists_full = _get_s4aupdater_lists_dynamic_sync()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania list S4a:", e)
         try:
-            best_oscam_version = _get_best_oscam_version_info_sync() # Używamy synchronicznej funkcji
+            best_oscam_version = _get_best_oscam_version_info_sync()
         except Exception as e:
             print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
             best_oscam_version = "Error"
         
-        # Zapisz pobrane dane w pamięci podręcznej
         self.fetched_data_cache = {
             "repo_lists": repo_lists,
             "s4a_lists_full": s4a_lists_full,
             "best_oscam_version": best_oscam_version
         }
-        
-        # Przekaż sygnał do głównego wątku, że dane są gotowe
         reactor.callFromThread(self._on_data_loaded)
         
     def _on_data_loaded(self):
-        # Ta funkcja działa z powrotem w głównym wątku
         self.data_loaded = True
-        # Zastosuj pobrane dane do interfejsu, używając bieżącego języka
         self.set_language(self.lang)
         self._focus()
 
@@ -609,7 +581,6 @@ class Panel(Screen):
         thread.start()
 
     def fetch_update_info_in_background(self):
-        # TA FUNKCJA DZIAŁA W OSOBNYM WĄTKU!
         try:
             update_info = self.perform_update_check_silent()
             if update_info and not self.update_prompt_shown:
@@ -622,23 +593,18 @@ class Panel(Screen):
         self.set_lang_headers_and_legends()
         
         if not self.data_loaded:
-            # Jeśli dane nie są jeszcze załadowane, pokaż "Ładowanie..."
             loading_text = TRANSLATIONS[self.lang]["loading_text"]
-            # Wypełniamy listy widoczne na ekranie (MENU UI)
             self["menuL"].setList([(loading_text, "SEPARATOR")])
             self["menuM"].setList([(loading_text, "SEPARATOR")])
             self["menuR"].setList([(loading_text, "SEPARATOR")])
             self._focus()
             return
 
-        # Dane są załadowane, przetwórz je i wypełnij menu
         try:
-            # Pobierz dane z pamięci podręcznej
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
             s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
             best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
 
-            # Mimo, że repo_lists ma już element błędu, dodajemy go, by być pewnym
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
             
@@ -671,9 +637,7 @@ class Panel(Screen):
         self._focus()
 
     def set_lang_headers_and_legends(self):
-        # === POPRAWKA LITERÓWKI v2 (poprzednio źle poprawione) ===
-        # Poprawiono self.["headM"] na self["headM"]
-        for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])): # Poprawna linia
+        for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
             head_widget.setText(COL_TITLES[self.lang][i])
         self["legend"].setText(LEGEND_PL if self.lang == 'PL' else LEGEND_EN)
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
@@ -688,7 +652,6 @@ class Panel(Screen):
 
 
     def perform_update_check_silent(self):
-        # TA FUNKCJA MUSI BYĆ SYNCHRONICZNA!
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
         version_url = repo_base_url + "version.txt"
         changelog_url = repo_base_url + "changelog.txt"
@@ -696,7 +659,6 @@ class Panel(Screen):
         tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog.txt')
         prepare_tmp_dir()
         try:
-            # Użycie subprocess.Popen().wait() czyni te operacje synchronicznymi
             cmd_ver = "wget --no-check-certificate -O {} {}".format(tmp_version_path, version_url)
             cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
             subprocess.Popen(cmd_ver, shell=True).wait()
@@ -706,19 +668,17 @@ class Panel(Screen):
                 with open(tmp_version_path, 'r') as f:
                     latest_ver = f.read().strip()
                 
-                # --- START POPRAWIONEJ LOGIKI AKTUALIZACJI ---
                 def parse_version(v_str):
-                    v_str_clean = v_str.split('-')[0] # "2.4-test" -> "2.4"
+                    v_str_clean = v_str.split('-')[0]
                     try:
-                        return [int(part) for part in v_str_clean.split('.')] # "2.4" -> [2, 4]
+                        return [int(part) for part in v_str_clean.split('.')]
                     except Exception:
-                        return [0] # Fallback
+                        return [0]
                 
                 current_ver_parts = parse_version(VER)
                 latest_ver_parts = parse_version(latest_ver)
 
-                if latest_ver_parts > current_ver_parts: # Porównanie list, np. [2, 4] > [2, 3]
-                # --- KONIEC POPRAWIONEJ LOGIKI AKTUALIZACJI ---
+                if latest_ver_parts > current_ver_parts:
                     changelog_text = "Brak informacji o zmianach."
                     if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
                         with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
@@ -739,7 +699,6 @@ class Panel(Screen):
         return None
 
     def check_for_updates_manual(self):
-        # Sprawdzanie aktualizacji w osobnym wątku (żeby nie blokować GUI)
         def manual_check_thread():
             info = self.perform_update_check_silent()
             if info:
@@ -764,22 +723,15 @@ class Panel(Screen):
             title=TRANSLATIONS[self.lang]["update_available_title"], 
             type=MessageBox.TYPE_YESNO
         )
-
-    # === POPRAWKA: Dodano informację o aktualizacji w tle ===
+    
     def do_update(self, confirmed):
         if confirmed:
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            
-            # Pokaż informację ZANIM uruchomisz konsolę
             info_msg_pl = "Rozpoczynam aktualizację w tle.\n\nOkno konsoli zaraz zniknie.\n\nPo ok. minucie zrestartuj RĘCZNIE GUI, aby zakończyć aktualizację.\n(Postęp można śledzić w /tmp/PanelAIO_Update.log)"
             info_msg_en = "Starting update in the background.\n\nThe console window will disappear shortly.\n\nAfter ~1 minute, restart the GUI MANUALLY to complete the update.\n(Progress can be tracked in /tmp/PanelAIO_Update.log)"
             info_msg = info_msg_pl if self.lang == 'PL' else info_msg_en
-            self.sess.open(MessageBox, info_msg, type=MessageBox.TYPE_INFO, timeout=15) # Pokaż przez 15 sekund
-
-            # Uruchom instalator przez Console. Sam instalator uruchomi proces w tle i szybko się zakończy.
-            # Console powinna zamknąć się automatycznie i szybko.
-            console_screen_open(self.sess, "Aktualizacja AIO Panel (Uruchamianie w tle)...", [update_cmd], callback=None, close_on_finish=True) # Zamknij konsolę automatycznie
-            
+            self.sess.open(MessageBox, info_msg, type=MessageBox.TYPE_INFO, timeout=15)
+            console_screen_open(self.sess, "Aktualizacja AIO Panel (Uruchamianie w tle)...", [update_cmd], callback=None, close_on_finish=True)
         else:
             self.update_info = None
     
@@ -821,23 +773,19 @@ class Panel(Screen):
                 lambda confirmed: self._wizard_start(steps) if confirmed else None,
                 MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(
                     TRANSLATIONS[lang].get(f"sk_option_{key}", "Wybrana opcja").split(') ')[-1]
-                ), # Używamy nazwy opcji zamiast ogólnego tekstu
+                ),
                 type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
             )
             
     def _wizard_start(self, steps):
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
         if "channel_list" in steps:
-            # Użyj danych z pamięci podręcznej zamiast ponownego pobierania
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            # Szukamy pierwszej nie-SEPARATOR listy z repo
             first_valid_list = next((item for item in repo_lists if item[1] != 'SEPARATOR'), None)
             
             if first_valid_list:
                 try:
-                    # Rozbijamy tytuł (np. "NazwaListy - Autor (Wersja)") by dostać samą nazwę
                     list_name = first_valid_list[0].split(' - ')[0]
-                    # Pobieramy URL z akcji (np. "archive:https://...")
                     channel_list_url = first_valid_list[1].split(':', 1)[1]
                 except (IndexError, AttributeError): 
                     channel_list_url = '' 
@@ -865,7 +813,7 @@ class Panel(Screen):
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
         if action == "SEPARATOR": return
-        actions_no_confirm = ["CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP"]
+        actions_no_confirm = ["CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
@@ -879,19 +827,13 @@ class Panel(Screen):
         if action.startswith("bash_raw:"):
             console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
         
-        # === POPRAWKA: Dodano komunikat przed instalacją archiwum ===
         elif action.startswith("archive:"):
             try:
                 list_url = action.split(':', 1)[1]
-                # Pokaż natychmiastowy komunikat o rozpoczęciu
                 start_msg_pl = "Rozpoczynam instalację:\n'{}'...".format(title)
                 start_msg_en = "Starting installation:\n'{}'...".format(title)
                 start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
-                # *** POPRAWKA LITERÓWKI TUTAJ ***
-                show_message_compat(self.sess, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5) # Pokaż przez 5 sekund
-
-                # Uruchom instalację w oknie Console (tytuł już zawiera nazwę listy)
-                # Użyj pełnego 'title' jako tytułu okna Console dla lepszej informacji
+                show_message_compat(self.sess, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
                 install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
             except IndexError:
                  show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
@@ -907,10 +849,10 @@ class Panel(Screen):
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
                 console_screen_open(self.sess, title, [cmd], close_on_finish=True)
+            elif command_key == "INSTALL_E2KODI": self.install_e2kodi()
             elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam(close_on_finish=True)
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            #elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed(close_on_finish=True) # Usunięte
             elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password()
             elif command_key == "CLEAR_FTP_PASS": self.clear_ftp_password()
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -948,9 +890,6 @@ class Panel(Screen):
         na_text = TRANSLATIONS[self.lang]["net_diag_na"]
         script_path = os.path.join(PLUGIN_TMP_PATH, "speedtest.py")
         output_file = os.path.join(PLUGIN_TMP_PATH, "speedtest_result.txt")
-        # === POPRAWKA LOGOWANIA BŁĘDÓW SPEEDTEST ===
-        # Zmieniono przekierowanie błędów w linii `$PYTHON_CMD ...` z `2>/dev/null` na `2>&1`
-        # Dodano `if [ $EXIT_CODE -ne 0 ]; then ... fi` do wyświetlania zawartości pliku wyjściowego w razie błędu
         cmd = """
             echo "--- AIO Panel - Diagnostyka Sieci ---"
             echo " "
@@ -969,7 +908,6 @@ class Panel(Screen):
             
             if [ ! -f "{script_path}" ]; then
                 echo "Pobieranie narzędzia speedtest-cli..."
-                # Używamy curl jako alternatywy dla wget, gdyby to curl był na obrazie
                 if command -v curl >/dev/null 2>&1; then
                     curl -s -o "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py
                 else
@@ -978,7 +916,6 @@ class Panel(Screen):
                 chmod +x "{script_path}"
             fi
             
-            # Używamy /usr/bin/env python3 lub python, by trafić na właściwą binarkę
             if command -v python3 >/dev/null 2>&1; then
                 PYTHON_CMD="python3"
             else
@@ -986,24 +923,21 @@ class Panel(Screen):
             fi
             
             echo "Uruchamianie skryptu speedtest..."
-            $PYTHON_CMD -W ignore "{script_path}" --simple > "{output_file}" 2>&1 # Przekieruj stderr do stdout
+            $PYTHON_CMD -W ignore "{script_path}" --simple > "{output_file}" 2>&1
             EXIT_CODE=$?
             
-            # Wyświetl zawartość pliku wyjściowego, jeśli wystąpił błąd
             if [ $EXIT_CODE -ne 0 ]; then
                 echo "--- BEGIN speedtest output (code: $EXIT_CODE) ---"
                 cat "{output_file}"
                 echo "--- END speedtest output ---"
             fi
             
-            # Sprawdzamy kod wyjścia ORAZ czy plik wynikowy *istnieje* i *nie jest pusty*
             if [ $EXIT_CODE -eq 0 ] && [ -s "{output_file}" ]; then
                 PING_SPEEDTEST=$(grep 'Ping:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
                 DOWNLOAD_SPEED=$(grep 'Download:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
                 UPLOAD_SPEED=$(grep 'Upload:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
             else
                 echo " "
-                # Wyświetlamy ogólny błąd tylko jeśli kod wyjścia jest różny od 0
                 if [ $EXIT_CODE -ne 0 ]; then
                     echo "*** {error_msg} (kod: $EXIT_CODE) ***"
                 fi
@@ -1012,7 +946,6 @@ class Panel(Screen):
                 UPLOAD_SPEED="{na}"
             fi
             
-            # Bezpieczniej jest czyścić plik po użyciu
             rm -f "{output_file}"
 
             echo " "
@@ -1074,7 +1007,6 @@ class Panel(Screen):
                 conf_path = os.path.join(d, "oscam.conf")
                 if fileExists(conf_path):
                     with open(conf_path, "r") as f: lines = f.readlines()
-                    # Usuwamy linię httppwd, jeśli nie jest już skomentowana
                     new_lines = [line for line in lines if not line.strip().lower().startswith("httppwd") or line.strip().startswith('#')]
                     if len(new_lines) < len(lines):
                         with open(conf_path, "w") as f: f.writelines(new_lines)
@@ -1115,17 +1047,11 @@ class Panel(Screen):
         if url: self.process_dvbapi_download(url)
 
     def process_dvbapi_download(self, url):
-        # === POPRAWKA NA ŻĄDANIE UŻYTKOWNIKA ===
-        # Zmieniono '...' na """...""" aby uniknąć błędów składni z wewnętrznymi cudzysłowami
-        # i dodano {{}} dla .format()
         cmd = """URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; echo "Zaktualizowano: $DIR/oscam.dvbapi"; else echo "Błąd pobierania: Plik z URL nie zawiera wpisów 'P:'. Przywrócono backup dla $DIR/oscam.dvbapi"; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; else echo "Błąd pobierania z URL dla: $DIR/oscam.dvbapi. Przywrócono backup."; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done""".format(url=url)
         console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
 
     def do_clear_dvbapi(self, confirmed):
         if confirmed:
-            # === POPRAWKA NA ŻĄDANIE UŻYTKOWNIKA ===
-            # Zmieniono '...' na """...""" aby uniknąć błędów składni
-            # i dodano {{}} dla polecenia find
             cmd = """CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; echo "Próbuję skasować zawartość oscam.dvbapi w katalogach: $CONFIG_DIRS"; for DIR in $CONFIG_DIRS; do DVBAPI_PATH="$DIR/oscam.dvbapi"; if [ -f "$DVBAPI_PATH" ]; then cp "$DVBAPI_PATH" "$DVBAPI_PATH.bak"; echo "" > "$DVBAPI_PATH"; echo "Skasowano: $DVBAPI_PATH"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done"""
             console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=True)
 
@@ -1136,7 +1062,7 @@ class Panel(Screen):
         self.sess.openWithCallback(lambda p: console_screen_open(self.sess, "Ustawianie Hasła", ["(echo {}; echo {}) | passwd".format(p, p)], close_on_finish=True) if p else None, InputBox, title="Wpisz nowe hasło dla konta root:")
 
     def show_free_space(self):
-        console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False) # Pozostaw otwarte
+        console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
 
     def restart_oscam(self):
         cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartowanie Oscam za pomocą $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 2;'
@@ -1144,7 +1070,6 @@ class Panel(Screen):
 
     def show_uninstall_manager(self):
         try:
-            # Użycie opkg list-installed i filtrowanie, aby uniknąć problemów z kodowaniem.
             process = subprocess.Popen("opkg list-installed", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, _ = process.communicate()
             packages = sorted([line.split(' - ')[0] for line in stdout.decode('utf-8', errors='ignore').splitlines() if ' - ' in line and line.split(' - ')[0]])
@@ -1157,15 +1082,85 @@ class Panel(Screen):
                 if choice:
                     self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]], close_on_finish=True) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
             
-            # Tworzenie listy tupli dla ChoiceBox
             list_options = [(p,) for p in packages]
-            self.sess.open(ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
+            # Poprawka: Trzeba przekazać 'list_options' do 'ChoiceBox', a nie wywoływać 'ChoiceBox' w 'on_package_selected'
+            self.sess.openWithCallback(on_package_selected, ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
             
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
+    def install_e2kodi(self):
+        title = "Instalator E2Kodi (j00zek)"
+        cmd = """
+            echo "--- {title} ---"
+            echo " "
+            echo "Krok 1/5: Wykrywanie wersji Python..."
+            
+            # Spróbuj python3, potem python
+            if command -v python3 >/dev/null 2>&1; then
+                PY_CMD="python3"
+            else
+                PY_CMD="python"
+            fi
+            
+            # Użyj -c do importu sys dla najbardziej niezawodnej wersji
+            # Używamy podwójnych {{}} aby uniknąć formatowania przez Python
+            PY_VER=$($PY_CMD -c "import sys; print(f'{{sys.version_info.major}}.{{sys.version_info.minor}}')")
+            
+            if [ -z "$PY_VER" ]; then
+                echo "BŁĄD: Nie można wykryć wersji Python."
+                sleep 5
+                exit 1
+            fi
+            echo "Wykryto Python w wersji: $PY_VER"
+            
+            echo "Krok 2/5: Wybór odpowiedniego pakietu E2Kodi..."
+            case "$PY_VER" in
+                "3.9")
+                    PKG_NAME="enigma2-plugin-extensions--j00zeks-e2kodi-v2-python3.9"
+                    ;;
+                "3.12")
+                    PKG_NAME="enigma2-plugin-extensions--j00zeks-e2kodi-v2-python3.12"
+                    ;;
+                "3.13")
+                    PKG_NAME="enigma2-plugin-extensions--j00zeks-e2kodi-v2-python3.13"
+                    ;;
+                *)
+                    PKG_NAME=""
+                    ;;
+            esac
+            
+            if [ -z "$PKG_NAME" ]; then
+                echo " "
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                echo "!!! BŁĄD: Twoja wersja Pythona ($PY_VER) nie jest wspierana."
+                echo "!!! Instalator j00zka wspiera wersje: 3.9, 3.12, 3.13."
+                echo "!!! Sprawdź repozytorium j00zka dla nowszych wersji."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                sleep 10
+                exit 1
+            fi
+            
+            echo "Wybrano pakiet: $PKG_NAME"
+            
+            echo "Krok 3/5: Dodawanie repozytorium j00zka..."
+            echo "src/gz opkg-j00zka http://j00zek.one.pl/opkg-j00zka-P3/" > /etc/opkg/opkg-j00zka.conf
+            
+            echo "Krok 4/5: Aktualizacja listy pakietów (opkg update)..."
+            opkg update
+            
+            echo "Krok 5/5: Instalacja pakietu $PKG_NAME..."
+            opkg install $PKG_NAME
+            
+            echo " "
+            echo "Instalacja E2Kodi zakończona."
+            echo "Naciśnij OK lub EXIT, aby zamknąć."
+        """.format(title=title)
+        
+        # Używamy close_on_finish=False, aby użytkownik mógł przeczytać wynik
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
     def install_best_oscam(self, callback=None, close_on_finish=False):
-        # Nowa, połączona komenda
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -1185,13 +1180,6 @@ class Panel(Screen):
             sleep 3
         """
         console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
-
-# === KONIEC KLASY 'Panel' ===
-
-# === POCZĄTEK DEFINICJI WTYCZKI ===
-# Poniższe funkcje 'def main' i 'def Plugins' SĄ celowo na poziomie 0 (bez wcięcia),
-# ponieważ MUSZĄ znajdować się POZA definicją klasy 'Panel'.
-# Poprzednie błędy wcięcia tutaj powodowały 'invalid syntax'.
 
 def main(session, **kwargs):
     session.open(Panel)
