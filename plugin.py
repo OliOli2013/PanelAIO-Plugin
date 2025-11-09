@@ -504,15 +504,17 @@ class WizardProgressScreen(Screen):
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
 class AIOLoadingScreen(Screen):
+    # *** POPRAWKA: Zwiększono rozmiar okna i widgetu dla 2 języków ***
     skin = """
-    <screen position="center,center" size="700,150" title="Panel AIO">
-        <widget name="message" position="20,20" size="660,110" font="Regular;26" halign="center" valign="center" />
+    <screen position="center,center" size="700,200" title="Panel AIO">
+        <widget name="message" position="20,20" size="660,160" font="Regular;26" halign="center" valign="center" />
     </screen>"""
 
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session
-        self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...")
+        # *** POPRAWKA: Komunikat w PL i EN ***
+        self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...\n\nLoading...\nPlease wait, loading AIO Panel data...")
         self.fetched_data_cache = None
         self.onShown.append(self.start_loading_process)
 
@@ -633,8 +635,6 @@ class Panel(Screen):
         self.set_language(self.lang)
 
     def post_initial_setup(self):
-        # *** TUTAJ JEST POPRAWKA ***
-        # Dodajemy _focus() tutaj, aby uruchomił się PO wyświetleniu okna
         self._focus() 
         reactor.callLater(1, self.check_for_updates_on_start)
 
@@ -688,7 +688,6 @@ class Panel(Screen):
             self["menuM"].setList([])
             self["menuR"].setList([])
         
-        # Wywołanie _focus() zostaje tutaj, aby działała zmiana języka
         self._focus()
 
     def set_lang_headers_and_legends(self):
