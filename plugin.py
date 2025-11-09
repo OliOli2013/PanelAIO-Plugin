@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 2.5 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam + E2Kodi v2 (j00zek)
+Wersja 3.0 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam + E2Kodi v2 (j00zek)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "2.5"
+VER = "3.0"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -129,7 +129,7 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
     }
 }
 
-# === POMOCNICZE ===
+# === POMOCNICZE (GLOBALNE) ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
@@ -148,7 +148,47 @@ def prepare_tmp_dir():
         except OSError as e:
             print("[AIO Panel] Error creating tmp dir:", e)
 
-# === E2KODI V2 - ROZPOZNAJ SYSTEM I ZAINSTALUJ ===
+# === FUNKCJA install_archive (GLOBALNA) ===
+def install_archive(session, title, url, callback_on_finish=None):
+    if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
+        show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
+        if callback_on_finish: callback_on_finish()
+        return
+    archive_type = "zip" if url.endswith(".zip") else ("tar.gz" if url.endswith((".tar.gz", ".tgz")) else "ipk")
+    prepare_tmp_dir()
+    tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
+    download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
+    
+    if "picon" in title.lower():
+        picon_path = "/usr/share/enigma2/picon"
+        nested_picon_path = os.path.join(picon_path, "picon")
+        full_command = (
+            "{download_cmd} && "
+            "mkdir -p {picon_path} && "
+            "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
+            "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
+            "rm -f \"{archive_path}\" && "
+            "echo 'Picony zostały pomyślnie zainstalowane.' && sleep 3"
+        ).format(
+            download_cmd=download_cmd,
+            archive_path=tmp_archive_path,
+            picon_path=picon_path,
+            nested_path=nested_picon_path
+        )
+    elif archive_type == "ipk":
+        full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
+    else:
+        install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
+        if not os.path.exists(install_script_path):
+             show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
+             if callback_on_finish: callback_on_finish()
+             return
+        chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
+        full_command = "{} && {} && bash {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
+    
+    console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
+
+# === E2KODI V2 - ROZPOZNAJ SYSTEM I ZAINSTALUJ (FUNKCJE GLOBALNE) ===
 def get_python_version():
     try:
         import sys
@@ -187,7 +227,7 @@ def install_e2kodi(session):
     cmd = f"opkg update && opkg install {pkg}"
     console_screen_open(session, f"E2Kodi v2 (Python {get_python_version()})", [cmd], close_on_finish=True)
 
-# === MENU PL/EN Z E2Kodi ===
+# === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
     ("--- Softcamy ---", "SEPARATOR"),
     ("Restart Oscam", "CMD:RESTART_OSCAM"),
@@ -264,7 +304,7 @@ TOOLS_AND_ADDONS_EN = [
 
 COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodatki"), "EN": ("Channel Lists", "Softcam & Plugins", "Tools & Extras")}
 
-# === POZOSTAŁE FUNKCJE (SKRÓT W NAZWACH – PEŁNE W ORYGINALE) ===
+# === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
 def _get_lists_from_repo_sync():
     manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
     tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
@@ -347,55 +387,136 @@ def _get_best_oscam_version_info_sync():
     except Exception:
         return "Error"
 
-# === KLASA Panel (skrócono – pełna w oryginale) ===
-class Panel(Screen):
+# === KLASA WizardProgressScreen (GLOBALNA) ===
+class WizardProgressScreen(Screen):
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1260,680' title=' '>
-        <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
-        <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
-        <widget name="title_label" position="630,25" size="615,40" font="Regular;32" halign="right" valign="center" transparent="1" />
-        <widget name='headL' position='15,150'  size='500,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuL' position='15,190'  size='500,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headM' position='530,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuM' position='530,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headR' position='895,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
-    </screen>""".format(PLUGIN_QR_CODE_PATH)
+    <screen position="center,center" size="800,400" title="Super Konfigurator">
+        <widget name="message" position="40,40" size="720,320" font="Regular;28" halign="center" valign="center" />
+    </screen>"""
+
+    def __init__(self, session, steps, **kwargs):
+        Screen.__init__(self, session)
+        self.session = session
+        self.wizard_queue = list(steps)
+        self.wizard_total_steps = len(steps)
+        self.wizard_current_step = 0
+        self.wizard_channel_list_url = kwargs.get("channel_list_url", "")
+        self.wizard_channel_list_name = kwargs.get("channel_list_name", "")
+        self.wizard_picon_url = kwargs.get("picon_url", "")
+        self["message"] = Label("Trwa automatyczna instalacja...\nProszę czekać.\n\nNie wyłączaj tunera.\nPo zakończeniu nastąpi automatyczny restart.")
+        self.onShown.append(self.start_wizard)
+
+    def start_wizard(self):
+        self._wizard_run_next_step()
+
+    def _wizard_run_next_step(self, *args, **kwargs):
+        if not self.wizard_queue:
+            self._on_wizard_finish()
+            return
+
+        next_step = self.wizard_queue.pop(0)
+        self.wizard_current_step += 1
+        
+        step_functions = {
+            "deps": self._wizard_step_deps,
+            "channel_list": self._wizard_step_channel_list,
+            "install_oscam": self._wizard_step_install_oscam, 
+            "picons": self._wizard_step_picons,
+            "reload_settings": self._wizard_step_reload_settings
+        }
+        
+        func_to_run = step_functions.get(next_step)
+        if func_to_run:
+            reactor.callLater(0.5, func_to_run)
+        else:
+            print("[AIO Panel] Nieznany krok w Super Konfiguratorze:", next_step)
+            self._wizard_run_next_step()
+
+    def _get_wizard_title(self, task_name):
+        return "Super Konfigurator [{}/{}]: {}".format(self.wizard_current_step, self.wizard_total_steps, task_name)
+
+    def _wizard_step_deps(self):
+        title = self._get_wizard_title("Instalacja zależności")
+        cmd = "opkg update; opkg install wget tar unzip --force-reinstall; exit 0"
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+
+    def _wizard_step_channel_list(self):
+        title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
+        url = self.wizard_channel_list_url
+        start_msg_pl = "Rozpoczynam instalację listy:\n'{}'...".format(self.wizard_channel_list_name)
+        start_msg_en = "Starting channel list installation:\n'{}'...".format(self.wizard_channel_list_name)
+        parent_lang = 'PL'
+        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
+            parent_lang = self.session.current_dialog.lang
+        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
+        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
+
+    def _wizard_step_install_oscam(self):
+        title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
+        cmd = """
+            echo "Instalowanie/Aktualizowanie Softcam Feed..."
+            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
+            echo "Aktualizuję listę pakietów..."
+            opkg update
+            echo "Wyszukuję najlepszą wersję Oscam w feedach..."
+            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
+            if [ -n "$PKG_NAME" ]; then
+                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
+                opkg install $PKG_NAME
+            else
+                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
+                echo "Próbuję instalacji z alternatywnego źródła (Levi45)..."
+                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
+            fi
+            echo "Instalacja Oscam zakończona."
+            sleep 3
+        """
+        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+
+    def _wizard_step_picons(self):
+        title = self._get_wizard_title("Instalacja Picon (Transparent)")
+        url = self.wizard_picon_url
+        start_msg_pl = "Rozpoczynam instalację picon..."
+        start_msg_en = "Starting picon installation..."
+        parent_lang = 'PL'
+        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
+             parent_lang = self.session.current_dialog.lang
+        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
+        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
+        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
+        
+    def _wizard_step_reload_settings(self):
+        try:
+            eDVBDB.getInstance().reloadServicelist()
+            eDVBDB.getInstance().reloadBouquets()
+        except Exception as e:
+            print("[AIO Panel] Błąd podczas przeładowywania list w wizardzie:", e)
+        self._wizard_run_next_step()
+
+    def _on_wizard_finish(self, *args, **kwargs):
+        self["message"].setText("Instalacja zakończona!\n\nZa chwilę nastąpi restart interfejsu GUI...")
+        reactor.callLater(4, self.do_restart_and_close)
+
+    def do_restart_and_close(self):
+        self.close(self.session.open(TryQuitMainloop, 3))
+
+
+# === NOWA KLASA EKRANU ŁADOWANIA ===
+class AIOLoadingScreen(Screen):
+    skin = """
+    <screen position="center,center" size="700,150" title="Panel AIO">
+        <widget name="message" position="20,20" size="660,110" font="Regular;26" halign="center" valign="center" />
+    </screen>"""
 
     def __init__(self, session):
         Screen.__init__(self, session)
-        self.setTitle(" ")
-        self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
-        self["qr_code_small"] = Pixmap()
-        self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
-        self["title_label"] = Label("AIO Panel " + VER)
-        for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
-        for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
-        self["footer"] = Label(FOOT)
-        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
-            "ok": self.run_with_confirmation,
-            "cancel": self.close,
-            "red": lambda: self.set_language('PL'),
-            "green": lambda: self.set_language('EN'),
-            "yellow": self.restart_gui,
-            "blue": self.check_for_updates_manual,
-            "info": self.close,
-            "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
-            "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
-            "left": self.left,
-            "right": self.right
-        }, -1)
-        self.onShown.append(self.initial_setup)
-        self.update_info = None
-        self.data_loaded = False 
-        self.fetched_data_cache = None 
-        self.update_prompt_shown = False
-        self.wait_message_box = None
-        self.set_language(self.lang)
+        self.session = session
+        self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...")
+        self.fetched_data_cache = None
+        self.onShown.append(self.start_loading_process)
 
-    def initial_setup(self):
+    def start_loading_process(self):
         self.check_dependencies()
 
     def check_dependencies(self):
@@ -414,6 +535,7 @@ class Panel(Screen):
         if not missing_packages:
             self.start_async_data_load()
             return
+        
         install_cmds = [
             "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
             "opkg update",
@@ -421,7 +543,7 @@ class Panel(Screen):
             "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
             "sleep 5"
         ]
-        console_screen_open(self.sess, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        console_screen_open(self.session, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
         self.start_async_data_load()
@@ -429,7 +551,6 @@ class Panel(Screen):
     def start_async_data_load(self):
         thread = Thread(target=self._background_data_loader)
         thread.start()
-        reactor.callLater(1, self.check_for_updates_on_start)
 
     def _background_data_loader(self):
         repo_lists, s4a_lists_full, best_oscam_version = [], [], "N/A"
@@ -456,9 +577,66 @@ class Panel(Screen):
         reactor.callFromThread(self._on_data_loaded)
 
     def _on_data_loaded(self):
+        self.session.open(Panel, self.fetched_data_cache)
+        self.close()
+
+
+# === KLASA Panel (GŁÓWNE OKNO) ===
+class Panel(Screen):
+    skin = """
+    <screen name='PanelAIO' position='center,center' size='1260,680' title=' '>
+        <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
+        <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
+        <widget name="title_label" position="630,25" size="615,40" font="Regular;32" halign="right" valign="center" transparent="1" />
+        <widget name='headL' position='15,150'  size='500,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuL' position='15,190'  size='500,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='headM' position='530,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuM' position='530,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='headR' position='895,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
+        <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
+        <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+    </screen>""".format(PLUGIN_QR_CODE_PATH)
+
+    def __init__(self, session, fetched_data):
+        Screen.__init__(self, session)
+        self.setTitle(" ")
+        self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
+        
+        self.fetched_data_cache = fetched_data
         self.data_loaded = True
+        self.update_info = None
+        self.update_prompt_shown = False
+        self.wait_message_box = None
+        
+        self["qr_code_small"] = Pixmap()
+        self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
+        self["title_label"] = Label("AIO Panel " + VER)
+        for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
+        for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
+        self["footer"] = Label(FOOT)
+        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
+            "ok": self.run_with_confirmation,
+            "cancel": self.close,
+            "red": lambda: self.set_language('PL'),
+            "green": lambda: self.set_language('EN'),
+            "yellow": self.restart_gui,
+            "blue": self.check_for_updates_manual,
+            "info": self.close,
+            "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
+            "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
+            "left": self.left,
+            "right": self.right
+        }, -1)
+        
+        self.onShown.append(self.post_initial_setup)
         self.set_language(self.lang)
-        self._focus()
+
+    def post_initial_setup(self):
+        # *** TUTAJ JEST POPRAWKA ***
+        # Dodajemy _focus() tutaj, aby uruchomił się PO wyświetleniu okna
+        self._focus() 
+        reactor.callLater(1, self.check_for_updates_on_start)
 
     def check_for_updates_on_start(self):
         thread = Thread(target=self.fetch_update_info_in_background)
@@ -476,14 +654,6 @@ class Panel(Screen):
         self.lang = lang
         self.set_lang_headers_and_legends()
         
-        if not self.data_loaded:
-            loading_text = TRANSLATIONS[self.lang]["loading_text"]
-            self["menuL"].setList([(loading_text, "SEPARATOR")])
-            self["menuM"].setList([(loading_text, "SEPARATOR")])
-            self["menuR"].setList([(loading_text, "SEPARATOR")])
-            self._focus()
-            return
-
         try:
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
             s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
@@ -518,6 +688,7 @@ class Panel(Screen):
             self["menuM"].setList([])
             self["menuR"].setList([])
         
+        # Wywołanie _focus() zostaje tutaj, aby działała zmiana języka
         self._focus()
 
     def set_lang_headers_and_legends(self):
@@ -618,9 +789,6 @@ class Panel(Screen):
             self.update_info = None
 
     def run_with_confirmation(self):
-        if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], message_type=MessageBox.TYPE_INFO, timeout=3)
-            return
         try:
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
@@ -894,7 +1062,7 @@ class Panel(Screen):
                     self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]], close_on_finish=True) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
             
             list_options = [(p,) for p in packages]
-            self.sess.open(ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
+            self.sess.openWithCallback(on_package_selected, ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
             
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
@@ -921,10 +1089,6 @@ class Panel(Screen):
         console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
 
     def run_super_setup_wizard(self):
-        if not self.data_loaded:
-            show_message_compat(self.sess, TRANSLATIONS[self.lang]["loading_text"], message_type=MessageBox.TYPE_INFO, timeout=3)
-            return
-            
         lang = self.lang
         options = [
             (TRANSLATIONS[lang]["sk_option_deps"], "deps_only"),
@@ -987,7 +1151,7 @@ class Panel(Screen):
                         picon_url = ''
             if not picon_url:
                 self.sess.open(MessageBox, "Nie udało się odnaleźć adresu picon.", type=MessageBox.TYPE_ERROR); return
-                
+        
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
     def _menu(self):
@@ -1012,7 +1176,7 @@ class Panel(Screen):
 
 # === DEFINICJA WTYCZKI ===
 def main(session, **kwargs):
-    session.open(Panel)
+    session.open(AIOLoadingScreen)
 
 def Plugins(**kwargs):
     return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main)]
