@@ -1,3 +1,7 @@
+[3.0]
+- Przebudowano start wtyczki: dodano ekran ładowania (Splash Screen), aby wyeliminować problem "pustego" okna na wolniejszych tunerach.
+- Naprawiono błąd początkowego fokusu (były zaznaczone wszystkie trzy kolumny).
+
 [2.5]
 - Poprawiono ładowanie wtyczki przy starcie (wyeliminowano błąd "zawieszania się" na ekranie powitalnym na niektórych tunerach).
 - Dodano inteligentny instalator E2Kodi z repozytorium j00zek (automatycznie wykrywa wersję Python 3.9, 3.12, 3.13).
