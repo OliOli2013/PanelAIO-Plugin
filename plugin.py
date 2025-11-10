@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 3.0 (finalna, uniwersalna) - Połączona instalacja Feed+Oscam + E2Kodi v2 (j00zek)
+Wersja 3.1 (finalna) - Poprawka Super Konfiguratora (kolejność) i pętli zależności
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "3.0"
+VER = "3.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -157,7 +157,9 @@ def install_archive(session, title, url, callback_on_finish=None):
     archive_type = "zip" if url.endswith(".zip") else ("tar.gz" if url.endswith((".tar.gz", ".tgz")) else "ipk")
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
-    download_cmd = "wget --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
+    
+    # *** POPRAWKA: Dodano timeout 30 sekund (-T 30) do wget ***
+    download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
     
     if "picon" in title.lower():
         picon_path = "/usr/share/enigma2/picon"
@@ -178,13 +180,27 @@ def install_archive(session, title, url, callback_on_finish=None):
     elif archive_type == "ipk":
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
+        # Ten blok dotyczy list kanałów
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         if not os.path.exists(install_script_path):
              show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
              if callback_on_finish: callback_on_finish()
              return
+        
+        # *** POPRAWKA v3.1: Kasowanie starych list kanałów PRZED instalacją nowych ***
+        clear_bouquets_cmd = "rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio"
+                
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
-        full_command = "{} && {} && bash {} \"{}\" \"{}\"".format(download_cmd, chmod_cmd, install_script_path, tmp_archive_path, archive_type)
+        
+        # Dodajemy clear_bouquets_cmd do polecenia
+        full_command = "{download_cmd} && {clear_cmd} && {chmod_cmd} && bash {script_path} \"{tmp_archive}\" \"{archive_type}\"".format(
+            download_cmd=download_cmd,
+            clear_cmd=clear_bouquets_cmd,
+            chmod_cmd=chmod_cmd,
+            script_path=install_script_path,
+            tmp_archive=tmp_archive_path,
+            archive_type=archive_type
+        )
     
     console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
 
@@ -418,7 +434,7 @@ class WizardProgressScreen(Screen):
         self.wizard_current_step += 1
         
         step_functions = {
-            "deps": self._wizard_step_deps,
+            "deps": self._wizard_step_deps, # Ten krok jest teraz usunięty z listy, ale zostawiamy na wszelki wypadek
             "channel_list": self._wizard_step_channel_list,
             "install_oscam": self._wizard_step_install_oscam, 
             "picons": self._wizard_step_picons,
@@ -437,23 +453,49 @@ class WizardProgressScreen(Screen):
 
     def _wizard_step_deps(self):
         title = self._get_wizard_title("Instalacja zależności")
-        cmd = "opkg update; opkg install wget tar unzip --force-reinstall; exit 0"
+        
+        # *** POPRAWKA: Aktualizuj etykietę na ekranie ***
+        self["message"].setText("Krok [{}/{}]:\nInstalacja zależności systemowych...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
+        
+        # *** POPRAWKA (HOTFIX) v3.1 DLA OpenPli ***
+        # Bezpieczna komenda instalacji zależności, która nie wywali się na 'tar'
+        # Ta funkcja jest teraz wywoływana tylko po ręcznym wybraniu "Zainstaluj zależności"
+        cmd = """
+        echo 'Krok 1/3: Aktualizacja listy pakietów...'
+        opkg update
+        echo 'Krok 2/3: Instalacja/Aktualizacja wget i certyfikatów SSL...'
+        opkg install wget ca-certificates
+        echo 'Krok 3/3: Sprawdzanie tar i unzip...'
+        opkg install tar || echo 'Info: Pakiet tar nie znaleziony (lub już jest), pomijam błąd.'
+        opkg install unzip || echo 'Info: Pakiet unzip nie znaleziony (lub już jest), pomijam błąd.'
+        echo 'Zakończono sprawdzanie zależności.'
+        sleep 3
+        """
         console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
 
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
         url = self.wizard_channel_list_url
-        start_msg_pl = "Rozpoczynam instalację listy:\n'{}'...".format(self.wizard_channel_list_name)
-        start_msg_en = "Starting channel list installation:\n'{}'...".format(self.wizard_channel_list_name)
+        
+        # *** POPRAWKA: Aktualizuj etykietę na ekranie, zamiast otwierać nowy MessageBox ***
+        start_msg_pl = "Krok [{}/{}]:\nInstalacja listy kanałów '{}'...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
+        start_msg_en = "Step [{}/{}]:\nInstalling channel list '{}'...\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
         parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
             parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
-        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
+        self["message"].setText(start_msg) # Zastąpiono show_message_compat
+        
+        # *** POPRAWKA (2025-11-10): Poprawiono błąd nazwy argumentu 'callback' na 'callback_on_finish' ***
+        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
 
     def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
+        
+        # *** POPRAWKA: Aktualizuj etykietę na ekranie ***
+        self["message"].setText("Krok [{}/{}]:\nInstalacja Softcam Feed + Oscam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
+        
+        # *** POPRAWKA v3.1: Usunięto fallback do Levi45, aby uniknąć restartu GUI ***
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -465,9 +507,10 @@ class WizardProgressScreen(Screen):
                 echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
                 opkg install $PKG_NAME
             else
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                 echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
-                echo "Próbuję instalacji z alternatywnego źródła (Levi45)..."
-                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
+                echo "Pomięto instalację Oscam. Możesz ją wykonać ręcznie z menu."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             fi
             echo "Instalacja Oscam zakończona."
             sleep 3
@@ -477,14 +520,18 @@ class WizardProgressScreen(Screen):
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
-        start_msg_pl = "Rozpoczynam instalację picon..."
-        start_msg_en = "Starting picon installation..."
+
+        # *** POPRAWKA: Aktualizuj etykietę na ekranie, zamiast otwierać nowy MessageBox ***
+        start_msg_pl = "Krok [{}/{}]:\nInstalacja Picon (Transparent)...\n(To może potrwać kilka minut)\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
+        start_msg_en = "Step [{}/{}]:\nInstalling Picons (Transparent)...\n(This may take a few minutes)\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps)
         parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
              parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        show_message_compat(self.session, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
-        install_archive(self.session, title, url, callback=self._wizard_run_next_step)
+        self["message"].setText(start_msg) # Zastąpiono show_message_compat
+
+        # *** POPRAWKA (2025-11-10): Poprawiono błąd nazwy argumentu 'callback' na 'callback_on_finish' ***
+        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
         
     def _wizard_step_reload_settings(self):
         try:
@@ -504,7 +551,6 @@ class WizardProgressScreen(Screen):
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
 class AIOLoadingScreen(Screen):
-    # *** POPRAWKA: Zwiększono rozmiar okna i widgetu dla 2 języków ***
     skin = """
     <screen position="center,center" size="700,200" title="Panel AIO">
         <widget name="message" position="20,20" size="660,160" font="Regular;26" halign="center" valign="center" />
@@ -513,41 +559,52 @@ class AIOLoadingScreen(Screen):
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session
-        # *** POPRAWKA: Komunikat w PL i EN ***
         self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...\n\nLoading...\nPlease wait, loading AIO Panel data...")
         self.fetched_data_cache = None
+        
+        # *** POPRAWKA v3.1: Ścieżka do pliku flagi ***
+        # Ten plik będzie tworzony w katalogu wtyczki i będzie oznaczał, że zależności są OK
+        self.flag_file = os.path.join(PLUGIN_PATH, ".deps_ok")
+        
         self.onShown.append(self.start_loading_process)
 
     def start_loading_process(self):
         self.check_dependencies()
 
     def check_dependencies(self):
-        try:
-            from shutil import which
-        except ImportError:
-            def which(cmd):
-                path = os.getenv('PATH')
-                for p in path.split(os.pathsep):
-                    p = os.path.join(p, cmd)
-                    if os.path.exists(p) and os.access(p, os.X_OK):
-                        return p
-                return None
-        required_packages = ['curl', 'tar', 'unzip']
-        missing_packages = [pkg for pkg in required_packages if not which(pkg)]
-        if not missing_packages:
-            self.start_async_data_load()
-            return
+        # *** POPRAWKA v3.1: Sprawdzamy, czy zależności już SĄ ***
         
-        install_cmds = [
-            "echo 'Wykryto brakujące pakiety. Rozpoczynam automatyczną instalację...'",
-            "opkg update",
-            "opkg install " + " ".join(missing_packages),
-            "echo 'Instalacja komponentów zakończona! Zalecany restart GUI.'",
-            "sleep 5"
-        ]
-        console_screen_open(self.session, "Pierwsze uruchomienie: Instalacja zależności", install_cmds, callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        # Sprawdzamy plik flagi. Jeśli istnieje, zależności są OK.
+        if os.path.exists(self.flag_file):
+            self.start_async_data_load() # Przechodzimy od razu do ładowania danych
+            return
+
+        # Pliku flagi nie ma - to znaczy, że pierwszy start lub błąd
+        # Uruchamiamy jednorazową, bezpieczną instalację
+        self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać...")
+        
+        cmd = """
+        echo 'Krok 1/3: Aktualizacja listy pakietów...'
+        opkg update
+        echo 'Krok 2/3: Instalacja/Aktualizacja wget i certyfikatów SSL...'
+        opkg install wget ca-certificates
+        echo 'Krok 3/3: Sprawdzanie tar i unzip...'
+        opkg install tar || echo 'Info: Pakiet tar nie znaleziony (lub już jest), pomijam błąd.'
+        opkg install unzip || echo 'Info: Pakiet unzip nie znaleziony (lub już jest), pomijam błąd.'
+        echo 'Zakończono sprawdzanie zależności.'
+        sleep 3
+        """
+        
+        console_screen_open(self.session, "Instalacja zależności AIO Panel", [cmd], callback=self.on_dependencies_installed_safe, close_on_finish=True)
 
     def on_dependencies_installed_safe(self, *args):
+        # *** POPRAWKA v3.1: Tworzymy plik flagi, aby nie robić tego ponownie ***
+        try:
+            with open(self.flag_file, 'w') as f:
+                f.write('ok')
+        except Exception as e:
+            print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
+            
         self.start_async_data_load()
 
     def start_async_data_load(self):
@@ -1067,6 +1124,7 @@ class Panel(Screen):
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
     def install_best_oscam(self, callback=None, close_on_finish=False):
+        # Ta funkcja (z menu) NADAL MA fallback do Levi45 - to jest poprawne
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -1109,25 +1167,37 @@ class Panel(Screen):
         key, lang = choice[1], self.lang
         steps, message = [], ""
 
+        # *** POPRAWKA v3.1: Usunięto "deps" i zmieniono kolejność ***
+        
         if key == "deps_only":
+            # "deps_only" nadal działa, jeśli ktoś wybierze to ręcznie
             steps, message = ["deps"], TRANSLATIONS[lang]["sk_confirm_deps"]
         elif key == "install_basic_no_picons":
-            steps, message = ["deps", "channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
+            # Nowa kolejność: lista, oscam, reload
+            steps, message = ["channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
         elif key == "install_with_picons":
-            steps, message = ["deps", "channel_list", "install_oscam", "picons", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
+            # Nowa kolejność: lista, picony, oscam, reload
+            steps, message = ["channel_list", "picons", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
 
         if steps:
+            # Zmieniamy komunikat, bo nie ma już "Instalacja zależności"
+            original_option_text = TRANSLATIONS[lang].get(f"sk_option_{key}", "Wybrana opcja").split(') ')[-1]
+            confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?\n\n(Zależności systemowe zostały już sprawdzone przy starcie wtyczki.)".format(original_option_text)
+            
+            # Dla "deps_only" zostawiamy stary komunikat
+            if key == "deps_only":
+                confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(original_option_text)
+
             self.sess.openWithCallback(
                 lambda confirmed: self._wizard_start(steps) if confirmed else None,
-                MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(
-                    TRANSLATIONS[lang].get(f"sk_option_{key}", "Wybrana opcja").split(') ')[-1]
-                ),
+                MessageBox, confirm_message,
                 type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
             )
             
     def _wizard_start(self, steps):
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
         if "channel_list" in steps:
+            # Używamy logiki "pierwsza lista z repozytorium"
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
             first_valid_list = next((item for item in repo_lists if item[1] != 'SEPARATOR'), None)
             
@@ -1139,7 +1209,28 @@ class Panel(Screen):
                     channel_list_url = '' 
             
             if not channel_list_url:
-                self.sess.open(MessageBox, "Nie udało się pobrać adresu listy kanałów.", type=MessageBox.TYPE_ERROR); return
+                # Fallback, jeśli repo GitHub nie działa (np. błąd SSL, którego nie dało się naprawić)
+                # Szukamy "Bzyk83" lub pierwszej listy S4A
+                s4a_lists = self.fetched_data_cache.get("s4a_lists_full", [])
+                
+                # Próbujemy znaleźć Bzyk83
+                bzyk_list = next((item for item in s4a_lists if "bzyk83" in item[0].lower()), None)
+                
+                if bzyk_list:
+                    first_valid_list = bzyk_list
+                else:
+                    # Bierzemy cokolwiek z S4A
+                    first_valid_list = next((item for item in s4a_lists if item[1] != 'SEPARATOR'), None)
+
+                if first_valid_list:
+                    try:
+                        list_name = first_valid_list[0].split(' - ')[0]
+                        channel_list_url = first_valid_list[1].split(':', 1)[1]
+                    except (IndexError, AttributeError): 
+                        channel_list_url = ''
+
+            if not channel_list_url:
+                self.sess.open(MessageBox, "BŁĄD KRYTYCZNY: Nie udało się pobrać adresu ŻADNEJ listy kanałów.", type=MessageBox.TYPE_ERROR); return
                 
         if "picons" in steps:
             for name, action in (TOOLS_AND_ADDONS_PL):
