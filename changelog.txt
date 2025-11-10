@@ -1,11 +1,6 @@
 [3.1]
 - Poprawiono pętlę zależności: Wtyczka sprawdza zależności (SSL/wget) tylko przy pierwszym uruchomieniu, tworząc plik .deps_ok.
 - Naprawiono błąd instalacji zależności na OpenPli (problem z pakietem 'tar'), co odblokowuje pobieranie list z GitHub.
-- Naprawiono Super Konfigurator (SK):
-    - Zmieniono kolejność instalacji (Oscam na końcu), aby uniknąć przedwczesnego restartu GUI.
-    - SK teraz priorytetowo wybiera listę "Bzyk83".
-    - Usunięto zbędne, powtórne sprawdzanie zależności w SK.
-- Naprawiono błąd nadpisywania list kanałów (stare listy są teraz kasowane przed instalacją nowej).
 
 [3.0]
 - Przebudowano start wtyczki: dodano ekran ładowania (Splash Screen), aby wyeliminować problem "pustego" okna na wolniejszych tunerach.
