@@ -52,10 +52,11 @@ VER = "3.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-# *** POCZĄTEK POPRAWKI (Legenda i - Info) ***
-LEGEND_PL = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj \c00aaaaaa●\c00ffffff i - Info"
-LEGEND_EN = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update \c00aaaaaa●\c00ffffff i - Info"
-# *** KONIEC POPRAWKI (Legenda i - Info) ***
+# *** POCZĄTEK POPRAWKI (Nowa Legenda) ***
+LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
+LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
+LEGEND_INFO = r"\c00aaaaaa●\c00ffffff i - Info"
+# *** KONIEC POPRAWKI (Nowa Legenda) ***
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -405,52 +406,6 @@ def _get_best_oscam_version_info_sync():
     except Exception:
         return "Error"
 
-# *** POCZĄTEK POPRAWKI (Nowa funkcja get_image_info) ***
-def get_image_info():
-    image_info = "Nieznany System"
-    try:
-        # Try /etc/image-version first (most E2 images, including OpenPLi)
-        if os.path.exists("/etc/image-version"):
-            lines = []
-            # Use robust encoding handling
-            try:
-                with open("/etc/image-version", "r", encoding="utf-8") as f:
-                    for line in f:
-                        lines.append(line.strip())
-            except UnicodeDecodeError:
-                with open("/etc/image-version", "r", encoding="latin-1") as f:
-                    for line in f:
-                        lines.append(line.strip())
-            
-            # Filter out empty lines and join
-            image_info_candidate = " ".join(filter(None, lines))
-            if image_info_candidate:
-                return image_info_candidate
-
-        # Fallback to /etc/issue if /etc/image-version failed or was empty
-        if os.path.exists("/etc/issue"):
-            line_one = ""
-            try:
-                with open("/etc/issue", "r", encoding="utf-8") as f:
-                    line_one = f.readline().strip()
-            except UnicodeDecodeError:
-                with open("/etc/issue", "r", encoding="latin-1") as f:
-                    line_one = f.readline().strip()
-            
-            if line_one:
-                # Clean up common /etc/issue junk
-                image_info_candidate = line_one.replace("\\n", "").replace("\\l", "").replace("%h", "").strip()
-                if image_info_candidate:
-                    return image_info_candidate
-                    
-    except Exception as e:
-        print("[AIO Panel] Błąd krytyczny podczas odczytu informacji o systemie:", e)
-        # If anything fails, return a default
-        return "Nieznany System (błąd odczytu)"
-        
-    return image_info # Returns "Nieznany System" if all fails
-# *** KONIEC POPRAWKI (Nowa funkcja get_image_info) ***
-
 # === KLASA WizardProgressScreen (GLOBALNA) ===
 class WizardProgressScreen(Screen):
     skin = """
@@ -695,13 +650,20 @@ class AIOLoadingScreen(Screen):
         self.close()
 
 
-# *** NOWA KLASA EKRANU INFO ***
+# *** NOWA KLASA EKRANU INFO (z notą prawną) ***
 class AIOInfoScreen(Screen):
+    # *** POCZĄTEK POPRAWKI (Nowy layout okna Info) ***
     skin = """
-    <screen position="center,center" size="900,500" title="Informacje o AIO Panel">
-        <widget name="static_info" position="20,20" size="860,100" font="Regular;24" halign="center" valign="center" />
-        <widget name="changelog_title" position="20,130" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
-        <widget name="changelog_text" position="30,180" size="840,300" font="Regular;22" halign="left" valign="top" />
+    <screen position="center,center" size="900,540" title="Informacje o AIO Panel">
+        <widget name="title" position="20,20" size="860,35" font="Regular;28" halign="center" valign="center" />
+        <widget name="author" position="20,60" size="860,25" font="Regular;22" halign="center" valign="center" />
+        <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
+        
+        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" valign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="20,165" size="860,125" font="Regular;20" halign="center" valign="top" />
+        
+        <widget name="changelog_title" position="20,300" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
+        <widget name="changelog_text" position="30,340" size="840,180" font="Regular;22" halign="left" valign="top" />
     </screen>"""
 
     def __init__(self, session):
@@ -709,25 +671,40 @@ class AIOInfoScreen(Screen):
         self.session = session
         self.setTitle("Informacje o AIO Panel")
 
-        # *** POCZĄTEK POPRAWKI (Bezpieczne pobieranie info o systemie) ***
-        image_info = get_image_info() # Wywołanie nowej, bezpiecznej funkcji
-        info_text = "AIO Panel v{}\nby Paweł Pawełek | msisystem@t.pl\n\nSystem: {}".format(VER, image_info)
-        self["static_info"] = Label(info_text)
-        # *** KONIEC POPRAWKI (Bezpieczne pobieranie info o systemie) ***
+        # *** POCZĄTEK POPRAWKI (Aktualizacja treści okna Info) ***
         
-        self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
+        self["title"] = Label("AIO Panel v{}".format(VER))
+        self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
+        self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
+        
+        self["legal_title"] = Label("--- Nota Prawna ---")
+        
+        # Nowa nota prawna
+        legal_note_text = "Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie\n" \
+                          "na tunerach i systemach Enigma 2.\n" \
+                          "Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników\n" \
+                          "na stronach internetowych, YouTube i innych social mediach,\n" \
+                          "wymaga zgody autora wtyczki."
+        
+        self["legal_text"] = Label(legal_note_text)
+        # *** KONIEC POPRAWKI (Aktualizacja treści okna Info) ***
+        
+        self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)") # Domyślny tytuł
         self["changelog_text"] = Label("Trwa pobieranie danych...")
+        
         self["actions"] = ActionMap(["OkCancelActions"], {"cancel": self.close, "ok": self.close}, -1)
         self.onShown.append(self.fetch_changelog)
 
     def fetch_changelog(self):
         Thread(target=self._background_changelog_fetch).start()
 
-    # *** POCZĄTEK POPRAWKI (Logika 2 wersji) ***
+    # *** POCZĄTEK POPRAWKI (Logika 1 wersji) ***
     def _background_changelog_fetch(self):
         changelog_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/changelog.txt"
         tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog_info.txt')
         prepare_tmp_dir()
+        
+        found_version_tag = "" # Przechowa znaleziony tag, np. [3.1]
         
         try:
             cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
@@ -748,14 +725,12 @@ class AIOInfoScreen(Screen):
                     
                     if line.startswith("[") and line.endswith("]"):
                         version_count += 1
-                        if version_count > 2: # Stop after finding two versions
+                        # *** POPRAWKA: Zatrzymaj po JEDNEJ wersji ***
+                        if version_count > 1: 
                             break
                         in_version_block = True
-                        if version_count > 1: # Add separator for 2nd
-                            changes.append("\n" + line) 
-                        else:
-                            changes.append(line) # First version, no preceding newline
-                        continue
+                        found_version_tag = line # Zapisz tag, np. "[3.1]"
+                        continue # Nie dodawaj samego tagu do treści
                     
                     if in_version_block and line:
                         changes.append(line)
@@ -768,18 +743,25 @@ class AIOInfoScreen(Screen):
             print("[AIO Panel] Info screen changelog fetch error:", e)
             changelog_text = "Błąd podczas pobierania listy zmian."
         
-        reactor.callFromThread(self.update_changelog_label, changelog_text)
-    # *** KONIEC POPRAWKI (Logika 2 wersji) ***
+        # Przekaż tekst zmian ORAZ znaleziony tag wersji
+        reactor.callFromThread(self.update_changelog_label, changelog_text, found_version_tag)
+    # *** KONIEC POPRAWKI (Logika 1 wersji) ***
 
-    def update_changelog_label(self, text):
+    def update_changelog_label(self, text, version_tag):
         self["changelog_text"].setText(text)
+        # Zaktualizuj tytuł, aby pokazywał, której wersji dotyczy changelog
+        if version_tag:
+            self["changelog_title"].setText("Zmiany dla {}".format(version_tag))
+        else:
+            self["changelog_title"].setText("Ostatnie zmiany (z GitHub)")
 # *** KONIEC KLASY EKRANU INFO ***
 
 
 # === KLASA Panel (GŁÓWNE OKNO) ===
 class Panel(Screen):
+    # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1260,680' title=' '>
+    <screen name='PanelAIO' position='center,center' size='1260,700' title=' '>
         <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
         <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
         <widget name="title_label" position="630,25" size="615,40" font="Regular;32" halign="right" valign="center" transparent="1" />
@@ -789,9 +771,12 @@ class Panel(Screen):
         <widget name='menuM' position='530,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         <widget name='headR' position='895,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
         <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
         <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,645' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+        <widget name='info_legend' position='15,645'  size='1230,28'  font='Regular;20' halign='center'/>
+        <widget name='footer' position='center,670' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
+    # *** KONIEC POPRAWKI (Nowy layout legendy) ***
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
@@ -807,7 +792,9 @@ class Panel(Screen):
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
-        for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
+        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
+        for name in ("headL", "headM", "headR", "legend", "info_legend"): self[name] = Label()
+        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         
@@ -891,13 +878,20 @@ class Panel(Screen):
         self._focus()
 
     def set_lang_headers_and_legends(self):
+        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
         for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
+        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
             head_widget.setText(COL_TITLES[self.lang][i])
-        self["legend"].setText(LEGEND_PL if self.lang == 'PL' else LEGEND_EN)
+        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
+        self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
+        self["info_legend"].setText(LEGEND_INFO)
+        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
         
     def populate_menus(self):
+        # *** POCZĄTEK POPRAWKI (Błąd linii 884) ***
         for i, menu_widget in enumerate((self["menuL"], self["menuM"], self["menuR"])):
+        # *** KONIEC POPRAWKI (Błąd linii 884) ***
             data_list = self.data[i]
             if data_list:
                 menu_widget.setList([str(item[0]) for item in data_list])
