@@ -405,6 +405,52 @@ def _get_best_oscam_version_info_sync():
     except Exception:
         return "Error"
 
+# *** POCZĄTEK POPRAWKI (Nowa funkcja get_image_info) ***
+def get_image_info():
+    image_info = "Nieznany System"
+    try:
+        # Try /etc/image-version first (most E2 images, including OpenPLi)
+        if os.path.exists("/etc/image-version"):
+            lines = []
+            # Use robust encoding handling
+            try:
+                with open("/etc/image-version", "r", encoding="utf-8") as f:
+                    for line in f:
+                        lines.append(line.strip())
+            except UnicodeDecodeError:
+                with open("/etc/image-version", "r", encoding="latin-1") as f:
+                    for line in f:
+                        lines.append(line.strip())
+            
+            # Filter out empty lines and join
+            image_info_candidate = " ".join(filter(None, lines))
+            if image_info_candidate:
+                return image_info_candidate
+
+        # Fallback to /etc/issue if /etc/image-version failed or was empty
+        if os.path.exists("/etc/issue"):
+            line_one = ""
+            try:
+                with open("/etc/issue", "r", encoding="utf-8") as f:
+                    line_one = f.readline().strip()
+            except UnicodeDecodeError:
+                with open("/etc/issue", "r", encoding="latin-1") as f:
+                    line_one = f.readline().strip()
+            
+            if line_one:
+                # Clean up common /etc/issue junk
+                image_info_candidate = line_one.replace("\\n", "").replace("\\l", "").replace("%h", "").strip()
+                if image_info_candidate:
+                    return image_info_candidate
+                    
+    except Exception as e:
+        print("[AIO Panel] Błąd krytyczny podczas odczytu informacji o systemie:", e)
+        # If anything fails, return a default
+        return "Nieznany System (błąd odczytu)"
+        
+    return image_info # Returns "Nieznany System" if all fails
+# *** KONIEC POPRAWKI (Nowa funkcja get_image_info) ***
+
 # === KLASA WizardProgressScreen (GLOBALNA) ===
 class WizardProgressScreen(Screen):
     skin = """
@@ -662,10 +708,14 @@ class AIOInfoScreen(Screen):
         Screen.__init__(self, session)
         self.session = session
         self.setTitle("Informacje o AIO Panel")
-        self["static_info"] = Label("AIO Panel v{}\nby Paweł Pawełek | msisystem@t.pl".format(VER))
-        # *** POCZĄTEK POPRAWKI (Tytuł Info) ***
+
+        # *** POCZĄTEK POPRAWKI (Bezpieczne pobieranie info o systemie) ***
+        image_info = get_image_info() # Wywołanie nowej, bezpiecznej funkcji
+        info_text = "AIO Panel v{}\nby Paweł Pawełek | msisystem@t.pl\n\nSystem: {}".format(VER, image_info)
+        self["static_info"] = Label(info_text)
+        # *** KONIEC POPRAWKI (Bezpieczne pobieranie info o systemie) ***
+        
         self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
-        # *** KONIEC POPRAWKI (Tytuł Info) ***
         self["changelog_text"] = Label("Trwa pobieranie danych...")
         self["actions"] = ActionMap(["OkCancelActions"], {"cancel": self.close, "ok": self.close}, -1)
         self.onShown.append(self.fetch_changelog)
@@ -1115,15 +1165,20 @@ class Panel(Screen):
     def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
+
+    # *** POCZĄTEK POPRAWKI (Błąd self.sess vs self.session) ***
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
-            show_message_compat(self.sess, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
+            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
+            show_message_compat(self.session, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
-            show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
+            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
+            show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
+    # *** KONIEC POPRAWKI (Błąd self.sess vs self.session) ***
 
     def clear_oscam_password(self):
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
@@ -1351,15 +1406,20 @@ class Panel(Screen):
     def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
     def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
+
+    # *** POCZĄTEK POPRAWKI (Błąd self.sess vs self.session) ***
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
-            show_message_compat(self.sess, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
+            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
+            show_message_compat(self.session, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
-            show_message_compat(self.sess, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
+            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
+            show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
+    # *** KONIEC POPRAWKI (Błąd self.sess vs self.session) ***
 
 # === DEFINICJA WTYCZKI ===
 def main(session, **kwargs):
