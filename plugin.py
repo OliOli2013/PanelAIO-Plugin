@@ -52,8 +52,10 @@ VER = "3.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-LEGEND_PL = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
-LEGEND_EN = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
+# *** POCZĄTEK POPRAWKI (Legenda i - Info) ***
+LEGEND_PL = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj \c00aaaaaa●\c00ffffff i - Info"
+LEGEND_EN = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update \c00aaaaaa●\c00ffffff i - Info"
+# *** KONIEC POPRAWKI (Legenda i - Info) ***
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -571,31 +573,37 @@ class AIOLoadingScreen(Screen):
     def start_loading_process(self):
         self.check_dependencies()
 
+    # *** POCZĄTEK POPRAWKI (Cicha instalacja zależności) ***
     def check_dependencies(self):
-        # *** POPRAWKA v3.1: Sprawdzamy, czy zależności już SĄ ***
-        
         # Sprawdzamy plik flagi. Jeśli istnieje, zależności są OK.
         if os.path.exists(self.flag_file):
             self.start_async_data_load() # Przechodzimy od razu do ładowania danych
             return
 
         # Pliku flagi nie ma - to znaczy, że pierwszy start lub błąd
-        # Uruchamiamy jednorazową, bezpieczną instalację
-        self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać...")
+        # Uruchamiamy jednorazową, bezpieczną instalację W TLE
+        self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
         cmd = """
-        echo 'Krok 1/3: Aktualizacja listy pakietów...'
-        opkg update
-        echo 'Krok 2/3: Instalacja/Aktualizacja wget i certyfikatów SSL...'
-        opkg install wget ca-certificates
-        echo 'Krok 3/3: Sprawdzanie tar i unzip...'
-        opkg install tar || echo 'Info: Pakiet tar nie znaleziony (lub już jest), pomijam błąd.'
-        opkg install unzip || echo 'Info: Pakiet unzip nie znaleziony (lub już jest), pomijam błąd.'
-        echo 'Zakończono sprawdzanie zależności.'
-        sleep 3
+        opkg update > /dev/null 2>&1
+        opkg install wget ca-certificates > /dev/null 2>&1
+        opkg install tar > /dev/null 2>&1 || echo 'Info: Pakiet tar pominięty.'
+        opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
         """
         
-        console_screen_open(self.session, "Instalacja zależności AIO Panel", [cmd], callback=self.on_dependencies_installed_safe, close_on_finish=True)
+        # *** NOWA METODA: Uruchom w tle bez konsoli ***
+        Thread(target=self._run_deps_in_background, args=(cmd,)).start()
+
+    def _run_deps_in_background(self, cmd):
+        try:
+            # Uruchom polecenie w tle, ukrywając jego wyjście
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process.communicate() # Czekaj na zakończenie
+        except Exception as e:
+            print("[AIO Panel] Błąd podczas cichej instalacji zależności:", e)
+        
+        # Po zakończeniu, wywołaj callback w głównym wątku
+        reactor.callFromThread(self.on_dependencies_installed_safe)
 
     def on_dependencies_installed_safe(self, *args):
         # *** POPRAWKA v3.1: Tworzymy plik flagi, aby nie robić tego ponownie ***
@@ -606,6 +614,7 @@ class AIOLoadingScreen(Screen):
             print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
             
         self.start_async_data_load()
+    # *** KONIEC POPRAWKI (Cicha instalacja zależności) ***
 
     def start_async_data_load(self):
         thread = Thread(target=self._background_data_loader)
@@ -638,6 +647,83 @@ class AIOLoadingScreen(Screen):
     def _on_data_loaded(self):
         self.session.open(Panel, self.fetched_data_cache)
         self.close()
+
+
+# *** NOWA KLASA EKRANU INFO ***
+class AIOInfoScreen(Screen):
+    skin = """
+    <screen position="center,center" size="900,500" title="Informacje o AIO Panel">
+        <widget name="static_info" position="20,20" size="860,100" font="Regular;24" halign="center" valign="center" />
+        <widget name="changelog_title" position="20,130" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
+        <widget name="changelog_text" position="30,180" size="840,300" font="Regular;22" halign="left" valign="top" />
+    </screen>"""
+
+    def __init__(self, session):
+        Screen.__init__(self, session)
+        self.session = session
+        self.setTitle("Informacje o AIO Panel")
+        self["static_info"] = Label("AIO Panel v{}\nby Paweł Pawełek | msisystem@t.pl".format(VER))
+        # *** POCZĄTEK POPRAWKI (Tytuł Info) ***
+        self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
+        # *** KONIEC POPRAWKI (Tytuł Info) ***
+        self["changelog_text"] = Label("Trwa pobieranie danych...")
+        self["actions"] = ActionMap(["OkCancelActions"], {"cancel": self.close, "ok": self.close}, -1)
+        self.onShown.append(self.fetch_changelog)
+
+    def fetch_changelog(self):
+        Thread(target=self._background_changelog_fetch).start()
+
+    # *** POCZĄTEK POPRAWKI (Logika 2 wersji) ***
+    def _background_changelog_fetch(self):
+        changelog_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/changelog.txt"
+        tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog_info.txt')
+        prepare_tmp_dir()
+        
+        try:
+            cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
+            process = subprocess.Popen(cmd_log, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process.communicate() # Czekaj na zakończenie
+
+            changelog_text = "Nie można pobrać listy zmian."
+            if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
+                with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                changes = []
+                version_count = 0
+                in_version_block = False
+
+                for line in lines:
+                    line = line.strip()
+                    
+                    if line.startswith("[") and line.endswith("]"):
+                        version_count += 1
+                        if version_count > 2: # Stop after finding two versions
+                            break
+                        in_version_block = True
+                        if version_count > 1: # Add separator for 2nd
+                            changes.append("\n" + line) 
+                        else:
+                            changes.append(line) # First version, no preceding newline
+                        continue
+                    
+                    if in_version_block and line:
+                        changes.append(line)
+                            
+                if changes: 
+                    changelog_text = "\n".join(changes)
+                else:
+                    changelog_text = "Nie znaleziono żadnych wpisów w changelogu."
+        except Exception as e:
+            print("[AIO Panel] Info screen changelog fetch error:", e)
+            changelog_text = "Błąd podczas pobierania listy zmian."
+        
+        reactor.callFromThread(self.update_changelog_label, changelog_text)
+    # *** KONIEC POPRAWKI (Logika 2 wersji) ***
+
+    def update_changelog_label(self, text):
+        self["changelog_text"].setText(text)
+# *** KONIEC KLASY EKRANU INFO ***
 
 
 # === KLASA Panel (GŁÓWNE OKNO) ===
@@ -674,6 +760,8 @@ class Panel(Screen):
         for name in ("headL", "headM", "headR", "legend"): self[name] = Label()
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
+        
+        # *** POCZĄTEK POPRAWKI (Przycisk Info) ***
         self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
@@ -681,15 +769,20 @@ class Panel(Screen):
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
-            "info": self.close,
+            "info": self.show_info_screen, # Zmieniono z self.close
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
             "right": self.right
         }, -1)
+        # *** KONIEC POPRAWKI (Przycisk Info) ***
         
         self.onShown.append(self.post_initial_setup)
         self.set_language(self.lang)
+
+    # *** NOWA FUNKCJA (Przycisk Info) ***
+    def show_info_screen(self):
+        self.session.open(AIOInfoScreen)
 
     def post_initial_setup(self):
         self._focus() 
@@ -1011,7 +1104,9 @@ class Panel(Screen):
         console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
         
     def _menu(self):
+        # *** POCZĄTEK POPRAWKI (Błąd . w linii 1107) ***
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
+        # *** KONIEC POPRAWKI (Błąd . w linii 1107) ***
 
     def _focus(self):
         self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
@@ -1245,7 +1340,9 @@ class Panel(Screen):
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
     def _menu(self):
+        # *** POCZĄTEK POPRAWKI (Błąd . w linii 1107) ***
         return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
+        # *** KONIEC POPRAWKI (Błąd . w linii 1107) ***
 
     def _focus(self):
         self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
