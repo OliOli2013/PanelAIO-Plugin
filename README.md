@@ -1,25 +1,23 @@
 ![Logo Panelu AIO](logo.png)
 
 Panel AIO Plugin
-
 Oficjalne repozytorium wtyczki Panel All-In-One (AIO) dla dekoderów z oprogramowaniem Enigma2.
 
-Panel AIO to zaawansowana, wielofunkcyjna wtyczka narzędziowa, która centralizuje zarządzanie dekoderem. Umożliwia błyskawiczną instalację list kanałów, popularnych wtyczek i softcamów, a także oferuje kompletny zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym, intuicyjnym miejscu.
+Panel AIO (wersja 3.1) to zaawansowana, wielofunkcyjna wtyczka narzędziowa, która centralizuje zarządzanie dekoderem. Umożliwia błyskawiczną instalację list kanałów, popularnych wtyczek i softcamów, a także oferuje kompletny zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym, intuicyjnym miejscu.
 
-🚀 Wielka Aktualizacja do Wersji 2.0! (Październik 2025)
-Ta aktualizacja jest obowiązkowa dla użytkowników najnowszych obrazów, takich jak OpenATV 7.6+, OpenPLi 9.1+ i innych opartych na Pythonie 3.11+.
+🚀 Aktualizacja 3.1 — Poprawki i Nowe Funkcje! (Listopad 2025)
+Wersja 3.1 skupia się na stabilności, poprawkach błędów zgłoszonych przez użytkowników oraz dodaniu nowych, przydatnych funkcji.
 
-Wersja 2.0 rozwiązuje kluczowe problemy, które powodowały błędy krytyczne (BSOD/GSOD) na nowszych systemach. Wtyczka została w pełni dostosowana i jest teraz w 100% kompatybilna z najnowszym oprogramowaniem.
+Co nowego w v3.1?
+Poprawka "Super Konfiguratora": Naprawiono krytyczny błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów, uniemożliwiając automatyczną instalację piconów i Oscam.
 
-Co naprawiono?
+Cicha instalacja zależności: Przy pierwszym uruchomieniu wtyczka nie pokazuje już okna konsoli. Wymagane pakiety (SSL, wget) instalują się teraz dyskretnie w tle, wyświetlając jedynie ekran ładowania.
 
-Krytyczny błąd (BSOD/GSOD) – Usunięto problem powodujący awarię wtyczki przy starcie na systemach z Python 3.11+.
+Nowy Ekran "i - Info": Dodano nowy ekran informacyjny (dostępny pod przyciskiem 'i' na pilocie). Wyświetla on dane o wtyczce, autorze, notę prawną oraz listę ostatnich zmian (changelog) pobieraną na żywo z GitHub.
 
-Zawieszanie się tunera – Naprawiono błąd, który powodował zawieszanie się interfejsu po zakończeniu pracy "Super Konfiguratora".
+Poprawki stabilności: Naprawiono błędy (crash) występujące na niektórych obrazach (np. OpenATV 7.6) podczas przeładowywania list kanałów po zakończeniu instalacji.
 
-Błąd "Modal open" – Rozwiązano problem z awarią podczas pierwszego uruchomienia wtyczki na niektórych systemach.
-
-Instalator Oscam – Ulepszono inteligentny instalator, który teraz posiada alternatywną metodę instalacji, gdy softcam nie jest dostępny w oficjalnym feedzie.
+Nowe instalatory: Dodano szybkie instalatory dla E2Kodi v2 oraz StreamlinkProxy.
 
 ✨ Główne Możliwości Wtyczki
 📡 Listy kanałów
@@ -48,6 +46,14 @@ YouTube
 
 NCam
 
+XStreamity
+
+ServiceApp
+
+StreamlinkProxy
+
+E2Kodi v2
+
 🛠️ Narzędzia systemowe i diagnostyka
 Menadżer deinstalacji pakietów (opkg).
 
@@ -68,8 +74,17 @@ Obsługa języków polskiego i angielskiego, zmieniana jednym przyciskiem.
 
 Wbudowany kod QR ze linkiem wsparcia autora.
 
+Przycisk "Info" (i) wyświetlający szczegóły wtyczki, notę prawną i listę zmian.
+
+⚖️ Nota Prawna
+Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie na tunerach i systemach Enigma 2.
+
+Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników na stronach internetowych, YouTube i innych social mediach, wymaga zgody autora wtyczki.
+
 💻 Instalacja
 Połącz się z dekoderem przez terminal (np. PuTTY lub Telnet) i wykonaj poniższą komendę:
+
+Bash
 
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
 Po instalacji zalecany jest restart Enigma2.
@@ -85,11 +100,12 @@ Wtyczka posiada intuicyjny, trzykolumnowy interfejs. Do nawigacji służą kolor
 
 🔵 Niebieski – Sprawdź aktualizacje wtyczki
 
+ℹ️ Info (i) – Wyświetla informacje o wtyczce, notę prawną i listę zmian
+
 ☕ Wsparcie
 Jeżeli wtyczka jest dla Ciebie pomocna, możesz wesprzeć jej rozwój, stawiając autorowi kawę. Link znajdziesz w kodzie QR w interfejsie wtyczki.
 
 Autor: Paweł Pawełek (msisystem@t.pl)
 
 Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
-
 ![Wesprzyj rozwój wtyczki](Kod_QR_buycoffee.png)
