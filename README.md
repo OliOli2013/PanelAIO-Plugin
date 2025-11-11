@@ -1,111 +1,96 @@
 ![Logo Panelu AIO](logo.png)
 
-Panel AIO Plugin
-Oficjalne repozytorium wtyczki Panel All-In-One (AIO) dla dekoderów z oprogramowaniem Enigma2.
+Panel AIO (All-In-One) dla Enigma2
+Panel AIO (wersja 3.1) to kompletne centrum zarządzania Twoim dekoderem Enigma2. Zamiast instalować i pamiętać o wielu różnych dodatkach, AIO łączy je wszystkie w jedno, intuicyjne menu.
 
-Panel AIO (wersja 3.1) to zaawansowana, wielofunkcyjna wtyczka narzędziowa, która centralizuje zarządzanie dekoderem. Umożliwia błyskawiczną instalację list kanałów, popularnych wtyczek i softcamów, a także oferuje kompletny zestaw narzędzi systemowych i diagnostycznych – wszystko w jednym, intuicyjnym miejscu.
+Wtyczka została stworzona, aby maksymalnie uprościć konfigurację dekodera – zarówno dla początkujących, jak i zaawansowanych użytkowników.
 
-🚀 Aktualizacja 3.1 — Poprawki i Nowe Funkcje! (Listopad 2025)
-Wersja 3.1 skupia się na stabilności, poprawkach błędów zgłoszonych przez użytkowników oraz dodaniu nowych, przydatnych funkcji.
+🚀 Nowości w wersji 3.1 (Listopad 2025)
+Ta aktualizacja skupia się na stabilności, poprawkach błędów zgłoszonych przez użytkowników oraz dodaniu nowych, przydatnych funkcji:
 
-Co nowego w v3.1?
-Poprawka "Super Konfiguratora": Naprawiono krytyczny błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów, uniemożliwiając automatyczną instalację piconów i Oscam.
+Kluczowa poprawka "Super Konfiguratora": Naprawiono błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów. Teraz cały proces (lista, picony, oscam) przechodzi płynnie do końca.
 
-Cicha instalacja zależności: Przy pierwszym uruchomieniu wtyczka nie pokazuje już okna konsoli. Wymagane pakiety (SSL, wget) instalują się teraz dyskretnie w tle, wyświetlając jedynie ekran ładowania.
+Nowy Ekran Informacyjny (przycisk 'i'): Dodano czytelne okno z informacjami o autorze, grupie na Facebooku, nocie prawnej oraz liście ostatnich zmian pobieranej na żywo z GitHub.
 
-Nowy Ekran "i - Info": Dodano nowy ekran informacyjny (dostępny pod przyciskiem 'i' na pilocie). Wyświetla on dane o wtyczce, autorze, notę prawną oraz listę ostatnich zmian (changelog) pobieraną na żywo z GitHub.
+Cicha Instalacja Zależności: Wtyczka nie pokazuje już okna konsoli przy pierwszym starcie. Niezbędne pakiety (SSL, wget) instalują się dyskretnie w tle.
 
-Poprawki stabilności: Naprawiono błędy (crash) występujące na niektórych obrazach (np. OpenATV 7.6) podczas przeładowywania list kanałów po zakończeniu instalacji.
+Dodatkowe Instalatory: Dodano szybkie instalatory dla E2Kodi v2 oraz StreamlinkProxy.
 
-Nowe instalatory: Dodano szybkie instalatory dla E2Kodi v2 oraz StreamlinkProxy.
+Poprawki Stabilności: Rozwiązano problemy (crashe) zgłaszane przez użytkowników OpenATV 7.6.
 
-✨ Główne Możliwości Wtyczki
-📡 Listy kanałów
-Pobieranie i instalacja gotowych list kanałów z dedykowanego repozytorium oraz zewnętrznego S4aUpdater.
+✨ Główne Funkcje
+Panel AIO został zaprojektowany wokół trzech głównych sekcji:
 
-Automatyczne filtrowanie i dynamiczne aktualizacje.
+1. Wizard (Super Konfigurator)
+Idealny do "czystej" instalacji. Jedno kliknięcie i kreator automatycznie:
 
-🔑 Softcamy i wtyczki
-Oscam – Inteligentny instalator z automatycznym wyborem najlepszej wersji (master/emu/stable) oraz awaryjną metodą instalacji.
+Pobierze i zainstaluje najnowszą listę kanałów.
 
-Pełne zarządzanie Oscam: restart, kasowanie hasła, edycja pliku oscam.dvbapi z wielu źródeł.
+Pobierze i zainstaluje komplet piconów.
 
-Błyskawiczna instalacja popularnych dodatków online:
+Zainstaluje Softcam Feed oraz najnowszą wersję Oscam.
 
-AJPanel
+Zrestartuje GUI, aby zmiany weszły w życie.
+
+2. Listy Kanałów i Picony
+Dostęp do aktualnych list kanałów z dedykowanego repozytorium AIO (m.in. Bzyk, JakiTaki) oraz dynamicznie pobieranych list z S4aUpdater.
+
+Osobny instalator picon (jeśli nie chcesz korzystać z kreatora).
+
+3. Instalatory Wtyczek (1-Click)
+Zapomnij o szukaniu poleceń w internecie. Zainstaluj najpopularniejsze dodatki jednym kliknięciem:
 
 E2iPlayer (dla Python 3)
 
-EPG Import
-
-S4aUpdater
-
-JediMakerXtream
-
-YouTube
-
-NCam
+AJPanel
 
 XStreamity
 
 ServiceApp
 
-StreamlinkProxy
+YouTube
 
 E2Kodi v2
 
-🛠️ Narzędzia systemowe i diagnostyka
-Menadżer deinstalacji pakietów (opkg).
+...i wiele innych!
 
-Aktualizacja pliku satellites.xml i instalacja Softcam Feed.
+4. Narzędzia i Diagnostyka
+Kompletny "toolbox" dla Twojego dekodera:
 
-Pobieranie piconów z GitHub z automatycznym tworzeniem katalogu.
+Zarządzanie Oscam: Restart, kasowanie hasła WebIf, pobieranie oscam.dvbapi.
 
-Zarządzanie hasłem dostępu root/FTP (ustawianie i kasowanie).
+Diagnostyka Sieci: Pełny test prędkości (speedtest), sprawdzanie pingu i publicznego IP.
 
-Test prędkości internetu oraz wyświetlanie IP i pingu.
+Narzędzia Systemowe: Menadżer deinstalacji pakietów, aktualizacja satellites.xml, czyszczenie pamięci RAM i cache.
 
-Informacja o wolnym miejscu i czyszczenie pamięci tymczasowej oraz cache RAM.
-
-🔄 Aktualizacje i Interfejs
-Wbudowany system sprawdzania aktualizacji z repozytorium GitHub (wersja i changelog).
-
-Obsługa języków polskiego i angielskiego, zmieniana jednym przyciskiem.
-
-Wbudowany kod QR ze linkiem wsparcia autora.
-
-Przycisk "Info" (i) wyświetlający szczegóły wtyczki, notę prawną i listę zmian.
-
-⚖️ Nota Prawna
-Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie na tunerach i systemach Enigma 2.
-
-Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników na stronach internetowych, YouTube i innych social mediach, wymaga zgody autora wtyczki.
+Zarządzanie Hasłem: Szybkie ustawianie lub kasowanie hasła dostępu root/FTP.
 
 💻 Instalacja
-Połącz się z dekoderem przez terminal (np. PuTTY lub Telnet) i wykonaj poniższą komendę:
+Instalacja jest prosta. Połącz się z dekoderem przez terminal SSH (np. PuTTY lub Telnet) i wklej poniższą komendę:
 
 Bash
 
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
 Po instalacji zalecany jest restart Enigma2.
 
-🖼️ Interfejs i Sterowanie
-Wtyczka posiada intuicyjny, trzykolumnowy interfejs. Do nawigacji służą kolorowe przyciski pilota:
+🎮 Sterowanie
+🔴 Czerwony: Zmiana języka na Polski
 
-🔴 Czerwony – Zmiana języka na Polski
+🟢 Zielony: Zmiana języka na Angielski
 
-🟢 Zielony – Zmiana języka na Angielski
+🟡 Żółty: Restart GUI (Interfejsu)
 
-🟡 Żółty – Restart GUI
+🔵 Niebieski: Sprawdź aktualizacje wtyczki
 
-🔵 Niebieski – Sprawdź aktualizacje wtyczki
+ℹ️ Info (przycisk 'i'): Wyświetla informacje o wtyczce, notę prawną i listę zmian
 
-ℹ️ Info (i) – Wyświetla informacje o wtyczce, notę prawną i listę zmian
+⚖️ Nota Prawna
+Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie na tunerach i systemach Enigma 2.
 
-☕ Wsparcie
-Jeżeli wtyczka jest dla Ciebie pomocna, możesz wesprzeć jej rozwój, stawiając autorowi kawę. Link znajdziesz w kodzie QR w interfejsie wtyczki.
+Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników na stronach internetowych, YouTube i innych social mediach, wymaga zgody autora wtyczki.
 
-Autor: Paweł Pawełek (msisystem@t.pl)
+☕ Wsparcie i Autor
+Twórca: Paweł Pawełek (msisystem@t.pl) Grupa Wsparcia: Facebook - Enigma 2 Oprogramowanie, dodatki
 
-Repozytorium: https://github.com/OliOli2013/PanelAIO-Plugin
+Podoba Ci się wtyczka i chcesz wesprzeć jej dalszy rozwój? Możesz postawić autorowi kawę, skanując kod QR dostępny w interfejsie wtyczki.
 ![Wesprzyj rozwój wtyczki](Kod_QR_buycoffee.png)
