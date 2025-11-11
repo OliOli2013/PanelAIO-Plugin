@@ -1,11 +1,13 @@
 ![Logo Panelu AIO](logo.png)
 
 Panel AIO (All-In-One) dla Enigma2
+
 Panel AIO (wersja 3.1) to kompletne centrum zarządzania Twoim dekoderem Enigma2. Zamiast instalować i pamiętać o wielu różnych dodatkach, AIO łączy je wszystkie w jedno, intuicyjne menu.
 
 Wtyczka została stworzona, aby maksymalnie uprościć konfigurację dekodera – zarówno dla początkujących, jak i zaawansowanych użytkowników.
 
 🚀 Nowości w wersji 3.1 (Listopad 2025)
+
 Ta aktualizacja skupia się na stabilności, poprawkach błędów zgłoszonych przez użytkowników oraz dodaniu nowych, przydatnych funkcji:
 
 Kluczowa poprawka "Super Konfiguratora": Naprawiono błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów. Teraz cały proces (lista, picony, oscam) przechodzi płynnie do końca.
@@ -33,11 +35,13 @@ Zainstaluje Softcam Feed oraz najnowszą wersję Oscam.
 Zrestartuje GUI, aby zmiany weszły w życie.
 
 2. Listy Kanałów i Picony
+
 Dostęp do aktualnych list kanałów z dedykowanego repozytorium AIO (m.in. Bzyk, JakiTaki) oraz dynamicznie pobieranych list z S4aUpdater.
 
 Osobny instalator picon (jeśli nie chcesz korzystać z kreatora).
 
 3. Instalatory Wtyczek (1-Click)
+
 Zapomnij o szukaniu poleceń w internecie. Zainstaluj najpopularniejsze dodatki jednym kliknięciem:
 
 E2iPlayer (dla Python 3)
@@ -55,6 +59,7 @@ E2Kodi v2
 ...i wiele innych!
 
 4. Narzędzia i Diagnostyka
+
 Kompletny "toolbox" dla Twojego dekodera:
 
 Zarządzanie Oscam: Restart, kasowanie hasła WebIf, pobieranie oscam.dvbapi.
@@ -68,9 +73,9 @@ Zarządzanie Hasłem: Szybkie ustawianie lub kasowanie hasła dostępu root/FTP.
 💻 Instalacja
 Instalacja jest prosta. Połącz się z dekoderem przez terminal SSH (np. PuTTY lub Telnet) i wklej poniższą komendę:
 
-Bash
 
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
+
 Po instalacji zalecany jest restart Enigma2.
 
 🎮 Sterowanie
