@@ -52,11 +52,11 @@ VER = "3.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
-# *** POCZĄTEK POPRAWKI (Nowa Legenda) ***
+# *** POCZĄTEK POPRAWKI (Niebieski = Aktualizuj, Info w menu) ***
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
 LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
-LEGEND_INFO = r"\c00aaaaaa●\c00ffffff i - Info"
-# *** KONIEC POPRAWKI (Nowa Legenda) ***
+LEGEND_INFO = r" " # Usunięto starą legendę 'i - Info'
+# *** KONIEC POPRAWKI (Niebieski = Aktualizuj, Info w menu) ***
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -287,10 +287,12 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
 ]
 
+# *** POPRAWKA: Dodano "Informacje o AIO Panel" ***
 TOOLS_AND_ADDONS_PL = [
     ("--- Konfigurator ---", "SEPARATOR"),
     ("Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
+    ("Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
@@ -304,10 +306,12 @@ TOOLS_AND_ADDONS_PL = [
     ("Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
 ]
 
+# *** POPRAWKA: Dodano "About AIO Panel" ***
 TOOLS_AND_ADDONS_EN = [
     ("--- Configurator ---", "SEPARATOR"),
     ("Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- System Tools ---", "SEPARATOR"),
+    ("About AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
@@ -689,7 +693,7 @@ class AIOInfoScreen(Screen):
                           "Licencji Publicznej GNU (GNU GPL), opublikowanej przez\n" \
                           "Free Software Foundation.\n\n" \
                           "Oprogramowanie to jest rozpowszechniane z nadzieją, że będzie\n" \
-                          "użyteczne, ale BEZ JAKIEJKOLWIEK GWARANCJI; nawet bez\n" \
+                          "użyteczne, ale BEZ JAKIEJKOLWIEK GWARANCJI; even without\n" \
                           "domniemanej gwarancji PRZYDATNOŚCI HANDLOWEJ lub\n" \
                           "PRZYDATNOŚCI DO OKREŚLONEGO CELU. Korzystasz z niej\n" \
                           "na własną odpowiedzialność.\n\n" \
@@ -773,7 +777,7 @@ class AIOInfoScreen(Screen):
 
 # === KLASA Panel (GŁÓWNE OKNO) ===
 class Panel(Screen):
-    # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
+    # *** POCZĄTEK POPRAWKI (Skin - usunięto info_legend) ***
     skin = """
     <screen name='PanelAIO' position='center,center' size='1260,700' title=' '>
         <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
@@ -787,10 +791,9 @@ class Panel(Screen):
         <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
         <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
-        <widget name='info_legend' position='15,645'  size='1230,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,670' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+        <widget name='footer' position='center,655' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
-    # *** KONIEC POPRAWKI (Nowy layout legendy) ***
+    # *** KONIEC POPRAWKI (Skin - usunięto info_legend) ***
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
@@ -807,32 +810,32 @@ class Panel(Screen):
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
         # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
-        for name in ("headL", "headM", "headR", "legend", "info_legend"): self[name] = Label()
+        for name in ("headL", "headM", "headR", "legend"): self[name] = Label() # Usunięto 'info_legend'
         # *** KONIEC POPRAWKI (Nowy layout legendy) ***
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         
-        # *** POCZĄTEK POPRAWKI (Przycisk Info + FIX DLA OPENPLI) ***
-        # Dodano "HelpActions", aby przycisk Info działał na OpenPLi
-        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions", "HelpActions"], {
+        # *** POCZĄTEK POPRAWKI (Niebieski = Aktualizuj, usunięto 'i') ***
+        # Usunięto 'InfoActions' i 'HelpActions' - nie są już potrzebne.
+        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
             "red": lambda: self.set_language('PL'),
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
-            "blue": self.check_for_updates_manual,
-            "info": self.show_info_screen,
+            "blue": self.check_for_updates_manual, # <-- ZMIANA: Niebieski to teraz AKTUALIZACJA
+            
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
             "right": self.right
-        }, -1)
-        # *** KONIEC POPRAWKI (Przycisk Info + FIX DLA OPENPLI) ***
+        }, -1) 
+        # *** KONIEC POPRAWKI (Niebieski = Aktualizuj, usunięto 'i') ***
         
         self.onShown.append(self.post_initial_setup)
         self.set_language(self.lang)
 
-    # *** NOWA FUNKCJA (Przycisk Info) ***
+    # *** Funkcja wywoływana teraz z MENU ***
     def show_info_screen(self):
         self.session.open(AIOInfoScreen)
 
@@ -899,7 +902,6 @@ class Panel(Screen):
             head_widget.setText(COL_TITLES[self.lang][i])
         # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
         self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
-        self["info_legend"].setText(LEGEND_INFO)
         # *** KONIEC POPRAWKI (Nowy layout legendy) ***
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
         
@@ -1001,7 +1003,8 @@ class Panel(Screen):
             name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
         except (IndexError, KeyError, TypeError): return
         if action == "SEPARATOR": return
-        actions_no_confirm = ["CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
+        # *** POPRAWKA: Dodano CMD:SHOW_AIO_INFO do listy bez potwierdzenia ***
+        actions_no_confirm = ["CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
@@ -1048,6 +1051,8 @@ class Panel(Screen):
             elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=True)
             elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
             elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess)
+            # *** POPRAWKA: Dodano nową akcję dla Info z menu ***
+            elif command_key == "SHOW_AIO_INFO": self.show_info_screen()
 
     def run_network_diagnostics(self):
         local_ip = "N/A"
@@ -1241,7 +1246,7 @@ class Panel(Screen):
         if url: self.process_dvbapi_download(url)
 
     def process_dvbapi_download(self, url):
-        cmd = """URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; echo "Zaktualizowano: $DIR/oscam.dvbapi"; else echo "Błąd pobierania: Plik z URL nie zawiera wpisów 'P:'. Przywrócono backup dla $DIR/oscam.dvbapi"; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; else echo "Błąd pobierania z URL dla: $DIR/oscam.dvbapi. Przywrócono backup."; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done""".format(url=url)
+        cmd = """URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; echo "Zaktualizowano: $DIR/oscam.dvbapi"; else echo "Błąd pobierania: Plik z URL nie zawiera wpisów 'P:'. Przywrcono backup dla $DIR/oscam.dvbapi"; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; else echo "Błąd pobierania z URL dla: $DIR/oscam.dvbapi. Przywrcono backup."; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done""".format(url=url)
         console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
 
     def do_clear_dvbapi(self, confirmed):
