@@ -76,11 +76,11 @@ Czy chcesz ją teraz zainstalować?\n\nPo instalacji KONIECZNY jest restart GUI!
         "loading_error_text": "Błąd wczytywania danych",
         "sk_wizard_title": "Super Konfigurator (Pierwsza Instalacja)",
         "sk_choice_title": "Super Konfigurator - Wybierz opcję",
-        "sk_option_deps": "1) Zainstaluj tylko zależności (wget, tar, unzip)",
+        "sk_option_deps": "1) Zainstaluj only zależności (wget, tar, unzip)",
         "sk_option_basic_no_picons": "2) Podstawowa Konfiguracja (bez Picon)",
         "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "Anuluj",
-        "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
+        "sk_confirm_deps": "Czy na pewno chcesz zainstalować only podstawowe zależności systemowe?",
         "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
         "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
@@ -462,7 +462,7 @@ class WizardProgressScreen(Screen):
         
         # *** POPRAWKA (HOTFIX) v3.1 DLA OpenPli ***
         # Bezpieczna komenda instalacji zależności, która nie wywali się na 'tar'
-        # Ta funkcja jest teraz wywoływana tylko po ręcznym wybraniu "Zainstaluj zależności"
+        # Ta funkcja jest teraz wywoływana only po ręcznym wybraniu "Zainstaluj zależności"
         cmd = """
         echo 'Krok 1/3: Aktualizacja listy pakietów...'
         opkg update
@@ -660,10 +660,11 @@ class AIOInfoScreen(Screen):
         <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
         
         <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" valign="center" foregroundColor="yellow" />
-        <widget name="legal_text" position="20,165" size="860,125" font="Regular;20" halign="center" valign="top" />
         
-        <widget name="changelog_title" position="20,300" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
-        <widget name="changelog_text" position="30,340" size="840,180" font="Regular;22" halign="left" valign="top" />
+        <widget name="legal_text" position="20,165" size="860,200" font="Regular;20" halign="center" valign="top" />
+        
+        <widget name="changelog_title" position="20,375" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
+        <widget name="changelog_text" position="30,415" size="840,105" font="Regular;22" halign="left" valign="top" />
     </screen>"""
 
     def __init__(self, session):
@@ -677,14 +678,27 @@ class AIOInfoScreen(Screen):
         self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
         self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
         
-        self["legal_title"] = Label("--- Nota Prawna ---")
+        self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
-        # Nowa nota prawna
-        legal_note_text = "Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie\n" \
-                          "na tunerach i systemach Enigma 2.\n" \
-                          "Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników\n" \
-                          "na stronach internetowych, YouTube i innych social mediach,\n" \
-                          "wymaga zgody autora wtyczki."
+        # *** POPRAWKA: Skrócono tekst licencji (usunięta wzmianka o wersji) ***
+        legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
+                          "Prawa autorskie (C) 2024, Paweł Pawełek (msisystem@t.pl)\n" \
+                          "Wszelkie prawa autorskie osobiste zastrzeżone.\n\n" \
+                          "Ta wtyczka (AIO Panel) jest wolnym oprogramowaniem: możesz ją\n" \
+                          "redystrybuować i/lub modyfikować na warunkach Powszechnej\n" \
+                          "Licencji Publicznej GNU (GNU GPL), opublikowanej przez\n" \
+                          "Free Software Foundation.\n\n" \
+                          "Oprogramowanie to jest rozpowszechniane z nadzieją, że będzie\n" \
+                          "użyteczne, ale BEZ JAKIEJKOLWIEK GWARANCJI; nawet bez\n" \
+                          "domniemanej gwarancji PRZYDATNOŚCI HANDLOWEJ lub\n" \
+                          "PRZYDATNOŚCI DO OKREŚLONEGO CELU. Korzystasz z niej\n" \
+                          "na własną odpowiedzialność.\n\n" \
+                          "Pełną treść licencji GNU GPL można znaleźć na stronie:\n" \
+                          "https://www.gnu.org/licenses/gpl-3.0.html\n\n" \
+                          "---\n" \
+                          "Wsparcie dla autora\n" \
+                          "Jeśli doceniasz moją pracę, możesz postawić mi wirtualną kawę.\n" \
+                          "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!"
         
         self["legal_text"] = Label(legal_note_text)
         # *** KONIEC POPRAWKI (Aktualizacja treści okna Info) ***
@@ -798,21 +812,22 @@ class Panel(Screen):
         for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
         self["footer"] = Label(FOOT)
         
-        # *** POCZĄTEK POPRAWKI (Przycisk Info) ***
-        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions"], {
+        # *** POCZĄTEK POPRAWKI (Przycisk Info + FIX DLA OPENPLI) ***
+        # Dodano "HelpActions", aby przycisk Info działał na OpenPLi
+        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "InfoActions", "HelpActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
             "red": lambda: self.set_language('PL'),
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
-            "info": self.show_info_screen, # Zmieniono z self.close
+            "info": self.show_info_screen,
             "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
             "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
             "left": self.left,
             "right": self.right
         }, -1)
-        # *** KONIEC POPRAWKI (Przycisk Info) ***
+        # *** KONIEC POPRAWKI (Przycisk Info + FIX DLA OPENPLI) ***
         
         self.onShown.append(self.post_initial_setup)
         self.set_language(self.lang)
