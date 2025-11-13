@@ -1,3 +1,7 @@
+[3.2]
+- Dodano instalator wtyczki Picon Updater do menu "Softcam i Wtyczki".
+- Podniesienie numeru wersj
+
 [3.1]
 - Poprawiono pętlę zależności: Wtyczka sprawdza zależności (SSL/wget) tylko przy pierwszym uruchomieniu, tworząc plik .deps_ok.
 - Naprawiono błąd instalacji zależności na OpenPli (problem z pakietem 'tar'), co odblokowuje pobieranie list z GitHub.
