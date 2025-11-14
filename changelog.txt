@@ -1,3 +1,9 @@
+[3.3]
+- Dodano inteligentne filtrowanie menu dla obrazów Hyperion/VTi.
+- Wtyczki (AJPanel, E2iPlayer, Picon Updater) są teraz widoczne na wszystkich systemach.
+- Ukrywane są tylko funkcje EMU (Oscam, NCam) oraz Super Konfigurator na systemach z własnym menedżerem.
+- dodano instalcje wtyczki Picon Updater by Paweł Pawałek
+
 [3.2]
 - Dodano instalator wtyczki Picon Updater do menu "Softcam i Wtyczki".
 - Podniesienie numeru wersj
