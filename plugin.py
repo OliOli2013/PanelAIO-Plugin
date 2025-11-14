@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 3.2 - Dodano Picon Updater
+Wersja 3.3 - Inteligentne filtrowanie menu dla Hyperion/VTi
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "3.2"
+VER = "3.3"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
 
@@ -801,6 +801,34 @@ class Panel(Screen):
         Screen.__init__(self, session)
         self.setTitle(" ")
         self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
+
+        # --- NOWA DETEKCJA SYSTEMU v3.3 ---
+        self.image_type = "unknown"
+        if fileExists("/etc/issue"):
+            try:
+                with open("/etc/issue", "r") as f:
+                    issue_content = f.read()
+                if "Hyperion" in issue_content:
+                    self.image_type = "hyperion"
+            except:
+                pass # Błąd odczytu
+        
+        if self.image_type == "unknown" and fileExists("/etc/image-version"):
+            try:
+                with open("/etc/image-version", "r") as f:
+                    img_info = f.read().lower()
+                if "openatv" in img_info:
+                    self.image_type = "openatv"
+                elif "openpli" in img_info:
+                    self.image_type = "openpli"
+            except:
+                pass # Błąd odczytu
+        
+        if self.image_type == "unknown" and fileExists("/etc/vtiversion.info"):
+            self.image_type = "vti"
+        
+        print(f"[AIO Panel] Wykryto system: {self.image_type}")
+        # --- KONIEC DETEKCJI ---
         
         self.fetched_data_cache = fetched_data
         self.data_loaded = True
@@ -876,6 +904,47 @@ class Panel(Screen):
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
             tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
 
+            # --- NOWA LOGIKA v3.3 DLA OBRAZÓW (np. Hyperion, VTi) ---
+            if self.image_type in ["hyperion", "vti"]:
+                # Na systemach z własnym menedżerem EMU (Hyperion, VTi),
+                # usuwamy tylko te opcje, które instalują lub zarządzają EMU,
+                # ale ZOSTAWIAMY instalatory innych wtyczek.
+
+                # Lista akcji EMU do zablokowania:
+                emu_actions_to_block = [
+                    "CMD:RESTART_OSCAM",
+                    "CMD:CLEAR_OSCAM_PASS",
+                    "CMD:MANAGE_DVBAPI",
+                    "CMD:INSTALL_BEST_OSCAM",
+                    "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh" # NCam
+                ]
+
+                softcam_menu_filtered = []
+                for (name, action) in softcam_menu:
+                    # Jeśli akcja NIE jest na liście zablokowanych, dodaj ją
+                    if action not in emu_actions_to_block:
+                        softcam_menu_filtered.append((name, action))
+                    elif "--- Softcamy ---" in name:
+                        # Jeśli to nagłówek "Softcamy", też go dodaj
+                        softcam_menu_filtered.append((name, action))
+                        # I dodaj notatkę dla użytkownika
+                        if lang == 'PL':
+                            softcam_menu_filtered.append(("(Opcje EMU wyłączone - użyj menedżera obrazu)", "SEPARATOR"))
+                        else:
+                            softcam_menu_filtered.append(("(EMU options disabled - use image manager)", "SEPARATOR"))
+                
+                softcam_menu = softcam_menu_filtered # Nadpisz menu
+
+                # DODATKOWO: Wyłącz Super Konfigurator na Hyperion/VTi
+                tools_menu_filtered = []
+                for (name, action) in tools_menu:
+                    if action != "CMD:SUPER_SETUP_WIZARD":
+                        tools_menu_filtered.append((name, action))
+                tools_menu = tools_menu_filtered # Nadpisujemy menu narzędzi
+            # --- KONIEC LOGIKI v3.3 ---
+
+            # Ten kod wykona się dla obrazów 'bezpiecznych' (OpenATV, OpenPLi)
+            # LUB na przefiltrowanej liście dla Hyperiona
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
                     oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
@@ -1007,6 +1076,21 @@ class Panel(Screen):
         if action == "SEPARATOR": return
         # *** POPRAWKA: Dodano CMD:SHOW_AIO_INFO do listy bez potwierdzenia ***
         actions_no_confirm = ["CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
+        
+        # --- LOGIKA v3.3 ---
+        # Jeśli jesteśmy na Hyperionie, niektóre akcje z listy 'no_confirm' również wymagają potwierdzenia,
+        # ponieważ mogą nie działać (np. MANAGE_DVBAPI)
+        if self.image_type in ["hyperion", "vti"]:
+            emu_actions = ["CMD:MANAGE_DVBAPI"]
+            # Jeśli akcja jest związana z EMU, wymuś potwierdzenie
+            if action in emu_actions:
+                self.sess.openWithCallback(
+                    lambda ret: self.execute_action(name, action) if ret else None,
+                    MessageBox, "UWAGA (Hyperion/VTi):\nTa funkcja może nie działać poprawnie, jeśli Twoje ścieżki EMU są niestandardowe.\n\nKontynuować mimo to?\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
+                )
+                return # Zakończ, aby nie wykonać domyślnej akcji
+
+        # Domyślna logika
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
