@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 3.3 - Inteligentne filtrowanie menu dla Hyperion/VTi
+Wersja 4.0 - Przebudowa UI (Zakładki) + Logika dodawania bukietów
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -35,7 +35,7 @@ import socket
 import datetime
 import sys
 import subprocess
-import shutil
+import shutil  # <-- Dodany import dla nowej logiki
 import re
 import json
 import time
@@ -48,15 +48,14 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "3.3"
+VER = "4.0"  # <-- ZMIANA WERSJI
 DATE = str(datetime.date.today())
-FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE)
+FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) # <-- Zaktualizowana stopka
 
-# *** POCZĄTEK POPRAWKI (Niebieski = Aktualizuj, Info w menu) ***
+# Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
 LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
-LEGEND_INFO = r" " # Usunięto starą legendę 'i - Info'
-# *** KONIEC POPRAWKI (Niebieski = Aktualizuj, Info w menu) ***
+LEGEND_INFO = r" " 
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -152,6 +151,7 @@ def prepare_tmp_dir():
             print("[AIO Panel] Error creating tmp dir:", e)
 
 # === FUNKCJA install_archive (GLOBALNA) ===
+# Ta funkcja instaluje KOMPLETNE LISTY (kasuje starą)
 def install_archive(session, title, url, callback_on_finish=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
         show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
@@ -161,7 +161,6 @@ def install_archive(session, title, url, callback_on_finish=None):
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     
-    # *** POPRAWKA: Dodano timeout 30 sekund (-T 30) do wget ***
     download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
     
     if "picon" in title.lower():
@@ -183,14 +182,14 @@ def install_archive(session, title, url, callback_on_finish=None):
     elif archive_type == "ipk":
         full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
-        # Ten blok dotyczy list kanałów
+        # Ten blok dotyczy list kanałów (TYPU "LIST")
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
         if not os.path.exists(install_script_path):
              show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
              if callback_on_finish: callback_on_finish()
              return
         
-        # *** POPRAWKA v3.1: Kasowanie starych list kanałów PRZED instalacją nowych ***
+        # TO JEST KLUCZOWY ELEMENT: Kasowanie starych list kanałów PRZED instalacją nowych
         clear_bouquets_cmd = "rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio"
                 
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
@@ -264,6 +263,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
     ("Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
@@ -285,12 +285,13 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
     ("Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
 
-# *** POPRAWKA: Dodano "Informacje o AIO Panel" ***
-TOOLS_AND_ADDONS_PL = [
+# === NOWE PODZIELONE LISTY MENU (PL) ===
+SYSTEM_TOOLS_PL = [
     ("--- Konfigurator ---", "SEPARATOR"),
     ("Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
@@ -301,6 +302,9 @@ TOOLS_AND_ADDONS_PL = [
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
+]
+
+DIAGNOSTICS_PL = [
     ("--- Diagnostyka i Czyszczenie ---", "SEPARATOR"),
     ("Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
     ("Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
@@ -308,8 +312,8 @@ TOOLS_AND_ADDONS_PL = [
     ("Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
 ]
 
-# *** POPRAWKA: Dodano "About AIO Panel" ***
-TOOLS_AND_ADDONS_EN = [
+# === NOWE PODZIELONE LISTY MENU (EN) ===
+SYSTEM_TOOLS_EN = [
     ("--- Configurator ---", "SEPARATOR"),
     ("Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- System Tools ---", "SEPARATOR"),
@@ -320,6 +324,9 @@ TOOLS_AND_ADDONS_EN = [
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
+]
+
+DIAGNOSTICS_EN = [
     ("--- Diagnostics & Cleaning ---", "SEPARATOR"),
     ("Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
     ("Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
@@ -327,7 +334,12 @@ TOOLS_AND_ADDONS_EN = [
     ("Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
 ]
 
-COL_TITLES = {"PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia i Dodatki"), "EN": ("Channel Lists", "Softcam & Plugins", "Tools & Extras")}
+# === NOWE 4 KATEGORIE ===
+COL_TITLES = {
+    "PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia Systemowe", "Diagnostyka i Czyszczenie"),
+    "EN": ("Channel Lists", "Softcam & Plugins", "System Tools", "Diagnostics & Cleaning")
+}
+
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
 def _get_lists_from_repo_sync():
@@ -353,11 +365,35 @@ def _get_lists_from_repo_sync():
     try:
         with open(tmp_json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        
         for item in data:
-            menu_title = "{} - {} ({})".format(item.get('name', 'Brak nazwy'), item.get('author', ''), item.get('version', ''))
-            action = "archive:{}".format(item.get('url', ''))
-            if item.get('url'):
+            item_type = item.get("type", "LIST").upper() # Domyślnie "LIST" (czyli kompletna lista .zip)
+            name = item.get('name', 'Brak nazwy')
+            author = item.get('author', '')
+            url = item.get('url', '')
+            
+            if not url: # Pomiń, jeśli nie ma URL
+                continue
+
+            if item_type == "M3U":
+                bouquet_id = item.get('bouquet_id', 'userbouquet.imported_m3u.tv')
+                menu_title = "{} - {} (Dodaj jako Bukiet M3U)".format(name, author)
+                action = "m3u:{}:{}:{}".format(url, bouquet_id, name)
                 lists_menu.append((menu_title, action))
+            
+            elif item_type == "BOUQUET":
+                # To jest dla plików .tv Azmana, które wymagają pasującego lamedb
+                bouquet_id = item.get('bouquet_id', 'userbouquet.imported_ref.tv')
+                menu_title = "{} - {} (Dodaj Bukiet REF)".format(name, author)
+                action = "bouquet:{}:{}:{}".format(url, bouquet_id, name)
+                lists_menu.append((menu_title, action))
+
+            else: # Domyślnie type == "LIST"
+                version = item.get('version', '')
+                menu_title = "{} - {} ({})".format(name, author, version)
+                action = "archive:{}".format(url)
+                lists_menu.append((menu_title, action))
+
     except Exception as e:
         print("[AIO Panel] Błąd przetwarzania pliku manifest.json:", e)
         return []
@@ -443,7 +479,7 @@ class WizardProgressScreen(Screen):
         self.wizard_current_step += 1
         
         step_functions = {
-            "deps": self._wizard_step_deps, # Ten krok jest teraz usunięty z listy, ale zostawiamy na wszelki wypadek
+            "deps": self._wizard_step_deps, 
             "channel_list": self._wizard_step_channel_list,
             "install_oscam": self._wizard_step_install_oscam, 
             "picons": self._wizard_step_picons,
@@ -462,13 +498,7 @@ class WizardProgressScreen(Screen):
 
     def _wizard_step_deps(self):
         title = self._get_wizard_title("Instalacja zależności")
-        
-        # *** POPRAWKA: Aktualizuj etykietę na ekranie ***
         self["message"].setText("Krok [{}/{}]:\nInstalacja zależności systemowych...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
-        
-        # *** POPRAWKA (HOTFIX) v3.1 DLA OpenPli ***
-        # Bezpieczna komenda instalacji zależności, która nie wywali się na 'tar'
-        # Ta funkcja jest teraz wywoływana only po ręcznym wybraniu "Zainstaluj zależności"
         cmd = """
         echo 'Krok 1/3: Aktualizacja listy pakietów...'
         opkg update
@@ -486,25 +516,20 @@ class WizardProgressScreen(Screen):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
         url = self.wizard_channel_list_url
         
-        # *** POPRAWKA: Aktualizuj etykietę na ekranie, zamiast otwierać nowy MessageBox ***
         start_msg_pl = "Krok [{}/{}]:\nInstalacja listy kanałów '{}'...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
         start_msg_en = "Step [{}/{}]:\nInstalling channel list '{}'...\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
         parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
             parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        self["message"].setText(start_msg) # Zastąpiono show_message_compat
+        self["message"].setText(start_msg)
         
-        # *** POPRAWKA (2025-11-10): Poprawiono błąd nazwy argumentu 'callback' na 'callback_on_finish' ***
         install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
 
     def _wizard_step_install_oscam(self):
         title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
-        
-        # *** POPRAWKA: Aktualizuj etykietę na ekranie ***
         self["message"].setText("Krok [{}/{}]:\nInstalacja Softcam Feed + Oscam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
         
-        # *** POPRAWKA v3.1: Usunięto fallback do Levi45, aby uniknąć restartu GUI ***
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -530,16 +555,14 @@ class WizardProgressScreen(Screen):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
         url = self.wizard_picon_url
 
-        # *** POPRAWKA: Aktualizuj etykietę na ekranie, zamiast otwierać nowy MessageBox ***
         start_msg_pl = "Krok [{}/{}]:\nInstalacja Picon (Transparent)...\n(To może potrwać kilka minut)\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
         start_msg_en = "Step [{}/{}]:\nInstalling Picons (Transparent)...\n(This may take a few minutes)\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps)
         parent_lang = 'PL'
         if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
              parent_lang = self.session.current_dialog.lang
         start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        self["message"].setText(start_msg) # Zastąpiono show_message_compat
+        self["message"].setText(start_msg)
 
-        # *** POPRAWKA (2025-11-10): Poprawiono błąd nazwy argumentu 'callback' na 'callback_on_finish' ***
         install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
         
     def _wizard_step_reload_settings(self):
@@ -571,8 +594,6 @@ class AIOLoadingScreen(Screen):
         self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...\n\nLoading...\nPlease wait, loading AIO Panel data...")
         self.fetched_data_cache = None
         
-        # *** POPRAWKA v3.1: Ścieżka do pliku flagi ***
-        # Ten plik będzie tworzony w katalogu wtyczki i będzie oznaczał, że zależności są OK
         self.flag_file = os.path.join(PLUGIN_PATH, ".deps_ok")
         
         self.onShown.append(self.start_loading_process)
@@ -580,15 +601,11 @@ class AIOLoadingScreen(Screen):
     def start_loading_process(self):
         self.check_dependencies()
 
-    # *** POCZĄTEK POPRAWKI (Cicha instalacja zależności) ***
     def check_dependencies(self):
-        # Sprawdzamy plik flagi. Jeśli istnieje, zależności są OK.
         if os.path.exists(self.flag_file):
-            self.start_async_data_load() # Przechodzimy od razu do ładowania danych
+            self.start_async_data_load()
             return
 
-        # Pliku flagi nie ma - to znaczy, że pierwszy start lub błąd
-        # Uruchamiamy jednorazową, bezpieczną instalację W TLE
         self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
         cmd = """
@@ -598,22 +615,18 @@ class AIOLoadingScreen(Screen):
         opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
         """
         
-        # *** NOWA METODA: Uruchom w tle bez konsoli ***
         Thread(target=self._run_deps_in_background, args=(cmd,)).start()
 
     def _run_deps_in_background(self, cmd):
         try:
-            # Uruchom polecenie w tle, ukrywając jego wyjście
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate() # Czekaj na zakończenie
+            process.communicate()
         except Exception as e:
             print("[AIO Panel] Błąd podczas cichej instalacji zależności:", e)
         
-        # Po zakończeniu, wywołaj callback w głównym wątku
         reactor.callFromThread(self.on_dependencies_installed_safe)
 
     def on_dependencies_installed_safe(self, *args):
-        # *** POPRAWKA v3.1: Tworzymy plik flagi, aby nie robić tego ponownie ***
         try:
             with open(self.flag_file, 'w') as f:
                 f.write('ok')
@@ -621,7 +634,6 @@ class AIOLoadingScreen(Screen):
             print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
             
         self.start_async_data_load()
-    # *** KONIEC POPRAWKI (Cicha instalacja zależności) ***
 
     def start_async_data_load(self):
         thread = Thread(target=self._background_data_loader)
@@ -658,7 +670,6 @@ class AIOLoadingScreen(Screen):
 
 # *** NOWA KLASA EKRANU INFO (z notą prawną) ***
 class AIOInfoScreen(Screen):
-    # *** POCZĄTEK POPRAWKI (Nowy layout okna Info) ***
     skin = """
     <screen position="center,center" size="900,540" title="Informacje o AIO Panel">
         <widget name="title" position="20,20" size="860,35" font="Regular;28" halign="center" valign="center" />
@@ -678,15 +689,11 @@ class AIOInfoScreen(Screen):
         self.session = session
         self.setTitle("Informacje o AIO Panel")
 
-        # *** POCZĄTEK POPRAWKI (Aktualizacja treści okna Info) ***
-        
         self["title"] = Label("AIO Panel v{}".format(VER))
         self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
         self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
-        
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
-        # *** POPRAWKA: Skrócono tekst licencji (usunięta wzmianka o wersji) ***
         legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
                           "Prawa autorskie (C) 2024, Paweł Pawełek (msisystem@t.pl)\n" \
                           "Wszelkie prawa autorskie osobiste zastrzeżone.\n\n" \
@@ -707,9 +714,7 @@ class AIOInfoScreen(Screen):
                           "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!"
         
         self["legal_text"] = Label(legal_note_text)
-        # *** KONIEC POPRAWKI (Aktualizacja treści okna Info) ***
-        
-        self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)") # Domyślny tytuł
+        self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
         self["changelog_text"] = Label("Trwa pobieranie danych...")
         
         self["actions"] = ActionMap(["OkCancelActions"], {"cancel": self.close, "ok": self.close}, -1)
@@ -718,18 +723,17 @@ class AIOInfoScreen(Screen):
     def fetch_changelog(self):
         Thread(target=self._background_changelog_fetch).start()
 
-    # *** POCZĄTEK POPRAWKI (Logika 1 wersji) ***
     def _background_changelog_fetch(self):
         changelog_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/changelog.txt"
         tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog_info.txt')
         prepare_tmp_dir()
         
-        found_version_tag = "" # Przechowa znaleziony tag, np. [3.1]
+        found_version_tag = "" 
         
         try:
             cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
             process = subprocess.Popen(cmd_log, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate() # Czekaj na zakończenie
+            process.communicate() 
 
             changelog_text = "Nie można pobrać listy zmian."
             if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
@@ -745,12 +749,11 @@ class AIOInfoScreen(Screen):
                     
                     if line.startswith("[") and line.endswith("]"):
                         version_count += 1
-                        # *** POPRAWKA: Zatrzymaj po JEDNEJ wersji ***
                         if version_count > 1: 
                             break
                         in_version_block = True
-                        found_version_tag = line # Zapisz tag, np. "[3.1]"
-                        continue # Nie dodawaj samego tagu do treści
+                        found_version_tag = line 
+                        continue 
                     
                     if in_version_block and line:
                         changes.append(line)
@@ -763,13 +766,10 @@ class AIOInfoScreen(Screen):
             print("[AIO Panel] Info screen changelog fetch error:", e)
             changelog_text = "Błąd podczas pobierania listy zmian."
         
-        # Przekaż tekst zmian ORAZ znaleziony tag wersji
         reactor.callFromThread(self.update_changelog_label, changelog_text, found_version_tag)
-    # *** KONIEC POPRAWKI (Logika 1 wersji) ***
 
     def update_changelog_label(self, text, version_tag):
         self["changelog_text"].setText(text)
-        # Zaktualizuj tytuł, aby pokazywał, której wersji dotyczy changelog
         if version_tag:
             self["changelog_title"].setText("Zmiany dla {}".format(version_tag))
         else:
@@ -777,32 +777,30 @@ class AIOInfoScreen(Screen):
 # *** KONIEC KLASY EKRANU INFO ***
 
 
-# === KLASA Panel (GŁÓWNE OKNO) ===
+# === KLASA Panel (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
 class Panel(Screen):
-    # *** POCZĄTEK POPRAWKI (Skin - usunięto info_legend) ***
+    # Nowy skin z jedną listą i informacją o zakładkach
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1260,700' title=' '>
-        <widget name='qr_code_small' position='15,25' size='110,110' pixmap="{}" alphatest='blend' />
-        <widget name="support_label" position="135,25" size="400,110" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
-        <widget name="title_label" position="630,25" size="615,40" font="Regular;32" halign="right" valign="center" transparent="1" />
-        <widget name='headL' position='15,150'  size='500,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuL' position='15,190'  size='500,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headM' position='530,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuM' position='530,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        <widget name='headR' position='895,150' size='350,30'  font='Regular;26' halign='center' foregroundColor='cyan' />
-        <widget name='menuR' position='895,190'  size='350,410' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+    <screen name='PanelAIO' position='center,center' size='1100,660' title='Panel AIO'>
+        <widget name='qr_code_small' position='15,15' size='90,90' pixmap="{}" alphatest='blend' />
+        <widget name="support_label" position="125,15" size="400,90" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
+        <widget name="title_label" position="500,15" size="585,40" font="Regular;32" halign="right" valign="center" transparent="1" />
         
-        <widget name='legend' position='15,620'  size='1230,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,655' size='1230,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+        <widget name='tabs_display' position='15,115' size='1070,30' font='Regular;26' halign='center' foregroundColor='cyan'/>
+        
+        <widget name='menu' position='15,165' size='1070,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        
+        <widget name='legend' position='15,600'  size='1070,28'  font='Regular;20' halign='center'/>
+        <widget name='footer' position='center,630' size='1070,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
-    # *** KONIEC POPRAWKI (Skin - usunięto info_legend) ***
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
-        self.setTitle(" ")
-        self.sess, self.col, self.lang, self.data = session, 'L', 'PL', ([],[],[])
-
-        # --- NOWA DETEKCJA SYSTEMU v3.3 ---
+        self.setTitle("Panel AIO " + VER)
+        self.sess = session
+        self.lang = 'PL'
+        
+        # Logika detekcji obrazu (skopiowana z Twojego kodu)
         self.image_type = "unknown"
         if fileExists("/etc/issue"):
             try:
@@ -810,67 +808,211 @@ class Panel(Screen):
                     issue_content = f.read()
                 if "Hyperion" in issue_content:
                     self.image_type = "hyperion"
-            except:
-                pass # Błąd odczytu
-        
+            except: pass
         if self.image_type == "unknown" and fileExists("/etc/image-version"):
             try:
                 with open("/etc/image-version", "r") as f:
                     img_info = f.read().lower()
-                if "openatv" in img_info:
-                    self.image_type = "openatv"
-                elif "openpli" in img_info:
-                    self.image_type = "openpli"
-            except:
-                pass # Błąd odczytu
-        
+                if "openatv" in img_info: self.image_type = "openatv"
+                elif "openpli" in img_info: self.image_type = "openpli"
+            except: pass
         if self.image_type == "unknown" and fileExists("/etc/vtiversion.info"):
             self.image_type = "vti"
-        
-        print(f"[AIO Panel] Wykryto system: {self.image_type}")
-        # --- KONIEC DETEKCJI ---
-        
+        print(f"[AIO Panel] Przebudowa v2: Wykryto system: {self.image_type}")
+
         self.fetched_data_cache = fetched_data
-        self.data_loaded = True
         self.update_info = None
         self.update_prompt_shown = False
         self.wait_message_box = None
         
+        self.active_tab = 0 # 0 = Listy, 1 = Wtyczki, 2 = Narzędzia, 3 = Diagnostyka
+        self.tab_titles_def = COL_TITLES # Używamy globalnej definicji 4-kategorii
+        self.all_data = ([], [], [], []) # Pusta krotka na 4 kategorie
+
+        # Inicjalizacja komponentów skin
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
-        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
-        for name in ("headL", "headM", "headR", "legend"): self[name] = Label() # Usunięto 'info_legend'
-        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
-        for name in ("menuL", "menuM", "menuR"): self[name] = MenuList([])
+        self["tabs_display"] = Label("") # Ustawiane w switch_tab
+        self["menu"] = MenuList([])
+        self["legend"] = Label(" ") # Ustawiane w set_language
         self["footer"] = Label(FOOT)
         
-        # *** POCZĄTEK POPRAWKI (Niebieski = Aktualizuj, usunięto 'i') ***
-        # Usunięto 'InfoActions' i 'HelpActions' - nie są już potrzebne.
-        self["act"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions"], {
+        # KROK 2: NOWA MAPA KLAWISZY (PRZYWRÓCONA LEGENDA + NAWIGACJA L/R)
+        self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
+            
+            # Przyciski kolorowe (Twoja legenda)
             "red": lambda: self.set_language('PL'),
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
-            "blue": self.check_for_updates_manual, # <-- ZMIANA: Niebieski to teraz AKTUALIZACJA
+            "blue": self.check_for_updates_manual,
             
-            "up": lambda: self._menu().instance.moveSelection(self._menu().instance.moveUp),
-            "down": lambda: self._menu().instance.moveSelection(self._menu().instance.moveDown),
-            "left": self.left,
-            "right": self.right
+            # Przyciski nawigacyjne (L/R do zmiany zakładek)
+            "left": self.prev_tab,
+            "right": self.next_tab
+            # Up/Down są domyślnie obsługiwane przez MenuList
         }, -1) 
-        # *** KONIEC POPRAWKI (Niebieski = Aktualizuj, usunięto 'i') ***
         
         self.onShown.append(self.post_initial_setup)
-        self.set_language(self.lang)
+        self.set_language(self.lang) # Pierwsze wypełnienie danych
 
-    # *** Funkcja wywoływana teraz z MENU ***
+    # --- NOWE FUNKCJE DLA ZAKŁADEK (L/R) ---
+    
+    def next_tab(self):
+        """Przełącza na następną zakładkę"""
+        new_tab_index = (self.active_tab + 1) % len(self.all_data) # % 4
+        self.switch_tab(new_tab_index)
+
+    def prev_tab(self):
+        """Przełącza na poprzednią zakładkę"""
+        new_tab_index = (self.active_tab - 1) % len(self.all_data) # % 4
+        self.switch_tab(new_tab_index)
+
+    def switch_tab(self, tab_index):
+        """Przełącza aktywną zakładkę i odświeża listę menu oraz tytuł."""
+        self.active_tab = tab_index
+        lang = self.lang
+        total_tabs = len(self.all_data)
+        
+        # Ustaw tytuł aktywnej zakładki (np. "Listy Kanałów")
+        title = self.tab_titles_def[lang][self.active_tab]
+        
+        # Ustaw wskaźnik zakładek (np. "< Listy Kanałów (1/4) >")
+        tabs_display_text = "< {title} ({current}/{total}) >".format(
+            title=title,
+            current=self.active_tab + 1,
+            total=total_tabs
+        )
+        self["tabs_display"].setText(tabs_display_text)
+        
+        # Załaduj dane dla tej zakładki do menu
+        data_list = self.all_data[self.active_tab]
+        if data_list:
+            menu_items = [str(item[0]) for item in data_list]
+            self["menu"].setList(menu_items)
+        else:
+            self["menu"].setList([(TRANSLATIONS[lang]["loading_error_text"],)])
+
+    # --- ZMODYFIKOWANE STARE FUNKCJE ---
+
+    def set_language(self, lang):
+        """ZMODYFIKOWANA: Ustawia język, buduje listę self.all_data (z 4 kategorii) i odświeża zakładkę."""
+        self.lang = lang
+        self.set_lang_headers_and_legends() # Ustawia legendę i etykiety
+        
+        try:
+            # Pobieranie danych (skopiowane z Twojego kodu)
+            repo_lists = self.fetched_data_cache.get("repo_lists", [])
+            s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
+            best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
+
+            if not repo_lists:
+                repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
+            
+            keywords_to_remove = ['bzyk', 'jakitaki']
+            s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
+            final_channel_lists = repo_lists + s4a_lists_filtered
+            
+            # Używamy nowych, podzielonych list globalnych
+            softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
+            tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
+            diag_menu = list(DIAGNOSTICS_PL if lang == 'PL' else DIAGNOSTICS_EN)
+            
+            # Logika filtrowania dla Hyperion/VTi (skopiowana z)
+            if self.image_type in ["hyperion", "vti"]:
+                emu_actions_to_block = [
+                    "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI",
+                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"
+                ]
+                softcam_menu_filtered = []
+                for (name, action) in softcam_menu:
+                    if action not in emu_actions_to_block:
+                        softcam_menu_filtered.append((name, action))
+                    elif "--- Softcamy ---" in name:
+                        softcam_menu_filtered.append((name, action))
+                        note = ("(Opcje EMU wyłączone - użyj menedżera obrazu)", "SEPARATOR") if lang == 'PL' else ("(EMU options disabled - use image manager)", "SEPARATOR")
+                        softcam_menu_filtered.append(note)
+                softcam_menu = softcam_menu_filtered
+
+                # Filtrujemy też SuperKonfigurator z Narzędzi
+                tools_menu_filtered = []
+                for (name, action) in tools_menu:
+                    if action != "CMD:SUPER_SETUP_WIZARD":
+                        tools_menu_filtered.append((name, action))
+                tools_menu = tools_menu_filtered
+            
+            # Logika dla Oscam (skopiowana z)
+            for i, (name, action) in enumerate(softcam_menu):
+                if action == "CMD:INSTALL_BEST_OSCAM":
+                    oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
+                    softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+            
+            # Logika dla SuperKonfiguratora (skopiowana z)
+            for i, (name, action) in enumerate(tools_menu):
+                if action == "CMD:SUPER_SETUP_WIZARD":
+                    tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
+
+            # NOWA LOGIKA: Ustawiamy self.all_data na 4 kategorie
+            self.all_data = (final_channel_lists, softcam_menu, tools_menu, diag_menu)
+            
+            # Odśwież bieżącą zakładkę, aby załadować dane
+            self.switch_tab(self.active_tab) 
+            
+        except Exception as e:
+            print("[AIO Panel] Błąd podczas przetwarzania danych dla set_language:", e)
+            self.all_data = ([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")], [], [], [])
+            self.switch_tab(0) # Załaduj zakładkę z błędem
+
+    def set_lang_headers_and_legends(self):
+        """ZMODYFIKOWANA: Ustawia tylko legendę i etykietę wsparcia."""
+        # Ustawia legendę (Czerwony, Zielony, Żółty, Niebieski)
+        self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
+        
+        # Ustawia etykietę "Wesprzyj rozwój..."
+        self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
+        
+        # Tytuł zakładki jest teraz ustawiany w switch_tab()
+
+    def run_with_confirmation(self):
+        """ZMODYFIKOWANA: Pobiera akcję z aktywnej zakładki i jednej listy."""
+        try:
+            # Pobieramy akcję z jednej listy, bazując na aktywnej zakładce
+            name, action = self.all_data[self.active_tab][self["menu"].getSelectedIndex()]
+        except (IndexError, KeyError, TypeError): 
+            return # Błąd lub pusta lista
+        if action == "SEPARATOR": 
+            return # Nie rób nic dla separatorów
+
+        # Reszta tej funkcji jest skopiowana 1:1 z Twojej starej funkcji
+        actions_no_confirm = ["CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
+        
+        # Logika dla Hyperion/VTi (skopiowana z)
+        if self.image_type in ["hyperion", "vti"]:
+            emu_actions = ["CMD:MANAGE_DVBAPI"]
+            if action in emu_actions:
+                self.sess.openWithCallback(
+                    lambda ret: self.execute_action(name, action) if ret else None,
+                    MessageBox, "UWAGA (Hyperion/VTi):\nTa funkcja może nie działać poprawnie, jeśli Twoje ścieżki EMU są niestandardowe.\n\nKontynuować mimo to?\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
+                )
+                return 
+
+        # Domyślna logika potwierdzenia (skopiowana z)
+        if any(action.startswith(prefix) for prefix in actions_no_confirm):
+            self.execute_action(name, action)
+        else:
+            self.sess.openWithCallback(
+                lambda ret: self.execute_action(name, action) if ret else None,
+                MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
+            )
+
+    # --- POZOSTAŁE FUNKCJE POMOCNICZE (SKOPIOWANE 1:1) ---
+
     def show_info_screen(self):
         self.session.open(AIOInfoScreen)
 
     def post_initial_setup(self):
-        self._focus() 
         reactor.callLater(1, self.check_for_updates_on_start)
 
     def check_for_updates_on_start(self):
@@ -884,107 +1026,6 @@ class Panel(Screen):
                 reactor.callFromThread(self.ask_for_update, update_info)
         except Exception as e:
             print("[AIO Panel] Błąd automatycznego sprawdzania aktualizacji:", e)
-
-    def set_language(self, lang):
-        self.lang = lang
-        self.set_lang_headers_and_legends()
-        
-        try:
-            repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
-            best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
-
-            if not repo_lists:
-                repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
-            
-            keywords_to_remove = ['bzyk', 'jakitaki']
-            s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
-            final_channel_lists = repo_lists + s4a_lists_filtered
-            
-            softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
-            tools_menu = list(TOOLS_AND_ADDONS_PL if lang == 'PL' else TOOLS_AND_ADDONS_EN)
-
-            # --- NOWA LOGIKA v3.3 DLA OBRAZÓW (np. Hyperion, VTi) ---
-            if self.image_type in ["hyperion", "vti"]:
-                # Na systemach z własnym menedżerem EMU (Hyperion, VTi),
-                # usuwamy tylko te opcje, które instalują lub zarządzają EMU,
-                # ale ZOSTAWIAMY instalatory innych wtyczek.
-
-                # Lista akcji EMU do zablokowania:
-                emu_actions_to_block = [
-                    "CMD:RESTART_OSCAM",
-                    "CMD:CLEAR_OSCAM_PASS",
-                    "CMD:MANAGE_DVBAPI",
-                    "CMD:INSTALL_BEST_OSCAM",
-                    "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh" # NCam
-                ]
-
-                softcam_menu_filtered = []
-                for (name, action) in softcam_menu:
-                    # Jeśli akcja NIE jest na liście zablokowanych, dodaj ją
-                    if action not in emu_actions_to_block:
-                        softcam_menu_filtered.append((name, action))
-                    elif "--- Softcamy ---" in name:
-                        # Jeśli to nagłówek "Softcamy", też go dodaj
-                        softcam_menu_filtered.append((name, action))
-                        # I dodaj notatkę dla użytkownika
-                        if lang == 'PL':
-                            softcam_menu_filtered.append(("(Opcje EMU wyłączone - użyj menedżera obrazu)", "SEPARATOR"))
-                        else:
-                            softcam_menu_filtered.append(("(EMU options disabled - use image manager)", "SEPARATOR"))
-                
-                softcam_menu = softcam_menu_filtered # Nadpisz menu
-
-                # DODATKOWO: Wyłącz Super Konfigurator na Hyperion/VTi
-                tools_menu_filtered = []
-                for (name, action) in tools_menu:
-                    if action != "CMD:SUPER_SETUP_WIZARD":
-                        tools_menu_filtered.append((name, action))
-                tools_menu = tools_menu_filtered # Nadpisujemy menu narzędzi
-            # --- KONIEC LOGIKI v3.3 ---
-
-            # Ten kod wykona się dla obrazów 'bezpiecznych' (OpenATV, OpenPLi)
-            # LUB na przefiltrowanej liście dla Hyperiona
-            for i, (name, action) in enumerate(softcam_menu):
-                if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
-                    softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
-            
-            for i, (name, action) in enumerate(tools_menu):
-                if action == "CMD:SUPER_SETUP_WIZARD":
-                    tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
-
-            self.data = (final_channel_lists, softcam_menu, tools_menu)
-            self.populate_menus()
-            
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas przetwarzania danych dla set_language:", e)
-            error_list = [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")]
-            self["menuL"].setList([item[0] for item in error_list])
-            self["menuM"].setList([])
-            self["menuR"].setList([])
-        
-        self._focus()
-
-    def set_lang_headers_and_legends(self):
-        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
-        for i, head_widget in enumerate((self["headL"], self["headM"], self["headR"])):
-        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
-            head_widget.setText(COL_TITLES[self.lang][i])
-        # *** POCZĄTEK POPRAWKI (Nowy layout legendy) ***
-        self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
-        # *** KONIEC POPRAWKI (Nowy layout legendy) ***
-        self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
-        
-    def populate_menus(self):
-        # *** POCZĄTEK POPRAWKI (Błąd linii 884) ***
-        for i, menu_widget in enumerate((self["menuL"], self["menuM"], self["menuR"])):
-        # *** KONIEC POPRAWKI (Błąd linii 884) ***
-            data_list = self.data[i]
-            if data_list:
-                menu_widget.setList([str(item[0]) for item in data_list])
-            else:
-                menu_widget.setList([(TRANSLATIONS[self.lang]["loading_error_text"],)])
 
     def perform_update_check_silent(self):
         repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
@@ -1069,52 +1110,51 @@ class Panel(Screen):
         else:
             self.update_info = None
 
-    def run_with_confirmation(self):
-        try:
-            name, action = self.data[{'L':0,'M':1,'R':2}[self.col]][self._menu().getSelectedIndex()]
-        except (IndexError, KeyError, TypeError): return
-        if action == "SEPARATOR": return
-        # *** POPRAWKA: Dodano CMD:SHOW_AIO_INFO do listy bez potwierdzenia ***
-        actions_no_confirm = ["CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
-        
-        # --- LOGIKA v3.3 ---
-        # Jeśli jesteśmy na Hyperionie, niektóre akcje z listy 'no_confirm' również wymagają potwierdzenia,
-        # ponieważ mogą nie działać (np. MANAGE_DVBAPI)
-        if self.image_type in ["hyperion", "vti"]:
-            emu_actions = ["CMD:MANAGE_DVBAPI"]
-            # Jeśli akcja jest związana z EMU, wymuś potwierdzenie
-            if action in emu_actions:
-                self.sess.openWithCallback(
-                    lambda ret: self.execute_action(name, action) if ret else None,
-                    MessageBox, "UWAGA (Hyperion/VTi):\nTa funkcja może nie działać poprawnie, jeśli Twoje ścieżki EMU są niestandardowe.\n\nKontynuować mimo to?\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
-                )
-                return # Zakończ, aby nie wykonać domyślnej akcji
-
-        # Domyślna logika
-        if any(action.startswith(prefix) for prefix in actions_no_confirm):
-            self.execute_action(name, action)
-        else:
-            self.sess.openWithCallback(
-                lambda ret: self.execute_action(name, action) if ret else None,
-                MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
-            )
-    
+    # --- NOWA, GŁÓWNA FUNKCJA WYKONAWCZA ---
     def execute_action(self, name, action):
         title = name
-        if action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
         
-        elif action.startswith("archive:"):
+        # --- LOGIKA DLA STARYCH LIST (.zip) ---
+        if action.startswith("archive:"):
             try:
                 list_url = action.split(':', 1)[1]
                 start_msg_pl = "Rozpoczynam instalację:\n'{}'...".format(title)
                 start_msg_en = "Starting installation:\n'{}'...".format(title)
                 start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
                 show_message_compat(self.sess, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
+                # Wywołuje starą funkcję, która KASUJE wszystko
                 install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
             except IndexError:
                  show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
+
+        # --- NOWA LOGIKA DLA BUKIETÓW M3U (np. IPTV.org) ---
+        elif action.startswith("m3u:"):
+            try:
+                parts = action.split(':', 3)
+                url = parts[1] + ":" + parts[2] # Poprawka dla URLi zawierających ':'
+                bouquet_info = parts[3].split(':', 1)
+                bouquet_id = bouquet_info[0]
+                bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
+                self.install_m3u_as_bouquet(title, url, bouquet_id, bouquet_name)
+            except Exception as e:
+                show_message_compat(self.sess, "Błąd parsowania akcji M3U: {}".format(e), message_type=MessageBox.TYPE_ERROR)
         
+        # --- NOWA LOGIKA DLA BUKIETÓW REFERENCYJNYCH (pliki .tv Azmana) ---
+        elif action.startswith("bouquet:"):
+            try:
+                parts = action.split(':', 3)
+                url = parts[1] + ":" + parts[2] # Poprawka dla URLi
+                bouquet_info = parts[3].split(':', 1)
+                bouquet_id = bouquet_info[0]
+                bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
+                self.install_bouquet_reference(title, url, bouquet_id, bouquet_name)
+            except Exception as e:
+                show_message_compat(self.sess, "Błąd parsowania akcji BOUQUET: {}".format(e), message_type=MessageBox.TYPE_ERROR)
+        
+        # --- LOGIKA DLA POLECEŃ CMD ---
+        elif action.startswith("bash_raw:"):
+            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
+
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
             if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
@@ -1137,8 +1177,165 @@ class Panel(Screen):
             elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=True)
             elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
             elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess)
-            # *** POPRAWKA: Dodano nową akcję dla Info z menu ***
+            elif command_key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo() # <-- NOWA AKCJA
             elif command_key == "SHOW_AIO_INFO": self.show_info_screen()
+
+    # --- NOWE FUNKCJE DLA J00ZEK I BUKIETÓW ---
+
+    def install_j00zek_repo(self):
+        """Instaluje repozytorium J00Zek i aktualizuje pakiety."""
+        title = "Instalator Repozytorium J00Zek"
+        cmd = """
+            echo "Instalowanie J00Zek Feed..."
+            echo "src/gz opkg-j00zka http://j00zek.one.pl/opkg-j00zka-P3/" > /etc/opkg/opkg-j00zka.conf
+            echo "Aktualizowanie listy pakietów..."
+            opkg update
+            echo "Zakończono."
+            sleep 3
+        """
+        console_screen_open(self.sess, title, [cmd], close_on_finish=True)
+
+    def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
+        """Pobiera M3U, konwertuje je w locie na bukiet E2 i dodaje do listy."""
+        tmp_m3u_path = os.path.join(PLUGIN_TMP_PATH, "temp.m3u")
+        download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_m3u_path, url)
+        
+        def on_download_finished(*args):
+            if not (fileExists(tmp_m3u_path) and os.path.getsize(tmp_m3u_path) > 0):
+                show_message_compat(self.sess, "Błąd: Nie udało się pobrać pliku M3U.", message_type=MessageBox.TYPE_ERROR)
+                return
+            
+            # Pokaż okno "Pracuję"
+            self.wait_message_box = self.sess.open(MessageBox, "Pobrano plik M3U.\nTrwa konwersja na bukiet E2...\nProszę czekać.", MessageBox.TYPE_INFO)
+            
+            # Uruchom parsowanie w osobnym wątku, aby nie blokować GUI
+            Thread(target=self._parse_m3u_thread, args=(tmp_m3u_path, bouquet_id, bouquet_name)).start()
+
+        console_screen_open(self.sess, "Pobieranie M3U: " + title, [download_cmd], callback=on_download_finished, close_on_finish=True)
+
+    def _parse_m3u_thread(self, tmp_m3u_path, bouquet_id, bouquet_name):
+        """Wątek roboczy do parsowania M3U i tworzenia pliku bukietu."""
+        try:
+            e2_bouquet_path = os.path.join(PLUGIN_TMP_PATH, bouquet_id)
+            e2_lines = ["#NAME {}\n".format(bouquet_name)]
+            channel_name = "N/A"
+            
+            with open(tmp_m3u_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('#EXTINF:'):
+                        try:
+                            channel_name = line.split(',')[-1].strip()
+                        except:
+                            channel_name = "Brak Nazwy"
+                    elif line.startswith('http://') or line.startswith('https://'):
+                        # Formatowanie URL dla Enigmy2: zamień : na %3a
+                        formatted_url = line.replace(':', '%3a')
+                        # Używamy serwisu 4097 (non-TS, np. HLS)
+                        e2_lines.append("#SERVICE 4097:0:1:0:0:0:0:0:0:0:{}:{}\n".format(formatted_url, channel_name))
+                        channel_name = "N/A" # Reset
+            
+            if len(e2_lines) <= 1:
+                raise Exception("Nie znaleziono kanałów w pliku M3U")
+
+            # Zapisz tymczasowy plik bukietu
+            with open(e2_bouquet_path, 'w', encoding='utf-8') as f:
+                f.writelines(e2_lines)
+
+            # Przekaż do głównego wątku, aby wykonać operacje na plikach E2
+            reactor.callFromThread(self._install_parsed_bouquet, e2_bouquet_path, bouquet_id)
+
+        except Exception as e:
+            print("[AIO Panel] Błąd parsowania M3U:", e)
+            if self.wait_message_box: 
+                reactor.callFromThread(self.wait_message_box.close)
+            reactor.callFromThread(show_message_compat, self.sess, "Błąd parsowania pliku M3U:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
+
+    def _install_parsed_bouquet(self, tmp_bouquet_path, bouquet_id):
+        """Wywoływane w głównym wątku: Kopiuje plik bukietu i aktualizuje bouquets.tv."""
+        if self.wait_message_box:
+            reactor.callFromThread(self.wait_message_box.close)
+            
+        e2_dir = "/etc/enigma2"
+        bouquets_tv_path = os.path.join(e2_dir, "bouquets.tv")
+        target_bouquet_path = os.path.join(e2_dir, bouquet_id)
+        
+        # 1. Przenieś plik
+        try:
+            shutil.move(tmp_bouquet_path, target_bouquet_path)
+        except Exception as e:
+            show_message_compat(self.sess, "Błąd kopiowania bukietu: {}".format(e), message_type=MessageBox.TYPE_ERROR)
+            return
+
+        # 2. Edytuj bouquets.tv
+        try:
+            entry_to_add = '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bouquet_id)
+            entry_exists = False
+            
+            if fileExists(bouquets_tv_path):
+                with open(bouquets_tv_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if bouquet_id in line:
+                            entry_exists = True
+                            break
+            
+            if not entry_exists:
+                with open(bouquets_tv_path, 'a', encoding='utf-8') as f:
+                    f.write(entry_to_add)
+            
+        except Exception as e:
+            show_message_compat(self.sess, "Błąd edycji bouquets.tv: {}".format(e), message_type=MessageBox.TYPE_ERROR)
+            return
+
+        # 3. Przeładuj listę
+        msg = "Bukiet '{}' został pomyślnie dodany.\nPrzeładowuję listy...".format(bouquet_id) if not entry_exists else "Bukiet '{}' został zaktualizowany.\nPrzeładowuję listy...".format(bouquet_id)
+        show_message_compat(self.sess, msg, message_type=MessageBox.TYPE_INFO, timeout=5)
+        self.reload_settings_python()
+
+    def install_bouquet_reference(self, title, url, bouquet_id, bouquet_name):
+        """Instaluje plik bukietu .tv (tylko referencje, bez lamedb)."""
+        e2_dir = "/etc/enigma2"
+        bouquets_tv_path = os.path.join(e2_dir, "bouquets.tv")
+        target_bouquet_path = os.path.join(e2_dir, bouquet_id)
+        tmp_bouquet_path = os.path.join(PLUGIN_TMP_PATH, bouquet_id)
+
+        cmd = """
+        echo "Pobieranie pliku bukietu referencyjnego..."
+        wget -T 30 --no-check-certificate -O "{tmp_path}" "{url}"
+        if [ $? -eq 0 ] && [ -s "{tmp_path}" ]; then
+            echo "Instalowanie bukietu..."
+            mv "{tmp_path}" "{target_path}"
+            
+            BOUQUET_ENTRY='#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{b_id}" ORDER BY bouquet'
+            
+            if ! grep -q -F "{b_id}" "{bq_tv_path}"; then
+                echo "Dodawanie wpisu do bouquets.tv..."
+                echo "$BOUQUET_ENTRY" >> "{bq_tv_path}"
+            else
+                echo "Wpis dla {b_id} już istnieje w bouquets.tv."
+            fi
+            echo "Instalacja bukietu zakończona."
+            echo " "
+            echo "!!! UWAGA !!!"
+            echo "To jest bukiet referencyjny. Kanały będą działać (nie będą 'N/A')"
+            echo "TYLKO jeśli Twoja główna lista (np. bzyk83) zawiera pasujący plik lamedb!"
+            echo " "
+            sleep 8
+        else
+            echo "BŁĄD: Nie udało się pobrać pliku bukietu."
+            sleep 5
+        fi
+        """.format(
+            url=url,
+            tmp_path=tmp_bouquet_path,
+            target_path=target_bouquet_path,
+            b_id=bouquet_id,
+            bq_tv_path=bouquets_tv_path
+        )
+        
+        console_screen_open(self.sess, title, [cmd], callback=self.reload_settings_python, close_on_finish=True)
+
+    # --- POZOSTAŁE FUNKCJE POMOCNICZE (BEZ ZMIAN) ---
 
     def run_network_diagnostics(self):
         local_ip = "N/A"
@@ -1253,32 +1450,18 @@ class Panel(Screen):
         )
         console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
         
-    def _menu(self):
-        # *** POCZĄTEK POPRAWKI (Błąd . w linii 1107) ***
-        return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
-        # *** KONIEC POPRAWKI (Błąd . w linii 1107) ***
+    def restart_gui(self): 
+        self.sess.open(TryQuitMainloop, 3)
 
-    def _focus(self):
-        self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
-        self["menuR"].selectionEnabled(self.col=='R')
-
-    def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
-    def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
-    def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
-
-    # *** POCZĄTEK POPRAWKI (Błąd self.sess vs self.session) ***
     def reload_settings_python(self, *args):
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
-            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
             show_message_compat(self.session, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
         except Exception as e:
             print("[AIO Panel] Błąd podczas przeładowywania list:", e)
-            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
             show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
-    # *** KONIEC POPRAWKI (Błąd self.sess vs self.session) ***
 
     def clear_oscam_password(self):
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
@@ -1416,25 +1599,18 @@ class Panel(Screen):
 
         key, lang = choice[1], self.lang
         steps, message = [], ""
-
-        # *** POPRAWKA v3.1: Usunięto "deps" i zmieniono kolejność ***
         
         if key == "deps_only":
-            # "deps_only" nadal działa, jeśli ktoś wybierze to ręcznie
             steps, message = ["deps"], TRANSLATIONS[lang]["sk_confirm_deps"]
         elif key == "install_basic_no_picons":
-            # Nowa kolejność: lista, oscam, reload
             steps, message = ["channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
         elif key == "install_with_picons":
-            # Nowa kolejność: lista, picony, oscam, reload
             steps, message = ["channel_list", "picons", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
 
         if steps:
-            # Zmieniamy komunikat, bo nie ma już "Instalacja zależności"
             original_option_text = TRANSLATIONS[lang].get(f"sk_option_{key}", "Wybrana opcja").split(') ')[-1]
             confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?\n\n(Zależności systemowe zostały już sprawdzone przy starcie wtyczki.)".format(original_option_text)
             
-            # Dla "deps_only" zostawiamy stary komunikat
             if key == "deps_only":
                 confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(original_option_text)
 
@@ -1447,43 +1623,42 @@ class Panel(Screen):
     def _wizard_start(self, steps):
         channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
         if "channel_list" in steps:
-            # Używamy logiki "pierwsza lista z repozytorium"
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            first_valid_list = next((item for item in repo_lists if item[1] != 'SEPARATOR'), None)
+            first_valid_list = next((item for item in repo_lists if item[1].startswith("archive:")), None) # Weź tylko listę typu "archive"
             
             if first_valid_list:
                 try:
                     list_name = first_valid_list[0].split(' - ')[0]
-                    channel_list_url = first_valid_list[1].split(':', 1)[1]
+                    action_str = first_valid_list[1]
+                    if action_str.startswith("archive:"):
+                        channel_list_url = action_str.split(':', 1)[1]
                 except (IndexError, AttributeError): 
                     channel_list_url = '' 
             
             if not channel_list_url:
-                # Fallback, jeśli repo GitHub nie działa (np. błąd SSL, którego nie dało się naprawić)
-                # Szukamy "Bzyk83" lub pierwszej listy S4A
                 s4a_lists = self.fetched_data_cache.get("s4a_lists_full", [])
-                
-                # Próbujemy znaleźć Bzyk83
                 bzyk_list = next((item for item in s4a_lists if "bzyk83" in item[0].lower()), None)
                 
                 if bzyk_list:
                     first_valid_list = bzyk_list
                 else:
-                    # Bierzemy cokolwiek z S4A
                     first_valid_list = next((item for item in s4a_lists if item[1] != 'SEPARATOR'), None)
 
                 if first_valid_list:
                     try:
                         list_name = first_valid_list[0].split(' - ')[0]
-                        channel_list_url = first_valid_list[1].split(':', 1)[1]
+                        action_str = first_valid_list[1]
+                        if action_str.startswith("archive:"):
+                            channel_list_url = action_str.split(':', 1)[1]
                     except (IndexError, AttributeError): 
                         channel_list_url = ''
 
             if not channel_list_url:
-                self.sess.open(MessageBox, "BŁĄD KRYTYCZNY: Nie udało się pobrać adresu ŻADNEJ listy kanałów.", type=MessageBox.TYPE_ERROR); return
+                self.sess.open(MessageBox, "BŁĄD KRYTYCZNY: Nie udało się pobrać adresu ŻADNEJ listy kanałów typu 'archive'.", type=MessageBox.TYPE_ERROR); return
                 
         if "picons" in steps:
-            for name, action in (TOOLS_AND_ADDONS_PL):
+            # Używamy nowej, podzielonej listy
+            for name, action in (SYSTEM_TOOLS_PL):
                 if name.startswith("Pobierz Picony"):
                     try: 
                         picon_url = action.split(':', 1)[1]; break
@@ -1494,32 +1669,8 @@ class Panel(Screen):
         
         self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
-    def _menu(self):
-        # *** POCZĄTEK POPRAWKI (Błąd . w linii 1107) ***
-        return {'L':self["menuL"], 'M':self["menuM"], 'R':self["menuR"]}[self.col]
-        # *** KONIEC POPRAWKI (Błąd . w linii 1107) ***
+# === KONIEC KLASY PANEL ===
 
-    def _focus(self):
-        self["menuL"].selectionEnabled(self.col=='L'); self["menuM"].selectionEnabled(self.col=='M')
-        self["menuR"].selectionEnabled(self.col=='R')
-
-    def left(self): self.col = {'M':'L','R':'M'}.get(self.col,self.col); self._focus()
-    def right(self): self.col = {'L':'M','M':'R'}.get(self.col,self.col); self._focus()
-    def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
-
-    # *** POCZĄTEK POPRAWKI (Błąd self.sess vs self.session) ***
-    def reload_settings_python(self, *args):
-        try:
-            db = eDVBDB.getInstance()
-            db.reloadServicelist()
-            db.reloadBouquets()
-            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
-            show_message_compat(self.session, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas przeładowywania list:", e)
-            # Użyj self.session (zamiast self.sess), które jest standardową zmienną Screen
-            show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
-    # *** KONIEC POPRAWKI (Błąd self.sess vs self.session) ***
 
 # === DEFINICJA WTYCZKI ===
 def main(session, **kwargs):
