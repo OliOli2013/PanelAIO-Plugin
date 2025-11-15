@@ -3,7 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 Wersja 4.0 - Przebudowa UI (Zakładki) + Logika dodawania bukietów
-(v4.0-hotfix1 - Usunięto 'opkg update' z ekranu ładowania)
+(v4.0-hotfix2 - Poprawka wizualna zakładek)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -49,7 +49,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.0"  # <-- Zostawiamy wersję 4.0
+VER = "4.0"  # Zostawiamy wersję 4.0
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -791,7 +791,7 @@ class Panel(Screen):
         <widget name="support_label" position="125,15" size="400,90" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
         <widget name="title_label" position="500,15" size="585,40" font="Regular;32" halign="right" valign="center" transparent="1" />
         
-        <widget name='tabs_display' position='15,115' size='1070,30' font='Regular;26' halign='center' foregroundColor='cyan'/>
+        <widget name='tabs_display' position='15,115' size='1070,30' font='Regular;26' halign='center' />
         
         <widget name='menu' position='15,165' size='1070,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
         
@@ -843,7 +843,7 @@ class Panel(Screen):
         self["legend"] = Label(" ") # Ustawiane w set_language
         self["footer"] = Label(FOOT)
         
-        # KROK 2: NOWA MAPA KLAWISZY (PRZYWRÓCONA LEGENDA + NAWIGACJA L/R)
+        # NOWA MAPA KLAWISZY (PRZYWRÓCONA LEGENDA + NAWIGACJA L/R)
         self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
@@ -879,18 +879,25 @@ class Panel(Screen):
         """Przełącza aktywną zakładkę i odświeża listę menu oraz tytuł."""
         self.active_tab = tab_index
         lang = self.lang
-        total_tabs = len(self.all_data)
         
-        # Ustaw tytuł aktywnej zakładki (np. "Listy Kanałów")
-        title = self.tab_titles_def[lang][self.active_tab]
+        all_titles = self.tab_titles_def[lang]
         
-        # Ustaw wskaźnik zakładek (np. "< Listy Kanałów (1/4) >")
-        tabs_display_text = "< {title} ({current}/{total}) >".format(
-            title=title,
-            current=self.active_tab + 1,
-            total=total_tabs
-        )
-        self["tabs_display"].setText(tabs_display_text)
+        # --- NOWA LOGIKA PASKA ZAKŁADEK ---
+        active_color = r"\c00ffff00" # Żółty
+        inactive_color = r"\c00999999" # Szary
+        separator = r"\c00ffffff | " # Biały separator
+        reset_color = r"\c00ffffff" # Domyślny (biały)
+        
+        tabs_display_text_list = []
+        for i, title in enumerate(all_titles):
+            if i == self.active_tab:
+                tabs_display_text_list.append("{color}► {title} ◄{reset}".format(color=active_color, title=title, reset=reset_color))
+            else:
+                tabs_display_text_list.append("{color}{title}{reset}".format(color=inactive_color, title=title, reset=reset_color))
+        
+        # Połącz je separatorem
+        self["tabs_display"].setText(separator.join(tabs_display_text_list))
+        # --- KONIEC NOWEJ LOGIKI ---
         
         # Załaduj dane dla tej zakładki do menu
         data_list = self.all_data[self.active_tab]
