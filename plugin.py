@@ -2,8 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.0 - Przebudowa UI (Zakładki) + Logika dodawania bukietów
-(v4.0-hotfix2 - Poprawka wizualna zakładek)
+Wersja 4.1 - Dodano Backup/Restore i logikę bukietów
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -49,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.0"  # Zostawiamy wersję 4.0
+VER = "4.1"  # <-- Wersja 4.1
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -136,6 +135,43 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
+# --- NOWA FUNKCJA URUCHAMIANIA W TLE (v4.1) ---
+def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
+    """
+    Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku,
+    ukrywając wyjście konsoli.
+    """
+    wait_message = session.open(MessageBox, "Trwa wykonywanie: {}\n\nProszę czekać...".format(title), MessageBox.TYPE_INFO, enable_input=False)
+    
+    def command_thread():
+        try:
+            for cmd in cmd_list:
+                print("[AIO Panel] Uruchamianie w tle [{}]: {}".format(title, cmd))
+                process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                
+                if process.returncode != 0:
+                    print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
+                # Kontynuuj nawet jeśli jest błąd, tak jak w Console
+                
+        except Exception as e:
+            print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
+        finally:
+            # Wywołaj zamknięcie okna i callback w głównym wątku
+            reactor.callFromThread(on_finish_thread)
+
+    def on_finish_thread():
+        wait_message.close()
+        if callback_on_finish:
+            try:
+                callback_on_finish()
+            except Exception as e:
+                print("[AIO Panel] Błąd w callback po run_command_in_background:", e)
+
+    # Uruchom wątek
+    Thread(target=command_thread).start()
+
+# Funkcja konsoli (teraz używana tylko do diagnostyki)
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
     if reactor.running:
@@ -152,7 +188,7 @@ def prepare_tmp_dir():
             print("[AIO Panel] Error creating tmp dir:", e)
 
 # === FUNKCJA install_archive (GLOBALNA) ===
-# Ta funkcja instaluje KOMPLETNE LISTY (kasuje starą)
+# ZMODYFIKOWANA v4.1: Używa run_command_in_background
 def install_archive(session, title, url, callback_on_finish=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
         show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
@@ -190,12 +226,8 @@ def install_archive(session, title, url, callback_on_finish=None):
              if callback_on_finish: callback_on_finish()
              return
         
-        # TO JEST KLUCZOWY ELEMENT: Kasowanie starych list kanałów PRZED instalacją nowych
         clear_bouquets_cmd = "rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio"
-                
         chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
-        
-        # Dodajemy clear_bouquets_cmd do polecenia
         full_command = "{download_cmd} && {clear_cmd} && {chmod_cmd} && bash {script_path} \"{tmp_archive}\" \"{archive_type}\"".format(
             download_cmd=download_cmd,
             clear_cmd=clear_bouquets_cmd,
@@ -205,7 +237,8 @@ def install_archive(session, title, url, callback_on_finish=None):
             archive_type=archive_type
         )
     
-    console_screen_open(session, title, [full_command], callback=callback_on_finish, close_on_finish=True)
+    # Użyj nowej funkcji tła zamiast console_screen_open
+    run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
 
 # === E2KODI V2 - ROZPOZNAJ SYSTEM I ZAINSTALUJ (FUNKCJE GLOBALNE) ===
 def get_python_version():
@@ -227,6 +260,7 @@ def get_e2kodi_package_name():
     else:
         return None
 
+# ZMODYFIKOWANA v4.1: Używa run_command_in_background
 def install_e2kodi(session):
     pkg = get_e2kodi_package_name()
     if not pkg:
@@ -244,7 +278,7 @@ def install_e2kodi(session):
             return
 
     cmd = f"opkg update && opkg install {pkg}"
-    console_screen_open(session, f"E2Kodi v2 (Python {get_python_version()})", [cmd], close_on_finish=True)
+    run_command_in_background(session, f"E2Kodi v2 (Python {get_python_version()})", [cmd])
 
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
@@ -253,7 +287,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), # <-- ZMIANA NA 15.6
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
@@ -275,7 +309,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.5", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), # <-- ZMIANA NA 15.6
     ("--- Online Plugins ---", "SEPARATOR"),
     ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
@@ -296,21 +330,28 @@ SYSTEM_TOOLS_PL = [
     ("--- Konfigurator ---", "SEPARATOR"),
     ("Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
-    ("Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
-    ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
-    ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
-    ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
+    ("--- Backup & Restore ---", "SEPARATOR"),
+    ("Backup Listy Kanałów", "CMD:BACKUP_LIST"),
+    ("Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
+    ("Restore Listy Kanałów", "CMD:RESTORE_LIST"),
+    ("Restore Konfiguracji Oscam", "CMD:RESTORE_OSCAM"),
 ]
 
 DIAGNOSTICS_PL = [
-    ("--- Diagnostyka i Czyszczenie ---", "SEPARATOR"),
+    ("--- Informacje i Aktualizacje ---", "SEPARATOR"),
+    ("Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
+    ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
+    ("--- Diagnostyka ---", "SEPARATOR"),
     ("Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
     ("Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
+    ("--- Czyszczenie i Bezpieczeństwo ---", "SEPARATOR"),
     ("Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
     ("Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
+    ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
+    ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
 ]
 
 # === NOWE PODZIELONE LISTY MENU (EN) ===
@@ -318,27 +359,34 @@ SYSTEM_TOOLS_EN = [
     ("--- Configurator ---", "SEPARATOR"),
     ("Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- System Tools ---", "SEPARATOR"),
-    ("About AIO Panel", "CMD:SHOW_AIO_INFO"),
-    ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("--- Backup & Restore ---", "SEPARATOR"),
+    ("Backup Channel List", "CMD:BACKUP_LIST"),
+    ("Backup Oscam Config", "CMD:BACKUP_OSCAM"),
+    ("Restore Channel List", "CMD:RESTORE_LIST"),
+    ("Restore Oscam Config", "CMD:RESTORE_OSCAM"),
+]
+
+DIAGNOSTICS_EN = [
+    ("--- Info & Updates ---", "SEPARATOR"),
+    ("About AIO Panel", "CMD:SHOW_AIO_INFO"),
+    ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
+    ("--- Diagnostics ---", "SEPARATOR"),
+    ("Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
+    ("Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
+    ("--- Cleaning & Security ---", "SEPARATOR"),
+    ("Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
+    ("Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
 ]
 
-DIAGNOSTICS_EN = [
-    ("--- Diagnostics & Cleaning ---", "SEPARATOR"),
-    ("Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
-    ("Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
-    ("Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
-    ("Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
-]
-
 # === NOWE 4 KATEGORIE ===
 COL_TITLES = {
-    "PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia Systemowe", "Diagnostyka i Czyszczenie"),
-    "EN": ("Channel Lists", "Softcam & Plugins", "System Tools", "Diagnostics & Cleaning")
+    "PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia Systemowe", "Info i Diagnostyka"),
+    "EN": ("Channel Lists", "Softcam & Plugins", "System Tools", "Info & Diagnostics")
 }
 
 
@@ -511,7 +559,7 @@ class WizardProgressScreen(Screen):
         echo 'Zakończono sprawdzanie zależności.'
         sleep 3
         """
-        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
 
     def _wizard_step_channel_list(self):
         title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
@@ -550,7 +598,7 @@ class WizardProgressScreen(Screen):
             echo "Instalacja Oscam zakończona."
             sleep 3
         """
-        console_screen_open(self.session, title, [cmd], callback=self._wizard_run_next_step, close_on_finish=True)
+        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
 
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
@@ -609,7 +657,7 @@ class AIOLoadingScreen(Screen):
 
         self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
-        # --- POCZĄTEK POPRAWKI v4.0.1 (Anti-Hang) ---
+        # --- POPRAWKA v4.0.1 (Anti-Hang) ---
         # Usunięto 'opkg update', aby uniknąć zawieszania się na wolnej sieci
         cmd = """
         echo "AIO Panel: Cicha instalacja zależności (bez opkg update)..."
@@ -618,7 +666,6 @@ class AIOLoadingScreen(Screen):
         opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
         echo "AIO Panel: Zakończono."
         """
-        # --- KONIEC POPRAWKI v4.0.1 (Anti-Hang) ---
         
         Thread(target=self._run_deps_in_background, args=(cmd,)).start()
 
@@ -882,7 +929,7 @@ class Panel(Screen):
         
         all_titles = self.tab_titles_def[lang]
         
-        # --- NOWA LOGIKA PASKA ZAKŁADEK ---
+        # --- NOWA LOGIKA PASKA ZAKŁADEK (Wizualna) ---
         active_color = r"\c00ffff00" # Żółty
         inactive_color = r"\c00999999" # Szary
         separator = r"\c00ffffff | " # Biały separator
@@ -998,7 +1045,12 @@ class Panel(Screen):
             return # Nie rób nic dla separatorów
 
         # Reszta tej funkcji jest skopiowana 1:1 z Twojej starej funkcji
-        actions_no_confirm = ["CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:INSTALL_E2KODI"]
+        actions_no_confirm = [
+            "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
+            "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
+            "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
+            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO"
+        ]
         
         # Logika dla Hyperion/VTi (skopiowana z)
         if self.image_type in ["hyperion", "vti"]:
@@ -1114,11 +1166,9 @@ class Panel(Screen):
     def do_update(self, confirmed):
         if confirmed:
             update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            info_msg_pl = "Rozpoczynam aktualizację w tle.\n\nOkno konsoli zaraz zniknie.\n\nPo ok. minucie zrestartuj RĘCZNIE GUI, aby zakończyć aktualizację.\n(Postęp można śledzić w /tmp/PanelAIO_Update.log)"
-            info_msg_en = "Starting update in the background.\n\nThe console window will disappear shortly.\n\nAfter ~1 minute, restart the GUI MANUALLY to complete the update.\n(Progress can be tracked in /tmp/PanelAIO_Update.log)"
-            info_msg = info_msg_pl if self.lang == 'PL' else info_msg_en
-            self.sess.open(MessageBox, info_msg, type=MessageBox.TYPE_INFO, timeout=15)
-            console_screen_open(self.sess, "Aktualizacja AIO Panel (Uruchamianie w tle)...", [update_cmd], callback=None, close_on_finish=True)
+            # Używamy nowej funkcji tła
+            run_command_in_background(self.sess, "Aktualizacja AIO Panel", [update_cmd])
+            show_message_compat(self.sess, "Aktualizacja została uruchomiona w tle.\nProszę ZRESTARTOWAĆ GUI za około minutę.", MessageBox.TYPE_INFO, timeout=10)
         else:
             self.update_info = None
 
@@ -1130,11 +1180,7 @@ class Panel(Screen):
         if action.startswith("archive:"):
             try:
                 list_url = action.split(':', 1)[1]
-                start_msg_pl = "Rozpoczynam instalację:\n'{}'...".format(title)
-                start_msg_en = "Starting installation:\n'{}'...".format(title)
-                start_msg = start_msg_pl if self.lang == 'PL' else start_msg_en
-                show_message_compat(self.sess, start_msg, message_type=MessageBox.TYPE_INFO, timeout=5)
-                # Wywołuje starą funkcję, która KASUJE wszystko
+                # Wywołuje starą funkcję, która KASUJE wszystko (i używa teraz run_command_in_background)
                 install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
             except IndexError:
                  show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
@@ -1165,32 +1211,42 @@ class Panel(Screen):
         
         # --- LOGIKA DLA POLECEŃ CMD ---
         elif action.startswith("bash_raw:"):
-            console_screen_open(self.sess, title, [action.split(':', 1)[1]], close_on_finish=True) 
+            run_command_in_background(self.sess, title, [action.split(':', 1)[1]])
 
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
             if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
             elif command_key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
-            elif command_key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
             elif command_key == "UPDATE_SATELLITES_XML":
                 script_path = os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")
-                console_screen_open(self.sess, title, ["bash " + script_path], callback=self.reload_settings_python, close_on_finish=True)
+                run_command_in_background(self.sess, title, ["bash " + script_path], callback_on_finish=self.reload_settings_python)
             elif command_key == "INSTALL_SERVICEAPP":
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                console_screen_open(self.sess, title, [cmd], close_on_finish=True)
-            elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam(close_on_finish=True)
+                run_command_in_background(self.sess, title, [cmd])
+            elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password()
-            elif command_key == "CLEAR_FTP_PASS": self.clear_ftp_password()
+            elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() # Ta jest bez konsoli
+            elif command_key == "CLEAR_FTP_PASS":
+                run_command_in_background(self.sess, title, ["passwd -d root"])
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif command_key == "RESTART_OSCAM": self.restart_oscam()
-            elif command_key == "FREE_SPACE_DISPLAY": self.show_free_space()
-            elif command_key == "CLEAR_TMP_CACHE": console_screen_open(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"], close_on_finish=True)
-            elif command_key == "CLEAR_RAM_CACHE": console_screen_open(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"], close_on_finish=True)
-            elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess)
-            elif command_key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo() # <-- NOWA AKCJA
+            elif command_key == "CLEAR_TMP_CACHE": 
+                run_command_in_background(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"])
+            elif command_key == "CLEAR_RAM_CACHE": 
+                run_command_in_background(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"])
+            elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess) # Ta już używa tła
+            elif command_key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo() # Ta używa tła
             elif command_key == "SHOW_AIO_INFO": self.show_info_screen()
+            elif command_key == "BACKUP_LIST": self.backup_lists()
+            elif command_key == "BACKUP_OSCAM": self.backup_oscam()
+            elif command_key == "RESTORE_LIST": self.restore_lists()
+            elif command_key == "RESTORE_OSCAM": self.restore_oscam()
+            
+            # WYJĄTKI, KTÓRE MUSZĄ POKAZAĆ KONSOLĘ
+            elif command_key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics() # Pokazuje wyjście
+            elif command_key == "FREE_SPACE_DISPLAY": 
+                console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False) # Pokazuje wyjście
 
     # --- NOWE FUNKCJE DLA J00ZEK I BUKIETÓW ---
 
@@ -1205,7 +1261,7 @@ class Panel(Screen):
             echo "Zakończono."
             sleep 3
         """
-        console_screen_open(self.sess, title, [cmd], close_on_finish=True)
+        run_command_in_background(self.sess, title, [cmd])
 
     def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
         """Pobiera M3U, konwertuje je w locie na bukiet E2 i dodaje do listy."""
@@ -1218,12 +1274,12 @@ class Panel(Screen):
                 return
             
             # Pokaż okno "Pracuję"
-            self.wait_message_box = self.sess.open(MessageBox, "Pobrano plik M3U.\nTrwa konwersja na bukiet E2...\nProszę czekać.", MessageBox.TYPE_INFO)
+            self.wait_message_box = self.sess.open(MessageBox, "Pobrano plik M3U.\nTrwa konwersja na bukiet E2...\nProszę czekać.", MessageBox.TYPE_INFO, enable_input=False)
             
             # Uruchom parsowanie w osobnym wątku, aby nie blokować GUI
             Thread(target=self._parse_m3u_thread, args=(tmp_m3u_path, bouquet_id, bouquet_name)).start()
 
-        console_screen_open(self.sess, "Pobieranie M3U: " + title, [download_cmd], callback=on_download_finished, close_on_finish=True)
+        run_command_in_background(self.sess, "Pobieranie M3U: " + title, [download_cmd], callback_on_finish=on_download_finished)
 
     def _parse_m3u_thread(self, tmp_m3u_path, bouquet_id, bouquet_name):
         """Wątek roboczy do parsowania M3U i tworzenia pliku bukietu."""
@@ -1345,11 +1401,178 @@ class Panel(Screen):
             bq_tv_path=bouquets_tv_path
         )
         
-        console_screen_open(self.sess, title, [cmd], callback=self.reload_settings_python, close_on_finish=True)
+        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
+
+    # --- NOWE FUNKCJE DLA BACKUP/RESTORE (v4.1.1 z poprawką) ---
+
+    def _get_backup_path(self):
+        """Zwraca najlepszą ścieżkę do backupu lub None, jeśli nie ma nośnika."""
+        hdd_path = "/media/hdd/aio_backups/"
+        usb_path = "/media/usb/aio_backups/"
+        
+        if os.path.exists("/media/hdd") and os.path.ismount("/media/hdd"):
+            return hdd_path
+        elif os.path.exists("/media/usb") and os.path.ismount("/media/usb"):
+            return usb_path
+        elif os.path.exists("/media/hdd"):
+            return hdd_path
+        elif os.path.exists("/media/usb"):
+            return usb_path
+            
+        return None # Nie znaleziono nośnika
+
+    def backup_lists(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.\nPodłącz nośnik i spróbuj ponownie.", MessageBox.TYPE_ERROR)
+            return
+        
+        title = "Backup Listy Kanałów"
+        backup_file = os.path.join(path, "aio_channels_backup.tar.gz")
+        
+        # --- POPRAWKA v4.1.1 (Błąd 'tar') ---
+        cmd = """
+            echo "Tworzenie ścieżki backupu: {path}"
+            mkdir -p "{path}"
+            echo "Archiwizowanie listy kanałów z /etc/enigma2/..."
+            
+            # Przejdź do katalogu i twórz archiwum
+            cd /etc/enigma2
+            
+            # Spakuj pliki, ignoruj błędy jeśli któregoś pliku nie ma (np. bouquets.radio)
+            tar -czf "{backup_file}" lamedb bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio 2>/dev/null
+            
+            if [ $? -eq 0 ]; then
+                echo "Backup listy kanałów zakończony pomyślnie!"
+                echo "Zapisano w: {backup_file}"
+            else
+                echo "BŁĄD: Wystąpił błąd podczas tworzenia archiwum."
+            fi
+            sleep 5
+        """.format(path=path, backup_file=backup_file)
+        
+        run_command_in_background(self.sess, title, [cmd])
+
+    def backup_oscam(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.\nPodłącz nośnik i spróbuj ponownie.", MessageBox.TYPE_ERROR)
+            return
+
+        title = "Backup Konfiguracji Oscam"
+        backup_file = os.path.join(path, "aio_oscam_config_backup.tar.gz")
+        cmd = """
+            echo "Tworzenie ścieżki backupu: {path}"
+            mkdir -p "{path}"
+            echo "Lokalizowanie konfiguracji Oscam..."
+            CONFIG_DIR=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u | head -n 1)
+            
+            if [ -z "$CONFIG_DIR" ]; then
+                echo "BŁĄD: Nie mogę znaleźć katalogu z oscam.conf!"
+                echo "Standardowe ścieżki to /etc/tuxbox/config/"
+                sleep 5
+                exit 1
+            fi
+            
+            echo "Znaleziono konfigurację w: $CONFIG_DIR"
+            echo "Archiwizowanie..."
+            tar -czf "{backup_file}" -C "$CONFIG_DIR" .
+            
+            if [ $? -eq 0 ]; then
+                echo "Backup Oscam zakończony pomyślnie!"
+                echo "Zapisano w: {backup_file}"
+            else
+                echo "BŁĄD: Wystąpił błąd podczas tworzenia archiwum."
+            fi
+            sleep 5
+        """.format(path=path, backup_file=backup_file)
+        run_command_in_background(self.sess, title, [cmd])
+
+    def restore_lists(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.", MessageBox.TYPE_ERROR)
+            return
+        
+        backup_file = os.path.join(path, "aio_channels_backup.tar.gz")
+        if not fileExists(backup_file):
+            show_message_compat(self.sess, "Błąd: Nie znaleziono pliku kopii zapasowej:\n" + backup_file, MessageBox.TYPE_ERROR)
+            return
+
+        self.sess.openWithCallback(
+            lambda ret: self._do_restore_lists(backup_file) if ret else None,
+            MessageBox, "Czy na pewno chcesz przywrócić listę kanałów z kopii?\n\nObecna lista zostanie NADPISANA.", type=MessageBox.TYPE_YESNO
+        )
+
+    def _do_restore_lists(self, backup_file):
+        title = "Przywracanie Listy Kanałów"
+        # --- POPRAWKA v4.1.1 ---
+        cmd = """
+            echo "Przywracanie listy kanałów z pliku..."
+            echo "{backup_file}"
+            
+            # Kasujemy starą listę, aby uniknąć konfliktów
+            rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio /etc/enigma2/lamedb
+            
+            # Rozpakowujemy do / (archiwum ma w sobie ścieżkę etc/enigma2)
+            tar -xzf "{backup_file}" -C /
+            
+            if [ $? -eq 0 ]; then
+                echo "Lista kanałów przywrócona pomyślnie."
+                echo "Przeładowywanie listy..."
+            else
+                echo "BŁĄD: Wystąpił błąd podczas przywracania."
+            fi
+            sleep 5
+        """.format(backup_file=backup_file)
+        
+        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
+
+    def restore_oscam(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.", MessageBox.TYPE_ERROR)
+            return
+        
+        backup_file = os.path.join(path, "aio_oscam_config_backup.tar.gz")
+        if not fileExists(backup_file):
+            show_message_compat(self.sess, "Błąd: Nie znaleziono pliku kopii zapasowej:\n" + backup_file, MessageBox.TYPE_ERROR)
+            return
+
+        self.sess.openWithCallback(
+            lambda ret: self._do_restore_oscam(backup_file) if ret else None,
+            MessageBox, "Czy na pewno chcesz przywrócić konfigurację Oscam?\n\nObecna konfiguracja zostanie NADPISANA.", type=MessageBox.TYPE_YESNO
+        )
+        
+    def _do_restore_oscam(self, backup_file):
+        title = "Przywracanie Konfiguracji Oscam"
+        cmd = """
+            echo "Lokalizowanie konfiguracji Oscam..."
+            CONFIG_DIR=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u | head -n 1)
+            if [ -z "$CONFIG_DIR" ]; then
+                echo "BŁĄD: Nie mogę znaleźć katalogu konfiguracyjnego Oscam!"
+                sleep 5
+                exit 1
+            fi
+
+            echo "Przywracanie konfiguracji do: $CONFIG_DIR"
+            tar -xzf "{backup_file}" -C "$CONFIG_DIR"
+            
+            if [ $? -eq 0 ]; then
+                echo "Konfiguracja Oscam przywrócona."
+                echo "Restartowanie Oscam..."
+            else
+                echo "BŁĄD: Wystąpił błąd podczas przywracania."
+            fi
+            sleep 3
+        """.format(backup_file=backup_file)
+        
+        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.restart_oscam)
 
     # --- POZOSTAŁE FUNKCJE POMOCNICZE (BEZ ZMIAN) ---
 
     def run_network_diagnostics(self):
+        # Ta funkcja celowo używa console_screen_open, aby pokazać wynik
         local_ip = "N/A"
         try:
             if network is not None: 
@@ -1476,6 +1699,7 @@ class Panel(Screen):
             show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
 
     def clear_oscam_password(self):
+        # Ta funkcja nie używa konsoli, jest OK
         cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
         try:
             process = subprocess.Popen(cmd_find, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -1528,25 +1752,26 @@ class Panel(Screen):
 
     def process_dvbapi_download(self, url):
         cmd = """URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; echo "Zaktualizowano: $DIR/oscam.dvbapi"; else echo "Błąd pobierania: Plik z URL nie zawiera wpisów 'P:'. Przywrcono backup dla $DIR/oscam.dvbapi"; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; else echo "Błąd pobierania z URL dla: $DIR/oscam.dvbapi. Przywrcono backup."; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done""".format(url=url)
-        console_screen_open(self.sess, "Aktualizacja oscam.dvbapi", [cmd], close_on_finish=True)
+        run_command_in_background(self.sess, "Aktualizacja oscam.dvbapi", [cmd])
 
     def do_clear_dvbapi(self, confirmed):
         if confirmed:
             cmd = """CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; echo "Próbuję skasować zawartość oscam.dvbapi w katalogach: $CONFIG_DIRS"; for DIR in $CONFIG_DIRS; do DVBAPI_PATH="$DIR/oscam.dvbapi"; if [ -f "$DVBAPI_PATH" ]; then cp "$DVBAPI_PATH" "$DVBAPI_PATH.bak"; echo "" > "$DVBAPI_PATH"; echo "Skasowano: $DVBAPI_PATH"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done"""
-            console_screen_open(self.sess, "Kasowanie oscam.dvbapi", [cmd], close_on_finish=True)
+            run_command_in_background(self.sess, "Kasowanie oscam.dvbapi", [cmd])
 
     def clear_ftp_password(self):
-        console_screen_open(self.sess, "Kasowanie hasła FTP", ["passwd -d root"], close_on_finish=True)
+        run_command_in_background(self.sess, "Kasowanie hasła FTP", ["passwd -d root"])
 
     def set_system_password(self):
-        self.sess.openWithCallback(lambda p: console_screen_open(self.sess, "Ustawianie Hasła", ["(echo {}; echo {}) | passwd".format(p, p)], close_on_finish=True) if p else None, InputBox, title="Wpisz nowe hasło dla konta root:")
+        self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Ustawianie Hasła", ["(echo {}; echo {}) | passwd".format(p, p)]) if p else None, InputBox, title="Wpisz nowe hasło dla konta root:")
 
     def show_free_space(self):
+        # Ta funkcja celowo używa console_screen_open
         console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
 
-    def restart_oscam(self):
+    def restart_oscam(self, *args): # Dodano *args, aby akceptować callback z konsoli
         cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartowanie Oscam za pomocą $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 2;'
-        console_screen_open(self.sess, "Restart Oscam", [cmd.strip()], close_on_finish=True)
+        run_command_in_background(self.sess, "Restart Oscam", [cmd.strip()])
 
     def show_uninstall_manager(self):
         try:
@@ -1560,7 +1785,7 @@ class Panel(Screen):
                  
             def on_package_selected(choice):
                 if choice:
-                    self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]], close_on_finish=True) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
+                    self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]]) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
             
             list_options = [(p,) for p in packages]
             self.sess.openWithCallback(on_package_selected, ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
@@ -1568,8 +1793,7 @@ class Panel(Screen):
         except Exception as e:
             show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
 
-    def install_best_oscam(self, callback=None, close_on_finish=False):
-        # Ta funkcja (z menu) NADAL MA fallback do Levi45 - to jest poprawne
+    def install_best_oscam(self, callback=None):
         cmd = """
             echo "Instalowanie/Aktualizowanie Softcam Feed..."
             wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
@@ -1588,7 +1812,7 @@ class Panel(Screen):
             echo "Instalacja Oscam zakończona."
             sleep 3
         """
-        console_screen_open(self.sess, "Instalator Oscam", [cmd], callback=callback, close_on_finish=close_on_finish)
+        run_command_in_background(self.sess, "Instalator Oscam", [cmd], callback_on_finish=callback)
 
     def run_super_setup_wizard(self):
         lang = self.lang
