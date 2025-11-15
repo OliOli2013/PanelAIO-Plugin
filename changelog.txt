@@ -1,3 +1,10 @@
+[4.1]
+- Dodano funkcje Backup/Restore dla Listy Kanałów i konfig. Oscam
+- Przeniesiono opcje (Info, Aktualizacje, Hasła) do nowej zakładki "Info i Diagnostyka"
+- Ukryto czarne okno konsoli (teraz polecenia wykonują się w tle)
+- Poprawiono błąd 'tar' przy tworzeniu backupu listy kanałów
+- Dodano instalator Ncam v15.6
+
 [4.0]
 - Gruntowna przebudowa interfejsu na 4 zakładki (Nawigacja Lewo/Prawo)
 - Przywrócenie pełnej legendy na kolorowych przyciskach (PL/EN/Restart/Aktualizuj)
