@@ -1,3 +1,11 @@
+[4.0]
+- Gruntowna przebudowa interfejsu na 4 zakładki (Nawigacja Lewo/Prawo)
+- Przywrócenie pełnej legendy na kolorowych przyciskach (PL/EN/Restart/Aktualizuj)
+- Dodano logikę dodawania bukietów (M3U / Bouquet REF) bez kasowania listy
+- Dodano możliwość instalacji bukietów Azman (jako bukiety referencyjne)
+- Dodano instalator Repozytorium J00Zek Feed
+- Drobne poprawki stabilności
+
 [3.3]
 - Dodano inteligentne filtrowanie menu dla obrazów Hyperion/VTi.
 - Wtyczki (AJPanel, E2iPlayer, Picon Updater) są teraz widoczne na wszystkich systemach.
