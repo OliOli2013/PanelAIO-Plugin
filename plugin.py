@@ -3,6 +3,7 @@
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
 Wersja 4.0 - Przebudowa UI (Zakładki) + Logika dodawania bukietów
+(v4.0-hotfix1 - Usunięto 'opkg update' z ekranu ładowania)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -35,7 +36,7 @@ import socket
 import datetime
 import sys
 import subprocess
-import shutil  # <-- Dodany import dla nowej logiki
+import shutil
 import re
 import json
 import time
@@ -48,9 +49,9 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.0"  # <-- ZMIANA WERSJI
+VER = "4.0"  # <-- Zostawiamy wersję 4.0
 DATE = str(datetime.date.today())
-FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) # <-- Zaktualizowana stopka
+FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
@@ -608,12 +609,16 @@ class AIOLoadingScreen(Screen):
 
         self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
+        # --- POCZĄTEK POPRAWKI v4.0.1 (Anti-Hang) ---
+        # Usunięto 'opkg update', aby uniknąć zawieszania się na wolnej sieci
         cmd = """
-        opkg update > /dev/null 2>&1
+        echo "AIO Panel: Cicha instalacja zależności (bez opkg update)..."
         opkg install wget ca-certificates > /dev/null 2>&1
         opkg install tar > /dev/null 2>&1 || echo 'Info: Pakiet tar pominięty.'
         opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
+        echo "AIO Panel: Zakończono."
         """
+        # --- KONIEC POPRAWKI v4.0.1 (Anti-Hang) ---
         
         Thread(target=self._run_deps_in_background, args=(cmd,)).start()
 
