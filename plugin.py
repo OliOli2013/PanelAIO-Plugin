@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.2 - Poprawka instalatora NCam
+Wersja 4.2 - Aktualizacja J00zek repo i poprawki instalatora Ncam
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.2"  # <-- ZMIANA WERSJI (HOTFIX)
+VER = "4.2"  # <-- Wersja 4.2
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -983,7 +983,7 @@ class Panel(Screen):
             if self.image_type in ["hyperion", "vti"]:
                 emu_actions_to_block = [
                     "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI",
-                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk -O /tmp/ncam_15.6.ipk && opkg install /tmp/ncam_15.6.ipk && rm -f /tmp/ncam_15.6.ipk"
+                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"
                 ]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
