@@ -1,3 +1,8 @@
+[4.2]
+- Zaktualizowano adres repozytorium J00zka do nowej ścieżki (github.io)
+- Zaktualizowano instalator NCam do wersji 15.6
+- Drobne poprawki stabilności i logiki poleceń
+
 [4.1]
 - Dodano funkcje Backup/Restore dla Listy Kanałów i konfig. Oscam
 - Przeniesiono opcje (Info, Aktualizacje, Hasła) do nowej zakładki "Info i Diagnostyka"
