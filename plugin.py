@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.1 - Dodano Backup/Restore i logikę bukietów
+Wersja 4.1 - Krytyczna poprawka dla 'Restore Listy Kanałów'
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.1"  # <-- Wersja 4.1
+VER = "4.1"  # <-- ZMIANA WERSJI (HOTFIX)
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -287,7 +287,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
     ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), # <-- ZMIANA NA 15.6
+    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), 
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
@@ -309,7 +309,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
     ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), # <-- ZMIANA NA 15.6
+    ("NCam 15.6", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"), 
     ("--- Online Plugins ---", "SEPARATOR"),
     ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
@@ -1506,7 +1506,8 @@ class Panel(Screen):
 
     def _do_restore_lists(self, backup_file):
         title = "Przywracanie Listy Kanałów"
-        # --- POPRAWKA v4.1.1 ---
+        # --- POPRAWKA v4.1.2 ---
+        # Poprawna ścieżka rozpakowania to /etc/enigma2
         cmd = """
             echo "Przywracanie listy kanałów z pliku..."
             echo "{backup_file}"
@@ -1514,8 +1515,8 @@ class Panel(Screen):
             # Kasujemy starą listę, aby uniknąć konfliktów
             rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio /etc/enigma2/lamedb
             
-            # Rozpakowujemy do / (archiwum ma w sobie ścieżkę etc/enigma2)
-            tar -xzf "{backup_file}" -C /
+            # Rozpakowujemy do /etc/enigma2/
+            tar -xzf "{backup_file}" -C /etc/enigma2/
             
             if [ $? -eq 0 ]; then
                 echo "Lista kanałów przywrócona pomyślnie."
