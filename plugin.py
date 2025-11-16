@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.1 - Krytyczna poprawka dla 'Restore Listy Kanałów'
+Wersja 4.2 - Aktualizacja J00zek repo i poprawki
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.1"  # <-- ZMIANA WERSJI (HOTFIX)
+VER = "4.2"  # <-- ZMIANA WERSJI
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -260,7 +260,7 @@ def get_e2kodi_package_name():
     else:
         return None
 
-# ZMODYFIKOWANA v4.1: Używa run_command_in_background
+# ZMODYFIKOWANA v4.2: Używa nowego repo J00zka
 def install_e2kodi(session):
     pkg = get_e2kodi_package_name()
     if not pkg:
@@ -268,7 +268,7 @@ def install_e2kodi(session):
         return
 
     repo_file = "/etc/opkg/opkg-j00zka.conf"
-    repo_url = "http://j00zek.one.pl/opkg-j00zka-P3/"
+    repo_url = "https://j00zek.github.io/eeRepo" # <-- NOWY ADRES REPO
     if not os.path.exists(repo_file):
         try:
             with open(repo_file, "w") as f:
@@ -983,7 +983,7 @@ class Panel(Screen):
             if self.image_type in ["hyperion", "vti"]:
                 emu_actions_to_block = [
                     "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI",
-                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"
+                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:opkg install --force-depends https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/enigma2-plugin-softcams-ncam-all-images_V15.6-r0_all.ipk"
                 ]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
@@ -1255,7 +1255,7 @@ class Panel(Screen):
         title = "Instalator Repozytorium J00Zek"
         cmd = """
             echo "Instalowanie J00Zek Feed..."
-            echo "src/gz opkg-j00zka http://j00zek.one.pl/opkg-j00zka-P3/" > /etc/opkg/opkg-j00zka.conf
+            echo "src/gz opkg-j00zka https://j00zek.github.io/eeRepo" > /etc/opkg/opkg-j00zka.conf
             echo "Aktualizowanie listy pakietów..."
             opkg update
             echo "Zakończono."
@@ -1403,7 +1403,7 @@ class Panel(Screen):
         
         run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
 
-    # --- NOWE FUNKCJE DLA BACKUP/RESTORE (v4.1.1 z poprawką) ---
+    # --- NOWE FUNKCJE DLA BACKUP/RESTORE (v4.1.2 z poprawką) ---
 
     def _get_backup_path(self):
         """Zwraca najlepszą ścieżkę do backupu lub None, jeśli nie ma nośnika."""
