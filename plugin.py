@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.2 - Aktualizacja J00zek repo i poprawki instalatora Ncam
+Wersja 4.2 - Poprawki RAM, Temp i usuniecie Emoji
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.2"  # <-- Wersja 4.2
+VER = "4.2" 
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -73,12 +73,12 @@ Czy chcesz ją teraz zainstalować?\n\nPo instalacji KONIECZNY jest restart GUI!
         "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji.",
         "loading_text": "Ładowanie...",
         "loading_error_text": "Błąd wczytywania danych",
-        "sk_wizard_title": "Super Konfigurator (Pierwsza Instalacja)",
+        "sk_wizard_title": ">>> Super Konfigurator (Pierwsza Instalacja)",
         "sk_choice_title": "Super Konfigurator - Wybierz opcję",
-        "sk_option_deps": "1) Zainstaluj only zależności (wget, tar, unzip)",
-        "sk_option_basic_no_picons": "2) Podstawowa Konfiguracja (bez Picon)",
-        "sk_option_full_picons": "3) Pełna Konfiguracja (z Piconami)",
-        "sk_option_cancel": "Anuluj",
+        "sk_option_deps": "1) [PKG] Zainstaluj only zależności (wget, tar, unzip)",
+        "sk_option_basic_no_picons": "2) [START] Podstawowa Konfiguracja (bez Picon)",
+        "sk_option_full_picons": "3) [FULL] Pełna Konfiguracja (z Piconami)",
+        "sk_option_cancel": "[X] Anuluj",
         "sk_confirm_deps": "Czy na pewno chcesz zainstalować only podstawowe zależności systemowe?",
         "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
         "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
@@ -108,12 +108,12 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
         "update_generic_error": "An error occurred while checking for updates.",
         "loading_text": "Loading...",
         "loading_error_text": "Error loading data",
-        "sk_wizard_title": "Super Setup Wizard (First Installation)",
+        "sk_wizard_title": ">>> Super Setup Wizard (First Installation)",
         "sk_choice_title": "Super Setup Wizard - Select an option",
-        "sk_option_deps": "1) Install dependencies only (wget, tar, unzip)",
-        "sk_option_basic_no_picons": "2) Basic Configuration (without Picons)",
-        "sk_option_full_picons": "3) Full Configuration (with Picons)",
-        "sk_option_cancel": "Cancel",
+        "sk_option_deps": "1) [PKG] Install dependencies only (wget, tar, unzip)",
+        "sk_option_basic_no_picons": "2) [START] Basic Configuration (without Picons)",
+        "sk_option_full_picons": "3) [FULL] Full Configuration (with Picons)",
+        "sk_option_cancel": "[X] Cancel",
         "sk_confirm_deps": "Are you sure you want to install only the basic system dependencies?",
         "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n\nDo you want to continue?",
         "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n- Install Picons (large file)\n\nDo you want to continue?",
@@ -135,7 +135,7 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
-# --- NOWA FUNKCJA URUCHAMIANIA W TLE (v4.1) ---
+# --- NOWA FUNKCJA URUCHAMIANIA W TLE ---
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
     Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku,
@@ -152,12 +152,10 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
                 
                 if process.returncode != 0:
                     print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
-                # Kontynuuj nawet jeśli jest błąd, tak jak w Console
                 
         except Exception as e:
             print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
         finally:
-            # Wywołaj zamknięcie okna i callback w głównym wątku
             reactor.callFromThread(on_finish_thread)
 
     def on_finish_thread():
@@ -168,7 +166,6 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
             except Exception as e:
                 print("[AIO Panel] Błąd w callback po run_command_in_background:", e)
 
-    # Uruchom wątek
     Thread(target=command_thread).start()
 
 # Funkcja konsoli (teraz używana tylko do diagnostyki)
@@ -188,7 +185,6 @@ def prepare_tmp_dir():
             print("[AIO Panel] Error creating tmp dir:", e)
 
 # === FUNKCJA install_archive (GLOBALNA) ===
-# ZMODYFIKOWANA v4.1: Używa run_command_in_background
 def install_archive(session, title, url, callback_on_finish=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
         show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
@@ -237,7 +233,6 @@ def install_archive(session, title, url, callback_on_finish=None):
             archive_type=archive_type
         )
     
-    # Użyj nowej funkcji tła zamiast console_screen_open
     run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
 
 # === E2KODI V2 - ROZPOZNAJ SYSTEM I ZAINSTALUJ (FUNKCJE GLOBALNE) ===
@@ -260,7 +255,6 @@ def get_e2kodi_package_name():
     else:
         return None
 
-# ZMODYFIKOWANA v4.2: Używa nowego repo J00zka
 def install_e2kodi(session):
     pkg = get_e2kodi_package_name()
     if not pkg:
@@ -268,7 +262,7 @@ def install_e2kodi(session):
         return
 
     repo_file = "/etc/opkg/opkg-j00zka.conf"
-    repo_url = "https://j00zek.github.io/eeRepo" # <-- NOWY ADRES REPO
+    repo_url = "https://j00zek.github.io/eeRepo" 
     if not os.path.exists(repo_file):
         try:
             with open(repo_file, "w") as f:
@@ -283,110 +277,110 @@ def install_e2kodi(session):
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
     ("--- Softcamy ---", "SEPARATOR"),
-    ("Restart Oscam", "CMD:RESTART_OSCAM"),
-    ("Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
-    ("oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
-    ("Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"), # <-- POPRAWKA v4.2.1
+    ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
+    ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
+    ("⚙️ oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
+    ("📥 Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
-    ("XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
-    ("ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
-    ("StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
-    ("E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
-    ("EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
-    ("J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
-    ("E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
-    ("Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
+    ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
+    ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
+    ("🛠 AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
+    ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
+    ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
+    ("▶️ YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
+    ("📺 E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
+    ("🖼️ Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
 
 SOFTCAM_AND_PLUGINS_EN = [
     ("--- Softcams ---", "SEPARATOR"),
-    ("Restart Oscam", "CMD:RESTART_OSCAM"),
-    ("Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
-    ("oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
-    ("Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"), # <-- POPRAWKA v4.2.1
+    ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
+    ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
+    ("⚙️ oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
+    ("📥 Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
-    ("XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
-    ("ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
-    ("StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
-    ("E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
-    ("EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
-    ("J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
-    ("E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
-    ("Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
+    ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
+    ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
+    ("🛠 AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
+    ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
+    ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
+    ("▶️ YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
+    ("📺 E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
+    ("🖼️ Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
 
 # === NOWE PODZIELONE LISTY MENU (PL) ===
 SYSTEM_TOOLS_PL = [
     ("--- Konfigurator ---", "SEPARATOR"),
-    ("Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
+    ("✨ Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- Narzędzia Systemowe ---", "SEPARATOR"),
-    ("Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
-    ("Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
+    ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
+    ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("--- Backup & Restore ---", "SEPARATOR"),
-    ("Backup Listy Kanałów", "CMD:BACKUP_LIST"),
-    ("Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
-    ("Restore Listy Kanałów", "CMD:RESTORE_LIST"),
-    ("Restore Konfiguracji Oscam", "CMD:RESTORE_OSCAM"),
+    ("💾 Backup Listy Kanałów", "CMD:BACKUP_LIST"),
+    ("💾 Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
+    ("♻️ Restore Listy Kanałów", "CMD:RESTORE_LIST"),
+    ("♻️ Restore Konfiguracji Oscam", "CMD:RESTORE_OSCAM"),
 ]
 
 DIAGNOSTICS_PL = [
     ("--- Informacje i Aktualizacje ---", "SEPARATOR"),
-    ("Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
-    ("Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
+    ("ℹ️ Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
+    ("🔄 Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
     ("--- Diagnostyka ---", "SEPARATOR"),
-    ("Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
-    ("Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
+    ("🌐 Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
+    ("💾 Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
     ("--- Czyszczenie i Bezpieczeństwo ---", "SEPARATOR"),
-    ("Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
-    ("Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
-    ("Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
-    ("Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
+    ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
+    ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
+    ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
+    ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
 ]
 
 # === NOWE PODZIELONE LISTY MENU (EN) ===
 SYSTEM_TOOLS_EN = [
     ("--- Configurator ---", "SEPARATOR"),
-    ("Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
+    ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("--- System Tools ---", "SEPARATOR"),
-    ("Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
-    ("Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
+    ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
+    ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("--- Backup & Restore ---", "SEPARATOR"),
-    ("Backup Channel List", "CMD:BACKUP_LIST"),
-    ("Backup Oscam Config", "CMD:BACKUP_OSCAM"),
-    ("Restore Channel List", "CMD:RESTORE_LIST"),
-    ("Restore Oscam Config", "CMD:RESTORE_OSCAM"),
+    ("💾 Backup Channel List", "CMD:BACKUP_LIST"),
+    ("💾 Backup Oscam Config", "CMD:BACKUP_OSCAM"),
+    ("♻️ Restore Channel List", "CMD:RESTORE_LIST"),
+    ("♻️ Restore Oscam Config", "CMD:RESTORE_OSCAM"),
 ]
 
 DIAGNOSTICS_EN = [
     ("--- Info & Updates ---", "SEPARATOR"),
-    ("About AIO Panel", "CMD:SHOW_AIO_INFO"),
-    ("Update Plugin", "CMD:CHECK_FOR_UPDATES"),
+    ("ℹ️ About AIO Panel", "CMD:SHOW_AIO_INFO"),
+    ("🔄 Update Plugin", "CMD:CHECK_FOR_UPDATES"),
     ("--- Diagnostics ---", "SEPARATOR"),
-    ("Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
-    ("Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
+    ("🌐 Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
+    ("💾 Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
     ("--- Cleaning & Security ---", "SEPARATOR"),
-    ("Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
-    ("Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
-    ("Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
-    ("Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
+    ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
+    ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
+    ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
+    ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
 ]
 
 # === NOWE 4 KATEGORIE ===
 COL_TITLES = {
-    "PL": ("Listy Kanałów", "Softcam i Wtyczki", "Narzędzia Systemowe", "Info i Diagnostyka"),
-    "EN": ("Channel Lists", "Softcam & Plugins", "System Tools", "Info & Diagnostics")
+    "PL": ("📺 Listy Kanałów", "🔑 Softcam i Wtyczki", "⚙️ Narzędzia Systemowe", "ℹ️ Info i Diagnostyka"),
+    "EN": ("📺 Channel Lists", "🔑 Softcam & Plugins", "⚙️ System Tools", "ℹ️ Info & Diagnostics")
 }
 
 
@@ -416,30 +410,29 @@ def _get_lists_from_repo_sync():
             data = json.load(f)
         
         for item in data:
-            item_type = item.get("type", "LIST").upper() # Domyślnie "LIST" (czyli kompletna lista .zip)
+            item_type = item.get("type", "LIST").upper() 
             name = item.get('name', 'Brak nazwy')
             author = item.get('author', '')
             url = item.get('url', '')
             
-            if not url: # Pomiń, jeśli nie ma URL
+            if not url: 
                 continue
 
             if item_type == "M3U":
                 bouquet_id = item.get('bouquet_id', 'userbouquet.imported_m3u.tv')
-                menu_title = "{} - {} (Dodaj jako Bukiet M3U)".format(name, author)
+                menu_title = "📺 {} - {} (Dodaj Bukiet M3U)".format(name, author)
                 action = "m3u:{}:{}:{}".format(url, bouquet_id, name)
                 lists_menu.append((menu_title, action))
             
             elif item_type == "BOUQUET":
-                # To jest dla plików .tv Azmana, które wymagają pasującego lamedb
                 bouquet_id = item.get('bouquet_id', 'userbouquet.imported_ref.tv')
-                menu_title = "{} - {} (Dodaj Bukiet REF)".format(name, author)
+                menu_title = "📺 {} - {} (Dodaj Bukiet REF)".format(name, author)
                 action = "bouquet:{}:{}:{}".format(url, bouquet_id, name)
                 lists_menu.append((menu_title, action))
 
-            else: # Domyślnie type == "LIST"
+            else: 
                 version = item.get('version', '')
-                menu_title = "{} - {} ({})".format(name, author, version)
+                menu_title = "📡 {} - {} ({})".format(name, author, version)
                 action = "archive:{}".format(url)
                 lists_menu.append((menu_title, action))
 
@@ -477,7 +470,7 @@ def _get_s4aupdater_lists_dynamic_sync():
             display_name_base = var_name.replace('_url', '').replace('_', ' ').title()
             version_key = var_name.replace('_url', '_version')
             date_info = versions_dict.get(version_key, "brak daty")
-            lists.append(("{} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
+            lists.append(("📡 {} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
     except Exception as e: 
         print("[AIO Panel] Błąd parsowania listy S4aUpdater:", e)
         return []
@@ -1049,7 +1042,7 @@ class Panel(Screen):
             "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
-            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO"
+            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE"
         ]
         
         # Logika dla Hyperion/VTi (skopiowana z)
@@ -1070,6 +1063,57 @@ class Panel(Screen):
                 lambda ret: self.execute_action(name, action) if ret else None,
                 MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
             )
+
+    def clear_ram_memory(self):
+        """Czyści RAM (drop_caches) i pokazuje odzyskane miejsce."""
+        try:
+            # Odczyt przed
+            with open("/proc/meminfo", "r") as f:
+                lines = f.readlines()
+            mem_free_before = 0
+            for line in lines:
+                if "MemFree:" in line:
+                    mem_free_before = int(line.split()[1])
+                    break
+            
+            # Czyszczenie
+            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+            
+            # Odczyt po
+            with open("/proc/meminfo", "r") as f:
+                lines = f.readlines()
+            mem_free_after = 0
+            for line in lines:
+                if "MemFree:" in line:
+                    mem_free_after = int(line.split()[1])
+                    break
+            
+            freed_kb = mem_free_after - mem_free_before
+            freed_mb = freed_kb / 1024.0
+            
+            if freed_mb > 0:
+                msg = "Pamięć RAM została wyczyszczona.\n\nZwolniono: {:.2f} MB".format(freed_mb)
+            else:
+                msg = "Pamięć RAM została wyczyszczona.\n\n(Brak zauważalnej zmiany, pamięć była już wolna)"
+                
+            self.sess.open(MessageBox, msg, MessageBox.TYPE_INFO)
+        except:
+            # Fallback w razie błędu odczytu pliku
+            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+            self.sess.open(MessageBox, "Pamięć RAM została wyczyszczona.", MessageBox.TYPE_INFO)
+
+    def clear_tmp_cache(self):
+        """Czyści pliki tymczasowe wtyczki."""
+        try:
+            # Czyścimy tylko folder tymczasowy wtyczki, żeby nie uszkodzić systemu
+            if os.path.exists(PLUGIN_TMP_PATH):
+                shutil.rmtree(PLUGIN_TMP_PATH)
+                os.makedirs(PLUGIN_TMP_PATH) # Odtwórz pusty katalog
+                self.sess.open(MessageBox, "Pliki tymczasowe wtyczki (AIO) zostały usunięte.", MessageBox.TYPE_INFO)
+            else:
+                 self.sess.open(MessageBox, "Brak plików tymczasowych do usunięcia.", MessageBox.TYPE_INFO)
+        except Exception as e:
+            self.sess.open(MessageBox, "Wystąpił błąd podczas czyszczenia: {}".format(e), MessageBox.TYPE_ERROR)
 
     # --- POZOSTAŁE FUNKCJE POMOCNICZE (SKOPIOWANE 1:1) ---
 
@@ -1232,9 +1276,9 @@ class Panel(Screen):
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif command_key == "RESTART_OSCAM": self.restart_oscam()
             elif command_key == "CLEAR_TMP_CACHE": 
-                run_command_in_background(self.sess, title, ["rm -rf " + PLUGIN_TMP_PATH + "*"])
+                self.clear_tmp_cache()
             elif command_key == "CLEAR_RAM_CACHE": 
-                run_command_in_background(self.sess, title, ["sync; echo 3 > /proc/sys/vm/drop_caches"])
+                self.clear_ram_memory()
             elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess) # Ta już używa tła
             elif command_key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo() # Ta używa tła
             elif command_key == "SHOW_AIO_INFO": self.show_info_screen()
@@ -1614,7 +1658,7 @@ class Panel(Screen):
             fi
             
             echo "Pobieranie publicznego adresu IP..."
-            PUBLIC_IP=$(wget -qO- --timeout=10 http://ipinfo.io/ip || echo "{na}")
+            PUBLIC_IP=$(wget -qO- --timeout=10 --no-check-certificate http://ipinfo.io/ip || echo "{na}")
             
             echo "Uruchamianie testu prędkości (może to potrwać minutę)..."
             
@@ -1623,7 +1667,7 @@ class Panel(Screen):
                 if command -v curl >/dev/null 2>&1; then
                     curl -s -o "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py
                 else
-                    wget -O "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py &>/dev/null
+                    wget --no-check-certificate -O "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py &>/dev/null
                 fi
                 chmod +x "{script_path}"
             fi
