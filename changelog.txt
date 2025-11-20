@@ -1,5 +1,6 @@
 [4.3]
-- Dodano instalator IPTV Dream
+- Dodano Instalator Softcam (opcja: Softcam Feed - Instalator) do menu Softcam i Wtyczki.
+- Dodano Instalator IPTV Dream by Paweł Pawełek (instalacja jest teraz cicha i powiadamia o konieczności restartu GUI).
 - Poprawka Oscam Feed: Zmieniono nazwę pozycji menu na "Oscam Feed - [numer wersji]" w celu lepszej czytelności.
 - Ulepszenie Narzędzia do Czyszczenia Pamięci Tymczasowej: Teraz bezpiecznie usuwa popularne pliki instalacyjne (.ipk, .zip, .tar.gz) i logi z /tmp, unikając usuwania kluczowych plików wtyczki.
 
