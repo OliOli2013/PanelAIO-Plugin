@@ -46,8 +46,7 @@ Kompletny "toolbox" dla Twojego dekodera:
 * Narzędzia Systemowe: Menadżer deinstalacji pakietów, aktualizacja `satellites.xml`, czyszczenie pamięci RAM i cache.
 * Zarządzanie Hasłem: Szybkie ustawianie lub kasowanie hasła dostępu root/FTP.
 
-💻 Instalacja
-Instalacja jest prosta. Połącz się z dekoderem przez terminal SSH (np. PuTTY lub Telnet) i wklej poniższą komendę:
+💻 Instalacja jest prosta. Połącz się z dekoderem przez terminal SSH (np. PuTTY lub Telnet) i wklej poniższą komendę:
 
 ```bash
 wget -q "--no-check-certificate" [https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh](https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh) -O - | /bin/sh
