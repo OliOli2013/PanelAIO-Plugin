@@ -66,10 +66,7 @@ STRZAŁKI L/P: Przełączanie między głównymi sekcjami (Listy, Wtyczki, Narz�
 
 ℹ️ Info (przycisk 'i'): Wyświetla informacje o wtyczce, notę prawną i listę zmian
 
-⚖️ Nota Prawna Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie na tunerach i systemach Enigma 2.
-
-Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników na stronach internetowych, YouTube i innych social mediach, wymaga zgody autora wtyczki.
-
 ☕ Wsparcie i Autor Twórca: Paweł Pawełek (msisystem@t.pl) Grupa Wsparcia: Facebook - Enigma 2 Oprogramowanie, dodatki
 
-Podoba Ci się wtyczka i chcesz wesprzeć jej dalszy rozwój? Możesz postawić autorowi kawę, skanując kod QR dostępny w interfejsie wtyczki.
+Podoba Ci się wtyczka i chcesz wesprzeć jej dalszy rozwój?
+Możesz postawić autorowi kawę, skanując kod QR dostępny w interfejsie wtyczki.
