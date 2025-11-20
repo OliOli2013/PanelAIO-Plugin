@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.2 - Poprawki RAM, Temp i usuniecie Emoji
+Wersja 4.3 - Softcam Installer, IPTV Dream, Cleanup DVBAPI
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.2" 
+VER = "4.3" 
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -280,10 +280,12 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("⚙️ oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
-    ("📥 Oscam z Feeda (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 Softcam Feed - Instalator", "CMD:INSTALL_SOFTCAM_FEED"),
+    ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
@@ -302,10 +304,12 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("⚙️ oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
-    ("📥 Oscam from Feed (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 Softcam Feed - Installer", "CMD:INSTALL_SOFTCAM_FEED"),
+    ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
@@ -721,7 +725,7 @@ class AIOInfoScreen(Screen):
         <widget name="author" position="20,60" size="860,25" font="Regular;22" halign="center" valign="center" />
         <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
         
-        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" valign="center" foregroundColor="yellow" />
+        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
         
         <widget name="legal_text" position="20,165" size="860,200" font="Regular;20" halign="center" valign="top" />
         
@@ -975,7 +979,7 @@ class Panel(Screen):
             # Logika filtrowania dla Hyperion/VTi (skopiowana z)
             if self.image_type in ["hyperion", "vti"]:
                 emu_actions_to_block = [
-                    "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI",
+                    "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_FEED",
                     "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"
                 ]
                 softcam_menu_filtered = []
@@ -995,10 +999,11 @@ class Panel(Screen):
                         tools_menu_filtered.append((name, action))
                 tools_menu = tools_menu_filtered
             
-            # Logika dla Oscam (skopiowana z)
+            # Logika dla Oscam (ZMIENIONA nazwa wpisu Oscam Feed)
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "Oscam z Feeda ({})" if lang == 'PL' else "Oscam from Feed ({})"
+                    # Nowy format: "Oscam Feed - [numer wersji]"
+                    oscam_text = "Oscam Feed - {}" if lang == 'PL' else "Oscam Feed - {}"
                     softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
             
             # Logika dla SuperKonfiguratora (skopiowana z)
@@ -1042,7 +1047,8 @@ class Panel(Screen):
             "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
-            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE"
+            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
+            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM"
         ]
         
         # Logika dla Hyperion/VTi (skopiowana z)
@@ -1103,15 +1109,58 @@ class Panel(Screen):
             self.sess.open(MessageBox, "Pamięć RAM została wyczyszczona.", MessageBox.TYPE_INFO)
 
     def clear_tmp_cache(self):
-        """Czyści pliki tymczasowe wtyczki."""
+        """
+        ZMODYFIKOWANA: Czyści typowe katalogi i pliki tymczasowe,
+        z pominięciem plików kluczowych dla działania wtyczki.
+        """
+        cleared_paths = []
         try:
-            # Czyścimy tylko folder tymczasowy wtyczki, żeby nie uszkodzić systemu
+            # 1. Usuwanie standardowych katalogów tymczasowych
+            standard_tmp_dirs = ["/tmp/*.ipk", "/tmp/*.zip", "/tmp/*.tar.gz", "/tmp/*.tgz"]
+            for pattern in standard_tmp_dirs:
+                # Używamy find/rm, ponieważ globbing w Pythonie jest ograniczony, a shell jest bardziej niezawodny
+                # Użyjemy prostej listy poleceń do usunięcia
+                cmd = f"find /tmp/ -maxdepth 1 -name '{pattern.split('/')[-1]}' -type f -delete"
+                os.system(cmd)
+            
+            # 2. Czyszczenie tymczasowego folderu AIO Panel (z wyłączeniem manifest.json i wersji)
+            files_to_keep = ['manifest.json', 'version.txt', 'changelog.txt', 'changelog_info.txt', 'speedtest.py', 'Kod_QR_buycoffee.png']
             if os.path.exists(PLUGIN_TMP_PATH):
-                shutil.rmtree(PLUGIN_TMP_PATH)
-                os.makedirs(PLUGIN_TMP_PATH) # Odtwórz pusty katalog
-                self.sess.open(MessageBox, "Pliki tymczasowe wtyczki (AIO) zostały usunięte.", MessageBox.TYPE_INFO)
+                for item in os.listdir(PLUGIN_TMP_PATH):
+                    item_path = os.path.join(PLUGIN_TMP_PATH, item)
+                    if item in files_to_keep:
+                        continue
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                    else:
+                        os.remove(item_path)
+                    cleared_paths.append(item)
+            
+            # 3. Dodatkowe, częste miejsca do czyszczenia
+            extra_paths = [
+                "/tmp/skin.xml",
+                "/tmp/messages.log",
+                "/tmp/opkg-lists", # Warto to wyczyścić, ale trzeba zrobić to ostrożnie, najlepiej przez opkg update, co tu pominiemy
+                "/tmp/epg.dat",
+            ]
+            
+            cleared_extra = False
+            for path in extra_paths:
+                if os.path.exists(path):
+                    if os.path.isdir(path):
+                        shutil.rmtree(path, ignore_errors=True)
+                        cleared_extra = True
+                    else:
+                        os.remove(path)
+                        cleared_extra = True
+                        
+            if cleared_paths or cleared_extra:
+                msg = "Pamięć tymczasowa została wyczyszczona. Usunięto m.in. pliki instalacyjne (.ipk, .zip, .tar.gz) i logi z /tmp."
             else:
-                 self.sess.open(MessageBox, "Brak plików tymczasowych do usunięcia.", MessageBox.TYPE_INFO)
+                 msg = "Brak znaczących plików tymczasowych do usunięcia. Katalogi tymczasowe wtyczki są czyste."
+                 
+            self.sess.open(MessageBox, msg, MessageBox.TYPE_INFO)
+            
         except Exception as e:
             self.sess.open(MessageBox, "Wystąpił błąd podczas czyszczenia: {}".format(e), MessageBox.TYPE_ERROR)
 
@@ -1268,6 +1317,9 @@ class Panel(Screen):
                 cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
                 run_command_in_background(self.sess, title, [cmd])
             elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
+            elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
+            # ZMODYFIKOWANA funkcja do instalacji IPTV DREAM
+            elif command_key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() # Ta jest bez konsoli
@@ -1769,10 +1821,6 @@ class Panel(Screen):
 
     def manage_dvbapi(self):
         dvbapi_options = [
-            ("Pobierz z oficjalnego repo Oscam (GitHub)", "https://raw.githubusercontent.com/picons/oscam-configs/main/oscam.dvbapi"),
-            ("Pobierz z repo Oscam-Emu (GitHub)", "https://raw.githubusercontent.com/oscam-emu/oscam-emu/master/oscam.dvbapi"),
-            ("Pobierz z repo Oscam-Patched (GitHub)", "https://raw.githubusercontent.com/oscam-emu/oscam-patched/master/oscam.dvbapi"),
-            ("Pobierz z oryginalnego repo SVN", "http://www.streamboard.tv/svn/oscam/trunk/oscam.dvbapi"),
             ("Pobierz z własnego źródła (ręczny URL)...", "custom"),
             ("Kasuj zawartość pliku oscam.dvbapi", "clear")
         ]
@@ -1789,8 +1837,6 @@ class Panel(Screen):
             self.sess.openWithCallback(self.on_custom_dvbapi_url_entered, InputBox, title="Podaj własny URL do pliku oscam.dvbapi", text="https://")
         elif choice[1] == "clear":
             self.sess.openWithCallback(self.do_clear_dvbapi, MessageBox, "Czy na pewno chcesz skasować zawartość pliku oscam.dvbapi?", type=MessageBox.TYPE_YESNO)
-        else:
-            self.process_dvbapi_download(choice[1])
 
     def on_custom_dvbapi_url_entered(self, url):
         if url: self.process_dvbapi_download(url)
@@ -1858,6 +1904,30 @@ class Panel(Screen):
             sleep 3
         """
         run_command_in_background(self.sess, "Instalator Oscam", [cmd], callback_on_finish=callback)
+
+    def install_softcam_feed_only(self):
+        """Instaluje tylko Softcam Feed bez wymuszania Oscama"""
+        cmd = "wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"
+        run_command_in_background(self.sess, "Instalacja Softcam Feed", [cmd])
+
+    # ZMODYFIKOWANA funkcja do instalacji IPTV Dream - pomija sprawdzanie wersji
+    def install_iptv_dream_simplified(self):
+        """Instaluje IPTV Dream, pokazuje informację o instalacji i wraca do menu."""
+        
+        # Wiadomość o rozpoczęciu instalacji
+        show_message_compat(self.sess, "Rozpoczęto instalację IPTV Dream w tle.\nPo zakończeniu instalacji KONIECZNY będzie restart GUI.\n\nPotwierdź, aby kontynuować...", MessageBox.TYPE_INFO, timeout=10)
+        
+        def on_install_finish():
+            # Wiadomość o zakończeniu instalacji
+            show_message_compat(self.sess, "Instalacja IPTV Dream zakończona.\nZalecany jest restart GUI.", MessageBox.TYPE_INFO, timeout=10)
+            # Powrót do Panelu (Panel jest rodzicem, więc po zamknięciu message boxa wrócimy do niego)
+            # Nie robimy nic, Panel pozostaje otwarty, a message box się zamknie.
+
+        # Polecenie instalacji
+        cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh -O - | /bin/sh'
+        
+        # Uruchomienie w tle z callbackiem
+        run_command_in_background(self.sess, "Instalacja IPTV Dream", [cmd], callback_on_finish=on_install_finish)
 
     def run_super_setup_wizard(self):
         lang = self.lang
@@ -1940,7 +2010,7 @@ class Panel(Screen):
         if "picons" in steps:
             # Używamy nowej, podzielonej listy
             for name, action in (SYSTEM_TOOLS_PL):
-                if name.startswith("Pobierz Picony"):
+                if name.startswith("🖼️ Pobierz Picony (Transparent)"):
                     try: 
                         picon_url = action.split(':', 1)[1]; break
                     except (IndexError, AttributeError): 
