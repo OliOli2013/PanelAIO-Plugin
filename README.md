@@ -11,7 +11,7 @@ Wtyczka została stworzona, aby maksymalnie uprościć konfigurację dekodera �
 Ta aktualizacja skupia się na ulepszeniu narzędzi systemowych, instalatorów oraz poprawie stabilności operacji:
 
 * **Dodano Instalator Softcam:** W sekcji Softcam i Wtyczki dodano nową, bezpośrednią opcję instalacji Softcam Feed.
-* **Instalator IPTV Dream:** Instalacja wtyczki IPTV Dream została uproszczona i teraz startuje bezpośrednio w tle, bez konieczności sprawdzania wersji, co przyspiesza proces.
+* **Dodan Instalator IPTV Dream:** Instalacja wtyczki IPTV Dream została uproszczona i teraz startuje bezpośrednio w tle, bez konieczności sprawdzania wersji, co przyspiesza proces.
 * **Poprawa Czyszczenia Cache:** Narzędzie do Czyszczenia Pamięci Tymczasowej (`/tmp`) zostało ulepszone – bezpiecznie usuwa popularne pliki instalacyjne (.ipk, .zip, .tar.gz) oraz logi, z pominięciem kluczowych dla systemu plików.
 * **Nowa Nazwa Oscam:** Pozycja "Oscam Feed - Instalator (Auto)" wyświetla teraz wykrytą wersję (np. `Oscam Feed - 11700`) dla lepszej informacji o pakiecie.
 * **Kluczowa Poprawka "Super Konfiguratora" (w 3.1):** Naprawiono błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów. Cały proces (lista, picony, oscam) przechodzi płynnie do końca.
@@ -50,3 +50,26 @@ Kompletny "toolbox" dla Twojego dekodera:
 
 ```bash
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
+Po instalacji zalecany jest restart Enigma2.
+
+🎮 Sterowanie
+
+🔴 Czerwony: Zmiana języka na Polski
+
+🟢 Zielony: Zmiana języka na Angielski
+
+🟡 Żółty: Restart GUI (Interfejsu)
+
+🔵 Niebieski: Sprawdź aktualizacje wtyczki
+
+STRZAŁKI L/P: Przełączanie między głównymi sekcjami (Listy, Wtyczki, Narzędzia, Diagnostyka)
+
+ℹ️ Info (przycisk 'i'): Wyświetla informacje o wtyczce, notę prawną i listę zmian
+
+⚖️ Nota Prawna Autor wyraża zgodę na wykorzystywanie wtyczki tylko i wyłącznie na tunerach i systemach Enigma 2.
+
+Jakiekolwiek inne wykorzystywanie, w tym tworzenie poradników na stronach internetowych, YouTube i innych social mediach, wymaga zgody autora wtyczki.
+
+☕ Wsparcie i Autor Twórca: Paweł Pawełek (msisystem@t.pl) Grupa Wsparcia: Facebook - Enigma 2 Oprogramowanie, dodatki
+
+Podoba Ci się wtyczka i chcesz wesprzeć jej dalszy rozwój? Możesz postawić autorowi kawę, skanując kod QR dostępny w interfejsie wtyczki.
