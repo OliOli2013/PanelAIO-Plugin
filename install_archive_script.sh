@@ -93,29 +93,9 @@ echo "--> Kopiowanie plików zakończone." >> "$LOG_FILE"
 # --- Koniec Kopiowania ---
 
 # --- Przeładowanie Bukietów ---
-# Sprawdźmy, czy skrypt reload_bouquets.sh istnieje w katalogu wtyczki
-PLUGIN_SCRIPT_DIR=$(dirname "$(readlink -f "$0")") # Pobierz katalog bieżącego skryptu
-RELOAD_SCRIPT_PATH="$PLUGIN_SCRIPT_DIR/reload_bouquets.sh"
-echo "--> Próba przeładowania bukietów przy użyciu '$RELOAD_SCRIPT_PATH'..." >> "$LOG_FILE"
-
-if [ -f "$RELOAD_SCRIPT_PATH" ]; then
-    if [ -x "$RELOAD_SCRIPT_PATH" ]; then
-        if "$RELOAD_SCRIPT_PATH"; then
-            echo "--> Skrypt reload_bouquets.sh zakończony pomyślnie." >> "$LOG_FILE"
-        else
-            RELOAD_EXIT_CODE=$?
-            echo "!!! OSTRZEŻENIE: Skrypt reload_bouquets.sh zwrócił błąd (kod: $RELOAD_EXIT_CODE). Może być konieczny restart GUI." | tee -a "$LOG_FILE"
-            COPY_ERRORS=1 # Traktujemy to jako potencjalny problem
-        fi
-    else
-        echo "!!! KRYTYCZNY BŁĄD: Skrypt reload_bouquets.sh '$RELOAD_SCRIPT_PATH' nie ma uprawnień do wykonywania!" | tee -a "$LOG_FILE"
-        echo "Nadaj uprawnienia: chmod +x '$RELOAD_SCRIPT_PATH'"
-        COPY_ERRORS=1 # To jest krytyczny błąd
-    fi
-else
-    echo "!!! KRYTYCZNY BŁĄD: Skrypt reload_bouquets.sh '$RELOAD_SCRIPT_PATH' nie został znaleziony!" | tee -a "$LOG_FILE"
-    COPY_ERRORS=1 # To jest krytyczny błąd
-fi
+# USUNIĘTO: Stary kod przeładowania bukietów (reload_bouquets.sh) 
+# OD TERAZ: Przeładowanie/Restart GUI będzie wykonane przez funkcję Pythona w plugin.py (reload_settings_python)
+echo "--> Przeładowanie/Restart GUI zostanie wykonane przez plugin.py." >> "$LOG_FILE"
 # --- Koniec Przeładowania ---
 
 # --- Czyszczenie ---
@@ -133,8 +113,8 @@ if [ $COPY_ERRORS -ne 0 ]; then
     echo ">>> Szczegółowe logi znajdziesz w pliku: $LOG_FILE" | tee -a "$LOG_FILE"
 else
     echo ">>> Instalacja listy kanałów ZAKOŃCZONA pomyślnie." | tee -a "$LOG_FILE"
-    echo ">>> Listy powinny być już widoczne." | tee -a "$LOG_FILE"
+    echo ">>> Restart/Przeładowanie list zostanie wykonane przez plugin.py" | tee -a "$LOG_FILE"
 fi
-sleep 3 # Daj użytkownikowi chwilę na przeczytanie
+sleep 1 # Krótka pauza dla wątku w tle, aby zakończyć działanie.
 
 exit 0
