@@ -1,3 +1,10 @@
+[4.4]
+- NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner" w Diagnostyce (automatyczne zwalnianie pamięci w tle).
+- POPRAWKA KRYTYCZNA: Naprawiono zawieszanie się tunera (spinner) podczas instalacji wtyczek zewnętrznych (np. EPG Import, NCam).
+- POPRAWKA: Usunięto błąd "invalid syntax" (linia 51).
+- OPTYMALIZACJA: Przyspieszono działanie skryptów instalacyjnych i backupu.
+- ZMIANA: Usunięto przestarzały skrypt reload_bouquets.sh.
+
 [4.3]
 - Dodano Instalator Softcam (opcja: Softcam Feed - Instalator) do menu Softcam i Wtyczki.
 - Dodano Instalator IPTV Dream by Paweł Pawełek (instalacja jest teraz cicha i powiadamia o konieczności restartu GUI).
