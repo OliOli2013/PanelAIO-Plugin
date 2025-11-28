@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.3 - Softcam Installer, IPTV Dream, Cleanup DVBAPI
+Wersja 4.4 - Auto RAM Cleaner & Fix GUI Hang
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -42,20 +42,37 @@ import time
 from twisted.internet import reactor
 from threading import Thread
 
+# === GLOBALNE ZMIENNE DLA AUTO RAM CLEANER ===
+# Timer musi być globalny, aby nie został usunięty po zamknięciu okna wtyczki
+g_auto_ram_timer = eTimer()
+g_auto_ram_active = False
+
+def run_auto_ram_clean_task():
+    """Funkcja wykonywana cyklicznie przez timer"""
+    try:
+        os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+        print("[AIO Panel] Auto RAM Cleaner: Pamięć wyczyszczona automatycznie.")
+    except Exception as e:
+        print("[AIO Panel] Auto RAM Cleaner Error:", e)
+
+# Podpięcie funkcji pod timer
+g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
+
+
 # === GLOBALNE ===
 PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
 PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.3" 
+VER = "4.4" 
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
 LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
-LEGEND_INFO = r" " 
+LEGEND_INFO = " " 
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -135,11 +152,12 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
     reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
 
-# --- NOWA FUNKCJA URUCHAMIANIA W TLE ---
+# --- FUNKCJA URUCHAMIANIA W TLE (Dla zadań wewnętrznych) ---
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
-    Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku,
-    ukrywając wyjście konsoli.
+    Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku.
+    UWAGA: Nie używać dla skryptów, które same restartują GUI (np. EPG Import, NCam),
+    ponieważ wątek może zablokować zamknięcie Enigmy!
     """
     wait_message = session.open(MessageBox, "Trwa wykonywanie: {}\n\nProszę czekać...".format(title), MessageBox.TYPE_INFO, enable_input=False)
     
@@ -168,7 +186,7 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
 
     Thread(target=command_thread).start()
 
-# Funkcja konsoli (teraz używana tylko do diagnostyki)
+# Funkcja konsoli (teraz używana do diagnostyki i instalatorów zewnętrznych)
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
     if reactor.running:
@@ -205,7 +223,7 @@ def install_archive(session, title, url, callback_on_finish=None):
             "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
             "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
             "rm -f \"{archive_path}\" && "
-            "echo 'Picony zostały pomyślnie zainstalowane.' && sleep 3"
+            "echo 'Picony zostały pomyślnie zainstalowane.' && sleep 1"
         ).format(
             download_cmd=download_cmd,
             archive_path=tmp_archive_path,
@@ -346,6 +364,7 @@ DIAGNOSTICS_PL = [
     ("🌐 Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
     ("--- Czyszczenie i Bezpieczeństwo ---", "SEPARATOR"),
+    ("⏱️ Auto RAM Cleaner (Konfiguruj)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
@@ -375,6 +394,7 @@ DIAGNOSTICS_EN = [
     ("🌐 Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
     ("--- Cleaning & Security ---", "SEPARATOR"),
+    ("⏱️ Auto RAM Cleaner (Setup)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
@@ -554,7 +574,7 @@ class WizardProgressScreen(Screen):
         opkg install tar || echo 'Info: Pakiet tar nie znaleziony (lub już jest), pomijam błąd.'
         opkg install unzip || echo 'Info: Pakiet unzip nie znaleziony (lub już jest), pomijam błąd.'
         echo 'Zakończono sprawdzanie zależności.'
-        sleep 3
+        sleep 1
         """
         run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
 
@@ -593,7 +613,7 @@ class WizardProgressScreen(Screen):
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             fi
             echo "Instalacja Oscam zakończona."
-            sleep 3
+            sleep 1
         """
         run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
 
@@ -1048,7 +1068,7 @@ class Panel(Screen):
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
-            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM"
+            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
         ]
         
         # Logika dla Hyperion/VTi (skopiowana z)
@@ -1111,7 +1131,7 @@ class Panel(Screen):
     def clear_tmp_cache(self):
         """
         ZMODYFIKOWANA: Czyści typowe katalogi i pliki tymczasowe,
-        z pominięciem plików kluczowych dla działania wtyczki.
+        z pominięciem plików kluczowych dla dziaÅ‚ania wtyczki.
         """
         cleared_paths = []
         try:
@@ -1163,6 +1183,51 @@ class Panel(Screen):
             
         except Exception as e:
             self.sess.open(MessageBox, "Wystąpił błąd podczas czyszczenia: {}".format(e), MessageBox.TYPE_ERROR)
+
+    # === AUTO RAM CLEANER FUNKCJE ===
+    def show_auto_ram_menu(self):
+        # Sprawdzamy status
+        status = "AKTYWNY" if g_auto_ram_active else "NIEAKTYWNY"
+        title = "Auto RAM Cleaner (Status: {})".format(status)
+        
+        options = [
+            ("Wyłącz Auto Czyszczenie", "off"),
+            ("Włącz co 10 minut", "10"),
+            ("Włącz co 30 minut", "30"),
+            ("Włącz co 60 minut", "60"),
+            ("Włącz co 120 minut (2h)", "120"),
+        ]
+        
+        self.sess.openWithCallback(self.set_auto_ram_timer, ChoiceBox, title=title, list=options)
+
+    def set_auto_ram_timer(self, choice):
+        global g_auto_ram_active
+        
+        if not choice:
+            return
+            
+        value = choice[1]
+        
+        if value == "off":
+            g_auto_ram_timer.stop()
+            g_auto_ram_active = False
+            show_message_compat(self.sess, "Automatyczne czyszczenie RAM zostało WYŁĄCZONE.", MessageBox.TYPE_INFO)
+        else:
+            try:
+                minutes = int(value)
+                # Zamiana minut na milisekundy (minuty * 60 * 1000)
+                interval_ms = minutes * 60 * 1000
+                
+                # Uruchomienie timera (False = cyklicznie, True = jednorazowo)
+                g_auto_ram_timer.start(interval_ms, False)
+                g_auto_ram_active = True
+                
+                # Wykonaj pierwsze czyszczenie od razu (opcjonalne)
+                run_auto_ram_clean_task()
+                
+                show_message_compat(self.sess, "Automatyczne czyszczenie RAM WŁĄCZONE.\nOdstęp: {} min.".format(minutes), MessageBox.TYPE_INFO)
+            except Exception as e:
+                show_message_compat(self.sess, "Błąd ustawiania timera: {}".format(e), MessageBox.TYPE_ERROR)
 
     # --- POZOSTAŁE FUNKCJE POMOCNICZE (SKOPIOWANE 1:1) ---
 
@@ -1273,7 +1338,6 @@ class Panel(Screen):
         if action.startswith("archive:"):
             try:
                 list_url = action.split(':', 1)[1]
-                # Wywołuje starą funkcję, która KASUJE wszystko (i używa teraz run_command_in_background)
                 install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
             except IndexError:
                  show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
@@ -1282,7 +1346,7 @@ class Panel(Screen):
         elif action.startswith("m3u:"):
             try:
                 parts = action.split(':', 3)
-                url = parts[1] + ":" + parts[2] # Poprawka dla URLi zawierających ':'
+                url = parts[1] + ":" + parts[2] 
                 bouquet_info = parts[3].split(':', 1)
                 bouquet_id = bouquet_info[0]
                 bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
@@ -1294,7 +1358,7 @@ class Panel(Screen):
         elif action.startswith("bouquet:"):
             try:
                 parts = action.split(':', 3)
-                url = parts[1] + ":" + parts[2] # Poprawka dla URLi
+                url = parts[1] + ":" + parts[2] 
                 bouquet_info = parts[3].split(':', 1)
                 bouquet_id = bouquet_info[0]
                 bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
@@ -1304,7 +1368,11 @@ class Panel(Screen):
         
         # --- LOGIKA DLA POLECEŃ CMD ---
         elif action.startswith("bash_raw:"):
-            run_command_in_background(self.sess, title, [action.split(':', 1)[1]])
+            # ZMIANA: Używamy standardowej Konsoli Enigmy (Console Screen) zamiast run_command_in_background.
+            # Dzięki temu, gdy skrypt wykona restart (killall/init 4), GUI zamknie się poprawnie, a nie zawiesi.
+            # Flaga closeOnSuccess=False pozwala zobaczyć błędy, jeśli skrypt nie zrestartuje GUI.
+            cmd = action.split(':', 1)[1]
+            self.session.open(Console, title=title, cmdlist=[cmd], closeOnSuccess=False)
 
         elif action.startswith("CMD:"):
             command_key = action.split(':', 1)[1]
@@ -1327,6 +1395,7 @@ class Panel(Screen):
                 run_command_in_background(self.sess, title, ["passwd -d root"])
             elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif command_key == "RESTART_OSCAM": self.restart_oscam()
+            elif command_key == "SETUP_AUTO_RAM": self.show_auto_ram_menu() # <--- NOWA OBSŁUGA
             elif command_key == "CLEAR_TMP_CACHE": 
                 self.clear_tmp_cache()
             elif command_key == "CLEAR_RAM_CACHE": 
@@ -1861,7 +1930,7 @@ class Panel(Screen):
         console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
 
     def restart_oscam(self, *args): # Dodano *args, aby akceptować callback z konsoli
-        cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartowanie Oscam za pomocą $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 2;'
+        cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartowanie Oscam za pomocą $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 1;' # SKRÓCONY SLEEP
         run_command_in_background(self.sess, "Restart Oscam", [cmd.strip()])
 
     def show_uninstall_manager(self):
@@ -1882,7 +1951,7 @@ class Panel(Screen):
             self.sess.openWithCallback(on_package_selected, ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
             
         except Exception as e:
-            show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
+            show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), MessageBox.TYPE_ERROR)
 
     def install_best_oscam(self, callback=None):
         cmd = """
@@ -1901,7 +1970,7 @@ class Panel(Screen):
                 wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
             fi
             echo "Instalacja Oscam zakończona."
-            sleep 3
+            sleep 1 # SKRÓCONY SLEEP
         """
         run_command_in_background(self.sess, "Instalator Oscam", [cmd], callback_on_finish=callback)
 
