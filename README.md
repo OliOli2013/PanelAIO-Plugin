@@ -1,7 +1,5 @@
 ![Logo Panelu AIO](logo.png)
 
-![Logo Panelu AIO](logo.png)
-
 # Panel AIO (All-In-One) dla Enigma2
 
 Panel AIO (aktualna wersja **5.0**) to kompletne centrum zarządzania Twoim dekoderem Enigma2. Zamiast instalować i pamiętać o wielu różnych dodatkach, AIO łączy je wszystkie w jedno, intuicyjne menu z podziałem na zakładki.
