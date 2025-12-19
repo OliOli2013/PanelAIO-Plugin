@@ -63,4 +63,4 @@ Połącz się z dekoderem przez terminal SSH (np. PuTTY, Terminal lub Telnet) i 
 ```bash
 wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
 
-Po instalacji zalecany jest restart Enigma2 (GUI).🎮 SterowaniePrzyciskAkcjaLEWO / PRAWOZmiana zakładki (Kategorii)🔴 CzerwonyZmiana języka na Polski🟢 ZielonyZmiana języka na Angielski🟡 ŻółtyRestart GUI (Interfejsu)🔵 NiebieskiSprawdź aktualizacje wtyczkiOKWybierz / Wykonaj akcjęEXITWyjście☕ Wsparcie i AutorTwórca: Paweł Pawełek (msisystem@t.pl)Grupa Wsparcia: Facebook - Enigma 2 Oprogramowanie, dodatkiPodoba Ci się wtyczka i chcesz wesprzeć jej dalszy rozwój?Możesz postawić autorowi wirtualną kawę, skanując kod QR dostępny w interfejsie wtyczki
+Po instalacji zalecany jest restart Enigma2 (GUI).
