@@ -1,18 +1,17 @@
 #!/bin/sh
-# Skrypt install_archive_script.sh (v9) - Bazuje na wersji użytkownika (bez czyszczenia), ulepszone logowanie.
+# Skrypt install_archive_script.sh (v5.0) - Zgodny z AIO Panel v5.0
+# Logika: Rozpakuj -> Znajdź lamedb -> Kopiuj -> (Restart robi plugin.py)
 
-# set -e # Usunięto set -e, aby skrypt kontynuował mimo błędów kopiowania
-
-LOG_FILE="/tmp/aio_install.log" # Log file for debugging
+# LOG_FILE dla debugowania
+LOG_FILE="/tmp/aio_install.log"
 
 # Start logging
-echo "--- START install_archive_script.sh (v9 - no clean) ---" > "$LOG_FILE"
+echo "--- START install_archive_script.sh (v5.0) ---" > "$LOG_FILE"
 echo "Argumenty: \$1='$1' \$2='$2'" >> "$LOG_FILE"
 date >> "$LOG_FILE"
 
 DOWNLOADED_FILE_PATH="$1"
 ARCHIVE_TYPE="$2"
-# ERROR_MSG="$3" # Argument $3 nie jest już potrzebny, bo nie przerywamy przy błędach rozpakowania od razu
 
 TMP_EXTRACT_DIR="/tmp/list_extract_tmp"
 
@@ -92,12 +91,6 @@ fi
 echo "--> Kopiowanie plików zakończone." >> "$LOG_FILE"
 # --- Koniec Kopiowania ---
 
-# --- Przeładowanie Bukietów ---
-# USUNIĘTO: Stary kod przeładowania bukietów (reload_bouquets.sh) 
-# OD TERAZ: Przeładowanie/Restart GUI będzie wykonane przez funkcję Pythona w plugin.py (reload_settings_python)
-echo "--> Przeładowanie/Restart GUI zostanie wykonane przez plugin.py." >> "$LOG_FILE"
-# --- Koniec Przeładowania ---
-
 # --- Czyszczenie ---
 echo "--> Usuwam pliki tymczasowe..." | tee -a "$LOG_FILE"
 rm -rf "$TMP_EXTRACT_DIR" >> "$LOG_FILE" 2>&1
@@ -106,7 +99,7 @@ echo "--> Pliki tymczasowe usunięte." >> "$LOG_FILE"
 # --- Koniec Czyszczenia ---
 
 # --- Komunikat końcowy ---
-echo "--- KONIEC install_archive_script.sh (v9) ---" >> "$LOG_FILE"
+echo "--- KONIEC install_archive_script.sh (v5.0) ---" >> "$LOG_FILE"
 if [ $COPY_ERRORS -ne 0 ]; then
     echo ">>> Instalacja ZAKOŃCZONA Z OSTRZEŻENIAMI." | tee -a "$LOG_FILE"
     echo ">>> Sprawdź listę kanałów. W razie problemów może być konieczny restart GUI." | tee -a "$LOG_FILE"
@@ -115,6 +108,6 @@ else
     echo ">>> Instalacja listy kanałów ZAKOŃCZONA pomyślnie." | tee -a "$LOG_FILE"
     echo ">>> Restart/Przeładowanie list zostanie wykonane przez plugin.py" | tee -a "$LOG_FILE"
 fi
-sleep 1 # Krótka pauza dla wątku w tle, aby zakończyć działanie.
+sleep 1 # Krótka pauza
 
 exit 0
