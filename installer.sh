@@ -1,5 +1,5 @@
 #!/bin/sh
-# Skrypt instalacyjny dla wtyczki PanelAIO (v6 - precyzyjniejsze instrukcje)
+# Skrypt instalacyjny dla wtyczki PanelAIO (v5.0)
 
 # --- Konfiguracja ---
 PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
@@ -24,12 +24,14 @@ do_background_update() {
     wget -q "$BASE_URL/selection.png" -O "$TMP_UPDATE_DIR/selection.png" >> "$LOG_FILE" 2>&1
     wget -q "$BASE_URL/install_archive_script.sh" -O "$TMP_UPDATE_DIR/install_archive_script.sh" >> "$LOG_FILE" 2>&1
     wget -q "$BASE_URL/update_satellites_xml.sh" -O "$TMP_UPDATE_DIR/update_satellites_xml.sh" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/reload_bouquets.sh" -O "$TMP_UPDATE_DIR/reload_bouquets.sh" >> "$LOG_FILE" 2>&1
     wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$TMP_UPDATE_DIR/Kod_QR_buycoffee.png" >> "$LOG_FILE" 2>&1
+    
+    # UWAGA: reload_bouquets.sh został usunięty, ponieważ plugin.py obsługuje przeładowanie.
+    # UWAGA: auto_backup.sh i speedtest.py nie są pobierane (moduły usunięte).
 
     # Sprawdź, czy pobrano kluczowy plik plugin.py
     if [ ! -f "$TMP_UPDATE_DIR/plugin.py" ]; then
-        echo "!!! BŁĄD: Nie udało się pobrać pliku plugin.py. Prerywam instalację." >> "$LOG_FILE"
+        echo "!!! BŁĄD: Nie udało się pobrać pliku plugin.py. Przerywam instalację." >> "$LOG_FILE"
         rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
         exit 1
     fi
