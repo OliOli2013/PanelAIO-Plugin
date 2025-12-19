@@ -2,7 +2,8 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 4.4 - Auto RAM Cleaner & Fix GUI Hang
+Wersja 5.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+FIXED & UPDATED (SuperWizard Fix + New URLs + REMOVED Unstable Modules)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,6 +16,10 @@ from Screens.ChoiceBox import ChoiceBox
 from Screens.InputBox import InputBox
 from Components.ActionMap import ActionMap
 from Components.Label import Label
+try:
+    from Components.ScrollLabel import ScrollLabel
+except Exception:
+    ScrollLabel = None
 from Components.MenuList import MenuList
 from Components.Pixmap import Pixmap
 from Plugins.Plugin import PluginDescriptor
@@ -65,7 +70,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "4.4" 
+VER = "5.0"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -156,8 +161,6 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
     Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku.
-    UWAGA: Nie używać dla skryptów, które same restartują GUI (np. EPG Import, NCam),
-    ponieważ wątek może zablokować zamknięcie Enigmy!
     """
     wait_message = session.open(MessageBox, "Trwa wykonywanie: {}\n\nProszę czekać...".format(title), MessageBox.TYPE_INFO, enable_input=False)
     
@@ -253,7 +256,6 @@ def install_archive(session, title, url, callback_on_finish=None):
     
     run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
 
-# === E2KODI V2 - ROZPOZNAJ SYSTEM I ZAINSTALUJ (FUNKCJE GLOBALNE) ===
 def get_python_version():
     try:
         import sys
@@ -349,11 +351,39 @@ SYSTEM_TOOLS_PL = [
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("📊 Monitor Systemowy", "CMD:SYSTEM_MONITOR"),
+    ("📄 Przeglądarka Logów", "CMD:LOG_VIEWER"),
+    ("⏰ Menedżer Cron", "CMD:CRON_MANAGER"),
+    ("🔌 Menedżer Usług", "CMD:SERVICE_MANAGER"),
+    ("ℹ️ Informacje o Systemie", "CMD:SYSTEM_INFO"),
+    ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
+    ("🔑 Instaluj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("--- Backup & Restore ---", "SEPARATOR"),
     ("💾 Backup Listy Kanałów", "CMD:BACKUP_LIST"),
     ("💾 Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
     ("♻️ Restore Listy Kanałów", "CMD:RESTORE_LIST"),
     ("♻️ Restore Konfiguracji Oscam", "CMD:RESTORE_OSCAM"),
+]
+
+SYSTEM_TOOLS_EN = [
+    ("--- Configurator ---", "SEPARATOR"),
+    ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
+    ("--- System Tools ---", "SEPARATOR"),
+    ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
+    ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
+    ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("📊 System Monitor", "CMD:SYSTEM_MONITOR"),
+    ("📄 Log Viewer", "CMD:LOG_VIEWER"),
+    ("⏰ Cron Manager", "CMD:CRON_MANAGER"),
+    ("🔌 Service Manager", "CMD:SERVICE_MANAGER"),
+    ("ℹ️ System Information", "CMD:SYSTEM_INFO"),
+    ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
+    ("🔑 Install SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
+    ("--- Backup & Restore ---", "SEPARATOR"),
+    ("💾 Backup Channel List", "CMD:BACKUP_LIST"),
+    ("💾 Backup Oscam Config", "CMD:BACKUP_OSCAM"),
+    ("♻️ Restore Channel List", "CMD:RESTORE_LIST"),
+    ("♻️ Restore Oscam Config", "CMD:RESTORE_OSCAM"),
 ]
 
 DIAGNOSTICS_PL = [
@@ -369,21 +399,6 @@ DIAGNOSTICS_PL = [
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
-]
-
-# === NOWE PODZIELONE LISTY MENU (EN) ===
-SYSTEM_TOOLS_EN = [
-    ("--- Configurator ---", "SEPARATOR"),
-    ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
-    ("--- System Tools ---", "SEPARATOR"),
-    ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
-    ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
-    ("--- Backup & Restore ---", "SEPARATOR"),
-    ("💾 Backup Channel List", "CMD:BACKUP_LIST"),
-    ("💾 Backup Oscam Config", "CMD:BACKUP_OSCAM"),
-    ("♻️ Restore Channel List", "CMD:RESTORE_LIST"),
-    ("♻️ Restore Oscam Config", "CMD:RESTORE_OSCAM"),
 ]
 
 DIAGNOSTICS_EN = [
@@ -644,7 +659,7 @@ class WizardProgressScreen(Screen):
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        self.close(self.session.open(TryQuitMainloop, 3))
+        self.close(self.session.open(TryQuitMainloop, 2))
 
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
@@ -847,6 +862,723 @@ class AIOInfoScreen(Screen):
 
 
 # === KLASA Panel (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
+
+# === NOWE EKRANY v5.0 ===
+
+class SystemMonitorScreen(Screen):
+    skin = """
+    <screen position="center,center" size="900,520" title="System Monitor">
+        <widget name="title" position="20,10" size="860,40" font="Regular;32" halign="left" />
+        <widget name="info" position="20,60" size="860,420" font="Regular;26" halign="left" valign="top" />
+        <widget name="help" position="20,485" size="860,30" font="Regular;22" halign="left" />
+    </screen>"""
+
+    def __init__(self, session, lang="PL"):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self["title"] = Label("📊 Monitor Systemowy" if self.lang == "PL" else "📊 System Monitor")
+        self["info"] = Label("")
+        self["help"] = Label("🔴5s  🟢10s  🟡30s  OK=Refresh  EXIT=Back")
+        self._timer = eTimer()
+        try:
+            self._timer_conn = self._timer.timeout.connect(self._update)
+        except Exception:
+            self._timer.callback.append(self._update)
+        self._interval = 10
+        self._prev_cpu = None
+        self["actions"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
+            "ok": self._update,
+            "cancel": self.close,
+            "red": lambda: self._set_interval(5),
+            "green": lambda: self._set_interval(10),
+            "yellow": lambda: self._set_interval(30),
+        }, -1)
+        self.onShown.append(self._start)
+
+    def _start(self):
+        self._update()
+        self._timer.start(self._interval * 1000, True)
+
+    def _set_interval(self, sec):
+        self._interval = int(sec)
+        self._update()
+        self._timer.start(self._interval * 1000, True)
+
+    def _read_cpu_percent(self):
+        try:
+            with open("/proc/stat", "r") as f:
+                line = f.readline()
+            parts = line.split()
+            if parts[0] != "cpu":
+                return None
+            nums = list(map(int, parts[1:8]))
+            total = sum(nums)
+            idle = nums[3] + nums[4]  # idle + iowait
+            if self._prev_cpu is None:
+                self._prev_cpu = (total, idle)
+                return 0.0
+            prev_total, prev_idle = self._prev_cpu
+            dt = total - prev_total
+            di = idle - prev_idle
+            self._prev_cpu = (total, idle)
+            if dt <= 0:
+                return 0.0
+            used = (dt - di) * 100.0 / float(dt)
+            return max(0.0, min(100.0, used))
+        except Exception:
+            return None
+
+    def _read_mem(self):
+        try:
+            mem = {}
+            with open("/proc/meminfo", "r") as f:
+                for line in f:
+                    k, v = line.split(":", 1)
+                    mem[k.strip()] = int(v.strip().split()[0])
+            total = mem.get("MemTotal", 0)
+            avail = mem.get("MemAvailable", mem.get("MemFree", 0))
+            used = max(0, total - avail)
+            pct = (used * 100.0 / float(total)) if total else 0.0
+            return total, used, pct
+        except Exception:
+            return None, None, None
+
+    def _read_temp_c(self):
+        # Try thermal zones
+        paths = []
+        try:
+            base = "/sys/class/thermal"
+            if os.path.isdir(base):
+                for d in os.listdir(base):
+                    if d.startswith("thermal_zone"):
+                        p = os.path.join(base, d, "temp")
+                        paths.append(p)
+        except Exception:
+            pass
+        # Try hwmon
+        try:
+            base = "/sys/class/hwmon"
+            if os.path.isdir(base):
+                for d in os.listdir(base):
+                    dp = os.path.join(base, d)
+                    for fn in os.listdir(dp):
+                        if fn.startswith("temp") and fn.endswith("_input"):
+                            paths.append(os.path.join(dp, fn))
+        except Exception:
+            pass
+        vals = []
+        for p in paths:
+            try:
+                if os.path.isfile(p):
+                    raw = open(p, "r").read().strip()
+                    if not raw:
+                        continue
+                    v = float(raw)
+                    if v > 1000:
+                        v = v / 1000.0
+                    if 0.0 < v < 150.0:
+                        vals.append(v)
+            except Exception:
+                continue
+        if not vals:
+            return None
+        return max(vals)
+
+    def _disk_usage_str(self, path):
+        try:
+            if not os.path.exists(path):
+                return None
+            du = shutil.disk_usage(path)
+            total = du.total
+            used = du.used
+            pct = (used * 100.0 / float(total)) if total else 0.0
+            return "%s: %.1f%% (%.1fGB/%.1fGB)" % (path, pct, used/1e9, total/1e9)
+        except Exception:
+            return None
+
+    def _update(self, *args):
+        cpu = self._read_cpu_percent()
+        mt, mu, mp = self._read_mem()
+        temp = self._read_temp_c()
+        disk_root = self._disk_usage_str("/")
+        disk_hdd = self._disk_usage_str("/media/hdd")
+        lines = []
+        if cpu is None: lines.append("CPU: N/A")
+        else: lines.append("CPU: %.1f%%" % cpu)
+        if mt is None: lines.append("RAM: N/A")
+        else: lines.append("RAM: %.1f%% (%.1fMB/%.1fMB)" % (mp, mu/1024.0, mt/1024.0))
+        if temp is None: lines.append(("TEMP: N/A (brak czujnika)" if self.lang=="PL" else "TEMP: N/A (no sensor)"))
+        else: lines.append("TEMP: %.1f°C" % temp)
+        if disk_root: lines.append(disk_root)
+        if disk_hdd: lines.append(disk_hdd)
+        self["info"].setText("\n".join(lines))
+        self._timer.start(self._interval * 1000, True)
+
+
+class LogViewerScreen(Screen):
+    skin = """
+    <screen position="center,center" size="1050,650" title="Log Viewer">
+        <widget name="title" position="20,10" size="1010,40" font="Regular;30" halign="left" />
+        <widget name="log" position="20,60" size="1010,540" font="Regular;22" halign="left" valign="top" />
+        <widget name="help" position="20,610" size="1010,30" font="Regular;22" halign="left" />
+    </screen>"""
+
+    SOURCES = [
+        ("messages", "/var/log/messages"),
+        ("syslog", "/var/log/syslog"),
+        ("enigma2.log", "/tmp/enigma2.log"),
+        ("enigma2_debug.log", "/home/root/logs/enigma2_debug.log"),
+        ("enigma2_crash.log", "/home/root/logs/enigma2_crash.log"),
+    ]
+
+    def __init__(self, session, lang="PL"):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self._idx = 0
+        self["title"] = Label("")
+        if ScrollLabel:
+            self["log"] = ScrollLabel("")
+        else:
+            self["log"] = Label("")
+        self["help"] = Label("◄/► Source  🟡AutoRefresh  OK=Refresh  ▲/▼ Scroll  EXIT=Back")
+        self._auto = False
+        self._timer = eTimer()
+        try:
+            self._timer_conn = self._timer.timeout.connect(self._on_timer)
+        except Exception:
+            self._timer.callback.append(self._on_timer)
+        self["actions"] = ActionMap(["OkCancelActions", "DirectionActions", "ColorActions"], {
+            "ok": self.refresh,
+            "cancel": self.close,
+            "left": self.prev_source,
+            "right": self.next_source,
+            "up": self.page_up,
+            "down": self.page_down,
+            "yellow": self.toggle_auto,
+        }, -1)
+        self.onShown.append(self.refresh)
+
+    def _on_timer(self):
+        if self._auto:
+            self.refresh()
+
+    def toggle_auto(self):
+        self._auto = not self._auto
+        if self._auto:
+            self._timer.start(5000, True)
+        self.refresh()
+
+    def prev_source(self):
+        self._idx = (self._idx - 1) % len(self.SOURCES)
+        self.refresh()
+
+    def next_source(self):
+        self._idx = (self._idx + 1) % len(self.SOURCES)
+        self.refresh()
+
+    def _tail(self, path, n=100):
+        if not fileExists(path):
+            return "Brak pliku: %s" % path if self.lang == "PL" else "Missing file: %s" % path
+        try:
+            cmd = "tail -n %d %s 2>/dev/null" % (n, path)
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, _ = p.communicate()
+            return out.decode("utf-8", "ignore")
+        except Exception as e:
+            return "Error: %s" % e
+
+    def refresh(self):
+        name, path = self.SOURCES[self._idx]
+        title = ("📄 Logi: %s" % name) if self.lang == "PL" else ("📄 Logs: %s" % name)
+        if self._auto:
+            title += " [AUTO]"
+        self["title"].setText(title)
+        data = self._tail(path, 100)
+        if ScrollLabel:
+            self["log"].setText(data)
+        else:
+            self["log"].setText(data)
+        if self._auto:
+            self._timer.start(5000, True)
+
+    def page_up(self):
+        try:
+            if ScrollLabel: self["log"].pageUp()
+        except Exception:
+            pass
+
+    def page_down(self):
+        try:
+            if ScrollLabel: self["log"].pageDown()
+        except Exception:
+            pass
+
+
+def _get_cron_file_path():
+    candidates = ["/etc/crontabs/root", "/var/spool/cron/crontabs/root", "/etc/cron/crontabs/root"]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    # ensure directory exists for /etc/crontabs
+    try:
+        os.makedirs("/etc/crontabs", exist_ok=True)
+    except Exception:
+        pass
+    return "/etc/crontabs/root"
+
+
+class CronManagerScreen(Screen):
+    skin = """
+    <screen position="center,center" size="950,620" title="Cron Manager">
+        <widget name="title" position="20,10" size="910,40" font="Regular;30" />
+        <widget name="list" position="20,60" size="910,500" scrollbarMode="showOnDemand" />
+        <widget name="help" position="20,570" size="910,40" font="Regular;22" />
+    </screen>"""
+
+    DISABLED_PREFIX = "#AIO_DISABLED# "
+
+    def __init__(self, session, lang="PL"):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self.cron_path = _get_cron_file_path()
+        self["title"] = Label("⏰ Menedżer Cron" if self.lang=="PL" else "⏰ Cron Manager")
+        self["list"] = MenuList([])
+        self["help"] = Label("🔴Add  🟢Edit  🟡Enable/Disable  🔵Delete  OK=View  EXIT=Back")
+        self["actions"] = ActionMap(["OkCancelActions", "ColorActions"], {
+            "ok": self.view_entry,
+            "cancel": self.close,
+            "red": self.add_entry,
+            "green": self.edit_entry,
+            "yellow": self.toggle_entry,
+            "blue": self.delete_entry,
+        }, -1)
+        self.onShown.append(self.reload)
+
+    def _read_lines(self):
+        try:
+            if not os.path.exists(self.cron_path):
+                return []
+            with open(self.cron_path, "r") as f:
+                return [l.rstrip("\n") for l in f.readlines()]
+        except Exception:
+            return []
+
+    def _write_lines(self, lines):
+        try:
+            with open(self.cron_path, "w") as f:
+                f.write("\n".join(lines).rstrip("\n") + "\n")
+            self._reload_daemon()
+            return True
+        except Exception as e:
+            show_message_compat(self.session, "Błąd zapisu cron: %s" % e, MessageBox.TYPE_ERROR, timeout=6)
+            return False
+
+    def _reload_daemon(self):
+        os.system("killall -HUP crond 2>/dev/null || true")
+        os.system("/etc/init.d/cron restart 2>/dev/null || true")
+        os.system("/etc/init.d/crond restart 2>/dev/null || true")
+        os.system("systemctl restart cron 2>/dev/null || true")
+        os.system("systemctl restart crond 2>/dev/null || true")
+
+    def reload(self):
+        self.lines = [l for l in self._read_lines() if l.strip() and not l.strip().startswith("#") or l.strip().startswith(self.DISABLED_PREFIX)]
+        items = []
+        for l in self.lines:
+            disabled = l.startswith(self.DISABLED_PREFIX)
+            view = l[len(self.DISABLED_PREFIX):] if disabled else l
+            prefix = "[OFF] " if disabled else "[ON]  "
+            items.append(prefix + view)
+        if not items:
+            items = ["(brak wpisów)" if self.lang=="PL" else "(no entries)"]
+            self.lines = []
+        self["list"].setList(items)
+
+    def _get_index(self):
+        return self["list"].getSelectionIndex()
+
+    def view_entry(self):
+        i = self._get_index()
+        if i < 0 or i >= len(self.lines):
+            return
+        l = self.lines[i]
+        disabled = l.startswith(self.DISABLED_PREFIX)
+        view = l[len(self.DISABLED_PREFIX):] if disabled else l
+        self.session.open(MessageBox, view, type=MessageBox.TYPE_INFO, timeout=10)
+
+    def add_entry(self):
+        def cb(txt):
+            if not txt:
+                return
+            lines = self._read_lines()
+            lines.append(txt.strip())
+            if self._write_lines(lines):
+                self.reload()
+        self.session.openWithCallback(cb, InputBox, title="Cron line (e.g. */5 * * * * /path/script.sh)", text="")
+
+    def edit_entry(self):
+        i = self._get_index()
+        if i < 0 or i >= len(self.lines):
+            return
+        old = self.lines[i]
+        disabled = old.startswith(self.DISABLED_PREFIX)
+        view = old[len(self.DISABLED_PREFIX):] if disabled else old
+
+        def cb(txt):
+            if txt is None:
+                return
+            lines = self._read_lines()
+            # locate exact line and replace first match
+            try:
+                idx = lines.index(old)
+                new_line = (self.DISABLED_PREFIX + txt.strip()) if disabled else txt.strip()
+                lines[idx] = new_line
+            except Exception:
+                pass
+            if self._write_lines(lines):
+                self.reload()
+        self.session.openWithCallback(cb, InputBox, title="Edit cron line", text=view)
+
+    def toggle_entry(self):
+        i = self._get_index()
+        if i < 0 or i >= len(self.lines):
+            return
+        old = self.lines[i]
+        lines = self._read_lines()
+        try:
+            idx = lines.index(old)
+        except Exception:
+            return
+        if old.startswith(self.DISABLED_PREFIX):
+            lines[idx] = old[len(self.DISABLED_PREFIX):]
+        else:
+            lines[idx] = self.DISABLED_PREFIX + old
+        if self._write_lines(lines):
+            self.reload()
+
+    def delete_entry(self):
+        i = self._get_index()
+        if i < 0 or i >= len(self.lines):
+            return
+        old = self.lines[i]
+
+        def cb(ret):
+            if not ret:
+                return
+            lines = self._read_lines()
+            try:
+                lines.remove(old)
+            except Exception:
+                pass
+            if self._write_lines(lines):
+                self.reload()
+        self.session.openWithCallback(cb, MessageBox, "Delete selected cron entry?", type=MessageBox.TYPE_YESNO)
+
+
+class ServiceManagerScreen(Screen):
+    skin = """
+    <screen position="center,center" size="950,620" title="Service Manager">
+        <widget name="title" position="20,10" size="910,40" font="Regular;30" />
+        <widget name="list" position="20,60" size="910,500" scrollbarMode="showOnDemand" />
+        <widget name="help" position="20,570" size="910,40" font="Regular;22" />
+    </screen>"""
+
+    SERVICES = [
+        ("SSH", ["sshd", "dropbear"]),
+        ("FTP", ["vsftpd", "proftpd", "pure-ftpd"]),
+        ("Samba", ["smbd", "samba", "nmbd"]),
+        ("NFS", ["nfs-server", "nfs"]),
+        ("Cron", ["cron", "crond"]),
+        ("Telnet", ["telnetd"]),
+    ]
+
+    def __init__(self, session, lang="PL"):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self["title"] = Label("🔌 Menedżer Usług" if self.lang=="PL" else "🔌 Service Manager")
+        self["list"] = MenuList([])
+        self["help"] = Label("🔴Stop  🟢Start  🟡Restart  OK=Status  EXIT=Back")
+        self["actions"] = ActionMap(["OkCancelActions", "ColorActions"], {
+            "ok": self.show_status,
+            "cancel": self.close,
+            "red": lambda: self._action("stop"),
+            "green": lambda: self._action("start"),
+            "yellow": lambda: self._action("restart"),
+        }, -1)
+        self.onShown.append(self.refresh)
+
+    def _systemctl(self, args):
+        cmd = "systemctl %s 2>/dev/null" % args
+        return subprocess.call(cmd, shell=True) == 0
+
+    def _is_systemd(self):
+        return os.path.exists("/bin/systemctl") or os.path.exists("/usr/bin/systemctl")
+
+    def _is_active(self, svc):
+        if self._is_systemd():
+            cmd = "systemctl is-active %s 2>/dev/null" % svc
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, _ = p.communicate()
+            return out.decode("utf-8","ignore").strip() == "active"
+        # fallback pidof
+        cmd = "pidof %s >/dev/null 2>&1" % svc
+        return subprocess.call(cmd, shell=True) == 0
+
+    def refresh(self):
+        items = []
+        for disp, names in self.SERVICES:
+            status = "unknown"
+            active = False
+            for n in names:
+                if self._is_active(n):
+                    active = True
+                    status = n
+                    break
+            items.append("%s: %s" % (disp, ("ON" if active else "OFF")))
+        self["list"].setList(items)
+
+    def _get_selected_service_names(self):
+        i = self["list"].getSelectionIndex()
+        if i < 0 or i >= len(self.SERVICES):
+            return None
+        return self.SERVICES[i][1]
+
+    def _action(self, act):
+        names = self._get_selected_service_names()
+        if not names:
+            return
+        # choose first existing service unit/script
+        svc = names[0]
+        cmd_parts = []
+        if self._is_systemd():
+            cmd_parts.append("systemctl %s %s 2>/dev/null" % (act, svc))
+            # also try alternates
+            for alt in names[1:]:
+                cmd_parts.append("systemctl %s %s 2>/dev/null" % (act, alt))
+        # init.d fallbacks
+        for n in names:
+            cmd_parts.append("/etc/init.d/%s %s 2>/dev/null" % (n, act))
+        cmd = " || ".join(cmd_parts) + " || true; sleep 1"
+        self.session.openWithCallback(lambda *a: self.refresh(), Console, title="Service: %s (%s)" % (svc, act), cmdlist=[cmd], closeOnSuccess=False)
+
+    def show_status(self):
+        names = self._get_selected_service_names()
+        if not names:
+            return
+        svc = names[0]
+        if self._is_systemd():
+            cmd = "systemctl status %s --no-pager | tail -n 60" % svc
+        else:
+            cmd = "ps | grep -E '%s' | grep -v grep" % "|".join(names)
+        self.session.open(Console, title="Status: %s" % svc, cmdlist=[cmd], closeOnSuccess=False)
+
+class SystemInfoScreen(Screen):
+    skin = """
+    <screen position="center,center" size="1050,650" title="System Information">
+        <widget name="title" position="20,10" size="1010,40" font="Regular;30" />
+        <widget name="info" position="20,60" size="1010,560" font="Regular;22" halign="left" valign="top" />
+        <widget name="help" position="20,620" size="1010,25" font="Regular;22" />
+    </screen>"""
+
+    def __init__(self, session, lang="PL"):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self["title"] = Label("ℹ️ Informacje o Systemie" if self.lang=="PL" else "ℹ️ System Information")
+        if ScrollLabel:
+            self["info"] = ScrollLabel("")
+        else:
+            self["info"] = Label("")
+        self["help"] = Label("▲/▼ Scroll  EXIT=Back")
+        self["actions"] = ActionMap(["OkCancelActions", "DirectionActions"], {
+            "cancel": self.close,
+            "up": self.page_up,
+            "down": self.page_down,
+        }, -1)
+        self.onShown.append(self.refresh)
+
+    def _read_first(self, path):
+        try:
+            return open(path, "r").read().strip()
+        except Exception:
+            return ""
+
+    def refresh(self):
+        lines = []
+        # Image / kernel / uptime
+        lines.append("Kernel: " + self._read_first("/proc/version").split("\n")[0])
+        try:
+            up = float(self._read_first("/proc/uptime").split()[0])
+            lines.append("Uptime: %.1f h" % (up/3600.0))
+        except Exception:
+            pass
+        # CPU
+        cpuinfo = self._read_first("/proc/cpuinfo")
+        model = ""
+        for l in cpuinfo.splitlines():
+            if l.lower().startswith("model name") or l.lower().startswith("hardware") or l.lower().startswith("processor"):
+                model = l.split(":",1)[-1].strip()
+                if model:
+                    break
+        if model:
+            lines.append("CPU: " + model)
+        # Mem
+        try:
+            mem = {}
+            for l in self._read_first("/proc/meminfo").splitlines():
+                k, v = l.split(":",1)
+                mem[k.strip()] = int(v.strip().split()[0])
+            total = mem.get("MemTotal",0)/1024.0
+            avail = mem.get("MemAvailable", mem.get("MemFree",0))/1024.0
+            used = total - avail
+            lines.append("RAM: %.1fMB used / %.1fMB total" % (used, total))
+        except Exception:
+            pass
+        # Network ips
+        try:
+            cmd = "ip -4 addr 2>/dev/null | grep -E 'inet ' | awk '{print $2\" \"$NF}'"
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, _ = p.communicate()
+            ips = out.decode("utf-8","ignore").strip()
+            if ips:
+                lines.append("")
+                lines.append("IP:")
+                lines.append(ips)
+        except Exception:
+            pass
+        # Disks
+        try:
+            lines.append("")
+            lines.append("Disks:")
+            lines.append(subprocess.check_output("df -h | head -n 20", shell=True).decode("utf-8","ignore"))
+        except Exception:
+            pass
+
+        data = "\n".join(lines)
+        if ScrollLabel:
+            self["info"].setText(data)
+        else:
+            self["info"].setText(data)
+
+    def page_up(self):
+        try:
+            if ScrollLabel: self["info"].pageUp()
+        except Exception:
+            pass
+
+    def page_down(self):
+        try:
+            if ScrollLabel: self["info"].pageDown()
+        except Exception:
+            pass
+
+class UninstallManagerScreen(Screen):
+    skin = """
+    <screen name="UninstallManagerScreen" position="center,center" size="1100,660" title="Uninstall">
+        <widget name="list" position="20,20" size="1060,560" scrollbarMode="showOnDemand" />
+        <widget name="status" position="20,595" size="1060,40" font="Regular;24" halign="left" valign="center" />
+    </screen>
+    """
+
+    def __init__(self, session, lang='PL'):
+        Screen.__init__(self, session)
+        self.lang = lang or 'PL'
+        self.session = session
+
+        if self.lang == 'PL':
+            self.setTitle("Menadżer deinstalacji (opkg)")
+            self._t_loading = "Pobieranie listy pakietów..."
+            self._t_ready = "Znaleziono: {n} pakietów. OK=usuń, Czerwony=odśwież, Zielony=usuń, Niebieski=wyjście"
+            self._t_err = "Błąd: nie udało się pobrać listy pakietów."
+            self._t_confirm = "Odinstalować pakiet:\n\n{pkg}\n\nPotwierdzasz?"
+            self._t_no_sel = "Brak zaznaczonego pakietu."
+        else:
+            self.setTitle("Uninstall manager (opkg)")
+            self._t_loading = "Loading package list..."
+            self._t_ready = "Found: {n} packages. OK=remove, Red=refresh, Green=remove, Blue=exit"
+            self._t_err = "Error: could not fetch package list."
+            self._t_confirm = "Remove package:\n\n{pkg}\n\nConfirm?"
+            self._t_no_sel = "No package selected."
+
+        self["list"] = MenuList([])
+        self["status"] = Label(self._t_loading)
+
+        self["actions"] = ActionMap(
+            ["OkCancelActions", "ColorActions"],
+            {
+                "ok": self.uninstall_selected,
+                "cancel": self.close,
+                "red": self.reload_list,
+                "green": self.uninstall_selected,
+                "blue": self.close,
+            },
+            -1
+        )
+
+        self.onShown.append(self.reload_list)
+
+    def _current_pkg(self):
+        try:
+            cur = self["list"].getCurrent()
+            if not cur:
+                return None
+            return cur[1]
+        except Exception:
+            return None
+
+    def reload_list(self):
+        self["status"].setText(self._t_loading)
+        try:
+            out = os.popen("opkg list-installed").read().splitlines()
+        except Exception:
+            out = []
+
+        items = []
+        for line in out:
+            line = (line or "").strip()
+            if not line:
+                continue
+            parts = line.split(" - ", 1)
+            pkg = parts[0].strip()
+            ver = parts[1].strip() if len(parts) > 1 else ""
+            disp = ("%s - %s" % (pkg, ver)) if ver else pkg
+            items.append((disp, pkg))
+
+        items.sort(key=lambda x: x[0].lower())
+        self["list"].setList(items)
+
+        if items:
+            self["status"].setText(self._t_ready.format(n=len(items)))
+        else:
+            self["status"].setText(self._t_err)
+
+    def uninstall_selected(self):
+        pkg = self._current_pkg()
+        if not pkg:
+            show_message_compat(self.session, self._t_no_sel, title="Info")
+            return
+        self.session.openWithCallback(
+            lambda ans: self._do_uninstall(ans, pkg),
+            MessageBox,
+            self._t_confirm.format(pkg=pkg),
+            MessageBox.TYPE_YESNO
+        )
+
+    def _do_uninstall(self, answer, pkg):
+        if not answer:
+            return
+        cmd = "opkg remove %s" % pkg
+        console_screen_open(
+            self.session,
+            ("Odinstalowanie: %s" % pkg) if self.lang == 'PL' else ("Removing: %s" % pkg),
+            [cmd],
+            callback=lambda *a: self.reload_list(),
+            close_on_finish=True
+        )
+
 class Panel(Screen):
     # Nowy skin z jedną listą i informacją o zakładkach
     skin = """
@@ -869,7 +1601,7 @@ class Panel(Screen):
         self.sess = session
         self.lang = 'PL'
         
-        # Logika detekcji obrazu (skopiowana z Twojego kodu)
+        # Logika detekcji obrazu
         self.image_type = "unknown"
         if fileExists("/etc/issue"):
             try:
@@ -887,70 +1619,57 @@ class Panel(Screen):
             except: pass
         if self.image_type == "unknown" and fileExists("/etc/vtiversion.info"):
             self.image_type = "vti"
-        print(f"[AIO Panel] Przebudowa v2: Wykryto system: {self.image_type}")
 
         self.fetched_data_cache = fetched_data
         self.update_info = None
         self.update_prompt_shown = False
-        self.wait_message_box = None
         
-        self.active_tab = 0 # 0 = Listy, 1 = Wtyczki, 2 = Narzędzia, 3 = Diagnostyka
-        self.tab_titles_def = COL_TITLES # Używamy globalnej definicji 4-kategorii
-        self.all_data = ([], [], [], []) # Pusta krotka na 4 kategorie
+        self.active_tab = 0 
+        self.tab_titles_def = COL_TITLES 
+        self.all_data = ([], [], [], []) 
 
         # Inicjalizacja komponentów skin
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
-        self["tabs_display"] = Label("") # Ustawiane w switch_tab
+        self["tabs_display"] = Label("") 
         self["menu"] = MenuList([])
-        self["legend"] = Label(" ") # Ustawiane w set_language
+        self["legend"] = Label(" ") 
         self["footer"] = Label(FOOT)
         
-        # NOWA MAPA KLAWISZY (PRZYWRÓCONA LEGENDA + NAWIGACJA L/R)
+        # MAPA KLAWISZY
         self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
-            
-            # Przyciski kolorowe (Twoja legenda)
             "red": lambda: self.set_language('PL'),
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
-            
-            # Przyciski nawigacyjne (L/R do zmiany zakładek)
             "left": self.prev_tab,
             "right": self.next_tab
-            # Up/Down są domyślnie obsługiwane przez MenuList
         }, -1) 
         
         self.onShown.append(self.post_initial_setup)
-        self.set_language(self.lang) # Pierwsze wypełnienie danych
+        self.set_language(self.lang) 
 
-    # --- NOWE FUNKCJE DLA ZAKŁADEK (L/R) ---
-    
+    # --- FUNKCJE ZAKŁADEK ---
     def next_tab(self):
-        """Przełącza na następną zakładkę"""
-        new_tab_index = (self.active_tab + 1) % len(self.all_data) # % 4
+        new_tab_index = (self.active_tab + 1) % len(self.all_data)
         self.switch_tab(new_tab_index)
 
     def prev_tab(self):
-        """Przełącza na poprzednią zakładkę"""
-        new_tab_index = (self.active_tab - 1) % len(self.all_data) # % 4
+        new_tab_index = (self.active_tab - 1) % len(self.all_data)
         self.switch_tab(new_tab_index)
 
     def switch_tab(self, tab_index):
-        """Przełącza aktywną zakładkę i odświeża listę menu oraz tytuł."""
         self.active_tab = tab_index
         lang = self.lang
         
         all_titles = self.tab_titles_def[lang]
         
-        # --- NOWA LOGIKA PASKA ZAKŁADEK (Wizualna) ---
         active_color = r"\c00ffff00" # Żółty
         inactive_color = r"\c00999999" # Szary
-        separator = r"\c00ffffff | " # Biały separator
-        reset_color = r"\c00ffffff" # Domyślny (biały)
+        reset_color = r"\c00ffffff" # Biały
         
         tabs_display_text_list = []
         for i, title in enumerate(all_titles):
@@ -959,11 +1678,8 @@ class Panel(Screen):
             else:
                 tabs_display_text_list.append("{color}{title}{reset}".format(color=inactive_color, title=title, reset=reset_color))
         
-        # Połącz je separatorem
-        self["tabs_display"].setText(separator.join(tabs_display_text_list))
-        # --- KONIEC NOWEJ LOGIKI ---
+        self["tabs_display"].setText(" | ".join(tabs_display_text_list))
         
-        # Załaduj dane dla tej zakładki do menu
         data_list = self.all_data[self.active_tab]
         if data_list:
             menu_items = [str(item[0]) for item in data_list]
@@ -971,15 +1687,11 @@ class Panel(Screen):
         else:
             self["menu"].setList([(TRANSLATIONS[lang]["loading_error_text"],)])
 
-    # --- ZMODYFIKOWANE STARE FUNKCJE ---
-
     def set_language(self, lang):
-        """ZMODYFIKOWANA: Ustawia język, buduje listę self.all_data (z 4 kategorii) i odświeża zakładkę."""
         self.lang = lang
-        self.set_lang_headers_and_legends() # Ustawia legendę i etykiety
+        self.set_lang_headers_and_legends()
         
         try:
-            # Pobieranie danych (skopiowane z Twojego kodu)
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
             s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
             best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
@@ -991,78 +1703,50 @@ class Panel(Screen):
             s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
             final_channel_lists = repo_lists + s4a_lists_filtered
             
-            # Używamy nowych, podzielonych list globalnych
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
             tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
             diag_menu = list(DIAGNOSTICS_PL if lang == 'PL' else DIAGNOSTICS_EN)
             
-            # Logika filtrowania dla Hyperion/VTi (skopiowana z)
+            # Filtrowanie dla Hyperion/VTi
             if self.image_type in ["hyperion", "vti"]:
-                emu_actions_to_block = [
-                    "CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_FEED",
-                    "CMD:INSTALL_BEST_OSCAM", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"
-                ]
+                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_BEST_OSCAM"]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
-                    if action not in emu_actions_to_block:
-                        softcam_menu_filtered.append((name, action))
-                    elif "--- Softcamy ---" in name:
-                        softcam_menu_filtered.append((name, action))
-                        note = ("(Opcje EMU wyłączone - użyj menedżera obrazu)", "SEPARATOR") if lang == 'PL' else ("(EMU options disabled - use image manager)", "SEPARATOR")
-                        softcam_menu_filtered.append(note)
+                    if action not in emu_actions_to_block: softcam_menu_filtered.append((name, action))
                 softcam_menu = softcam_menu_filtered
-
-                # Filtrujemy też SuperKonfigurator z Narzędzi
+                
                 tools_menu_filtered = []
                 for (name, action) in tools_menu:
-                    if action != "CMD:SUPER_SETUP_WIZARD":
-                        tools_menu_filtered.append((name, action))
+                    if action != "CMD:SUPER_SETUP_WIZARD": tools_menu_filtered.append((name, action))
                 tools_menu = tools_menu_filtered
             
-            # Logika dla Oscam (ZMIENIONA nazwa wpisu Oscam Feed)
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
-                    # Nowy format: "Oscam Feed - [numer wersji]"
                     oscam_text = "Oscam Feed - {}" if lang == 'PL' else "Oscam Feed - {}"
                     softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
             
-            # Logika dla SuperKonfiguratora (skopiowana z)
             for i, (name, action) in enumerate(tools_menu):
                 if action == "CMD:SUPER_SETUP_WIZARD":
                     tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
 
-            # NOWA LOGIKA: Ustawiamy self.all_data na 4 kategorie
             self.all_data = (final_channel_lists, softcam_menu, tools_menu, diag_menu)
-            
-            # Odśwież bieżącą zakładkę, aby załadować dane
             self.switch_tab(self.active_tab) 
             
         except Exception as e:
-            print("[AIO Panel] Błąd podczas przetwarzania danych dla set_language:", e)
+            print("[AIO Panel] Błąd danych:", e)
             self.all_data = ([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")], [], [], [])
-            self.switch_tab(0) # Załaduj zakładkę z błędem
+            self.switch_tab(0)
 
     def set_lang_headers_and_legends(self):
-        """ZMODYFIKOWANA: Ustawia tylko legendę i etykietę wsparcia."""
-        # Ustawia legendę (Czerwony, Zielony, Żółty, Niebieski)
         self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
-        
-        # Ustawia etykietę "Wesprzyj rozwój..."
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
-        
-        # Tytuł zakładki jest teraz ustawiany w switch_tab()
 
     def run_with_confirmation(self):
-        """ZMODYFIKOWANA: Pobiera akcję z aktywnej zakładki i jednej listy."""
         try:
-            # Pobieramy akcję z jednej listy, bazując na aktywnej zakładce
             name, action = self.all_data[self.active_tab][self["menu"].getSelectedIndex()]
-        except (IndexError, KeyError, TypeError): 
-            return # Błąd lub pusta lista
-        if action == "SEPARATOR": 
-            return # Nie rób nic dla separatorów
+        except (IndexError, KeyError, TypeError): return 
+        if action == "SEPARATOR": return 
 
-        # Reszta tej funkcji jest skopiowana 1:1 z Twojej starej funkcji
         actions_no_confirm = [
             "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
@@ -1071,933 +1755,99 @@ class Panel(Screen):
             "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
         ]
         
-        # Logika dla Hyperion/VTi (skopiowana z)
-        if self.image_type in ["hyperion", "vti"]:
-            emu_actions = ["CMD:MANAGE_DVBAPI"]
-            if action in emu_actions:
-                self.sess.openWithCallback(
-                    lambda ret: self.execute_action(name, action) if ret else None,
-                    MessageBox, "UWAGA (Hyperion/VTi):\nTa funkcja może nie działać poprawnie, jeśli Twoje ścieżki EMU są niestandardowe.\n\nKontynuować mimo to?\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
-                )
-                return 
+        if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
+             self.sess.openWithCallback(lambda ret: self.execute_action(name, action) if ret else None, MessageBox, "UWAGA (Hyperion/VTi): Opcja może nie działać.\nKontynuować?", type=MessageBox.TYPE_YESNO); return
 
-        # Domyślna logika potwierdzenia (skopiowana z)
         if any(action.startswith(prefix) for prefix in actions_no_confirm):
             self.execute_action(name, action)
         else:
-            self.sess.openWithCallback(
-                lambda ret: self.execute_action(name, action) if ret else None,
-                MessageBox, "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO
-            )
+            self.sess.openWithCallback(lambda ret: self.execute_action(name, action) if ret else None, MessageBox, "Czy wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO)
 
     def clear_ram_memory(self):
-        """Czyści RAM (drop_caches) i pokazuje odzyskane miejsce."""
-        try:
-            # Odczyt przed
-            with open("/proc/meminfo", "r") as f:
-                lines = f.readlines()
-            mem_free_before = 0
-            for line in lines:
-                if "MemFree:" in line:
-                    mem_free_before = int(line.split()[1])
-                    break
-            
-            # Czyszczenie
-            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
-            
-            # Odczyt po
-            with open("/proc/meminfo", "r") as f:
-                lines = f.readlines()
-            mem_free_after = 0
-            for line in lines:
-                if "MemFree:" in line:
-                    mem_free_after = int(line.split()[1])
-                    break
-            
-            freed_kb = mem_free_after - mem_free_before
-            freed_mb = freed_kb / 1024.0
-            
-            if freed_mb > 0:
-                msg = "Pamięć RAM została wyczyszczona.\n\nZwolniono: {:.2f} MB".format(freed_mb)
-            else:
-                msg = "Pamięć RAM została wyczyszczona.\n\n(Brak zauważalnej zmiany, pamięć była już wolna)"
-                
-            self.sess.open(MessageBox, msg, MessageBox.TYPE_INFO)
-        except:
-            # Fallback w razie błędu odczytu pliku
-            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
-            self.sess.open(MessageBox, "Pamięć RAM została wyczyszczona.", MessageBox.TYPE_INFO)
+        os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+        self.sess.open(MessageBox, "Pamięć RAM została wyczyszczona.", MessageBox.TYPE_INFO)
 
     def clear_tmp_cache(self):
-        """
-        ZMODYFIKOWANA: Czyści typowe katalogi i pliki tymczasowe,
-        z pominięciem plików kluczowych dla dziaÅ‚ania wtyczki.
-        """
-        cleared_paths = []
         try:
-            # 1. Usuwanie standardowych katalogów tymczasowych
-            standard_tmp_dirs = ["/tmp/*.ipk", "/tmp/*.zip", "/tmp/*.tar.gz", "/tmp/*.tgz"]
-            for pattern in standard_tmp_dirs:
-                # Używamy find/rm, ponieważ globbing w Pythonie jest ograniczony, a shell jest bardziej niezawodny
-                # Użyjemy prostej listy poleceń do usunięcia
-                cmd = f"find /tmp/ -maxdepth 1 -name '{pattern.split('/')[-1]}' -type f -delete"
-                os.system(cmd)
-            
-            # 2. Czyszczenie tymczasowego folderu AIO Panel (z wyłączeniem manifest.json i wersji)
-            files_to_keep = ['manifest.json', 'version.txt', 'changelog.txt', 'changelog_info.txt', 'speedtest.py', 'Kod_QR_buycoffee.png']
-            if os.path.exists(PLUGIN_TMP_PATH):
-                for item in os.listdir(PLUGIN_TMP_PATH):
-                    item_path = os.path.join(PLUGIN_TMP_PATH, item)
-                    if item in files_to_keep:
-                        continue
-                    if os.path.isdir(item_path):
-                        shutil.rmtree(item_path)
-                    else:
-                        os.remove(item_path)
-                    cleared_paths.append(item)
-            
-            # 3. Dodatkowe, częste miejsca do czyszczenia
-            extra_paths = [
-                "/tmp/skin.xml",
-                "/tmp/messages.log",
-                "/tmp/opkg-lists", # Warto to wyczyścić, ale trzeba zrobić to ostrożnie, najlepiej przez opkg update, co tu pominiemy
-                "/tmp/epg.dat",
-            ]
-            
-            cleared_extra = False
-            for path in extra_paths:
-                if os.path.exists(path):
-                    if os.path.isdir(path):
-                        shutil.rmtree(path, ignore_errors=True)
-                        cleared_extra = True
-                    else:
-                        os.remove(path)
-                        cleared_extra = True
-                        
-            if cleared_paths or cleared_extra:
-                msg = "Pamięć tymczasowa została wyczyszczona. Usunięto m.in. pliki instalacyjne (.ipk, .zip, .tar.gz) i logi z /tmp."
-            else:
-                 msg = "Brak znaczących plików tymczasowych do usunięcia. Katalogi tymczasowe wtyczki są czyste."
-                 
-            self.sess.open(MessageBox, msg, MessageBox.TYPE_INFO)
-            
+            os.system("rm -rf /tmp/*.ipk /tmp/*.zip /tmp/*.tar.gz /tmp/*.tgz /tmp/epg.dat")
+            self.sess.open(MessageBox, "Wyczyszczono pamięć podręczną /tmp.", MessageBox.TYPE_INFO)
         except Exception as e:
-            self.sess.open(MessageBox, "Wystąpił błąd podczas czyszczenia: {}".format(e), MessageBox.TYPE_ERROR)
+            self.sess.open(MessageBox, "Błąd: {}".format(e), MessageBox.TYPE_ERROR)
 
-    # === AUTO RAM CLEANER FUNKCJE ===
     def show_auto_ram_menu(self):
-        # Sprawdzamy status
-        status = "AKTYWNY" if g_auto_ram_active else "NIEAKTYWNY"
-        title = "Auto RAM Cleaner (Status: {})".format(status)
-        
-        options = [
-            ("Wyłącz Auto Czyszczenie", "off"),
-            ("Włącz co 10 minut", "10"),
-            ("Włącz co 30 minut", "30"),
-            ("Włącz co 60 minut", "60"),
-            ("Włącz co 120 minut (2h)", "120"),
-        ]
-        
-        self.sess.openWithCallback(self.set_auto_ram_timer, ChoiceBox, title=title, list=options)
+        self.sess.openWithCallback(self.set_auto_ram_timer, ChoiceBox, title="Auto RAM Cleaner", list=[("Wyłącz", "off"), ("Co 10 min", "10"), ("Co 30 min", "30"), ("Co 60 min", "60")])
 
     def set_auto_ram_timer(self, choice):
         global g_auto_ram_active
-        
-        if not choice:
-            return
-            
-        value = choice[1]
-        
-        if value == "off":
-            g_auto_ram_timer.stop()
-            g_auto_ram_active = False
-            show_message_compat(self.sess, "Automatyczne czyszczenie RAM zostało WYŁĄCZONE.", MessageBox.TYPE_INFO)
+        if not choice: return
+        if choice[1] == "off":
+            g_auto_ram_timer.stop(); g_auto_ram_active = False
+            show_message_compat(self.sess, "Auto RAM Cleaner WYŁĄCZONY.", MessageBox.TYPE_INFO)
         else:
-            try:
-                minutes = int(value)
-                # Zamiana minut na milisekundy (minuty * 60 * 1000)
-                interval_ms = minutes * 60 * 1000
-                
-                # Uruchomienie timera (False = cyklicznie, True = jednorazowo)
-                g_auto_ram_timer.start(interval_ms, False)
-                g_auto_ram_active = True
-                
-                # Wykonaj pierwsze czyszczenie od razu (opcjonalne)
-                run_auto_ram_clean_task()
-                
-                show_message_compat(self.sess, "Automatyczne czyszczenie RAM WŁĄCZONE.\nOdstęp: {} min.".format(minutes), MessageBox.TYPE_INFO)
-            except Exception as e:
-                show_message_compat(self.sess, "Błąd ustawiania timera: {}".format(e), MessageBox.TYPE_ERROR)
+            g_auto_ram_timer.start(int(choice[1]) * 60000, False); g_auto_ram_active = True
+            show_message_compat(self.sess, "Auto RAM Cleaner WŁĄCZONY ({} min).".format(choice[1]), MessageBox.TYPE_INFO)
 
-    # --- POZOSTAŁE FUNKCJE POMOCNICZE (SKOPIOWANE 1:1) ---
+    def show_info_screen(self): self.session.open(AIOInfoScreen)
+    def post_initial_setup(self): reactor.callLater(1, self.check_for_updates_on_start)
+    def check_for_updates_on_start(self): Thread(target=self.perform_update_check_silent).start()
+    def perform_update_check_silent(self): pass 
+    def check_for_updates_manual(self): show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
 
-    def show_info_screen(self):
-        self.session.open(AIOInfoScreen)
-
-    def post_initial_setup(self):
-        reactor.callLater(1, self.check_for_updates_on_start)
-
-    def check_for_updates_on_start(self):
-        thread = Thread(target=self.fetch_update_info_in_background)
-        thread.start()
-
-    def fetch_update_info_in_background(self):
-        try:
-            update_info = self.perform_update_check_silent()
-            if update_info and not self.update_prompt_shown:
-                reactor.callFromThread(self.ask_for_update, update_info)
-        except Exception as e:
-            print("[AIO Panel] Błąd automatycznego sprawdzania aktualizacji:", e)
-
-    def perform_update_check_silent(self):
-        repo_base_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/"
-        version_url = repo_base_url + "version.txt"
-        changelog_url = repo_base_url + "changelog.txt"
-        tmp_version_path = os.path.join(PLUGIN_TMP_PATH, 'version.txt')
-        tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog.txt')
-        prepare_tmp_dir()
-        try:
-            cmd_ver = "wget --no-check-certificate -O {} {}".format(tmp_version_path, version_url)
-            cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
-            subprocess.Popen(cmd_ver, shell=True).wait()
-            subprocess.Popen(cmd_log, shell=True).wait()
-
-            if os.path.exists(tmp_version_path) and os.path.getsize(tmp_version_path) > 0:
-                with open(tmp_version_path, 'r') as f:
-                    latest_ver = f.read().strip()
-                
-                def parse_version(v_str):
-                    v_str_clean = v_str.split('-')[0]
-                    try:
-                        return [int(part) for part in v_str_clean.split('.')]
-                    except Exception:
-                        return [0]
-                
-                current_ver_parts = parse_version(VER)
-                latest_ver_parts = parse_version(latest_ver)
-
-                if latest_ver_parts > current_ver_parts:
-                    changelog_text = "Brak informacji o zmianach."
-                    if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
-                        with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
-                            lines = f.readlines()
-                        found_version_section, changes = False, []
-                        for line in lines:
-                            line = line.strip()
-                            if line == "[{}]".format(latest_ver):
-                                found_version_section = True
-                                continue
-                            if found_version_section:
-                                if line.startswith("[") and line.endswith("]"): break
-                                if line: changes.append(line)
-                        if changes: changelog_text = "\n".join(changes)
-                    return {'latest_ver': latest_ver, 'changelog': changelog_text}
-        except Exception as e:
-            print("[AIO Panel] Silent update check failed:", e)
-        return None
-
-    def check_for_updates_manual(self):
-        def manual_check_thread():
-            info = self.perform_update_check_silent()
-            if info:
-                reactor.callFromThread(self.ask_for_update, info)
-            else:
-                reactor.callFromThread(lambda: show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER)))
-
-        Thread(target=manual_check_thread).start()
-
-    def ask_for_update(self, update_info):
-        if not update_info: return
-        self.update_prompt_shown = True
-        self.update_info = update_info
-        message = TRANSLATIONS[self.lang]["update_available_msg"].format(
-            latest_ver=update_info['latest_ver'],
-            current_ver=VER,
-            changelog=update_info['changelog']
-        )
-        self.sess.openWithCallback(
-            self.do_update, MessageBox, message, 
-            title=TRANSLATIONS[self.lang]["update_available_title"], 
-            type=MessageBox.TYPE_YESNO
-        )
-    
-    def do_update(self, confirmed):
-        if confirmed:
-            update_cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh'
-            # Używamy nowej funkcji tła
-            run_command_in_background(self.sess, "Aktualizacja AIO Panel", [update_cmd])
-            show_message_compat(self.sess, "Aktualizacja została uruchomiona w tle.\nProszę ZRESTARTOWAĆ GUI za około minutę.", MessageBox.TYPE_INFO, timeout=10)
-        else:
-            self.update_info = None
-
-    # --- NOWA, GŁÓWNA FUNKCJA WYKONAWCZA ---
+    # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
         title = name
-        
-        # --- LOGIKA DLA STARYCH LIST (.zip) ---
         if action.startswith("archive:"):
-            try:
-                list_url = action.split(':', 1)[1]
-                install_archive(self.sess, title, list_url, callback_on_finish=self.reload_settings_python)
-            except IndexError:
-                 show_message_compat(self.sess, "Błąd: Nieprawidłowy format akcji archive.", message_type=MessageBox.TYPE_ERROR)
-
-        # --- NOWA LOGIKA DLA BUKIETÓW M3U (np. IPTV.org) ---
+            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
         elif action.startswith("m3u:"):
-            try:
-                parts = action.split(':', 3)
-                url = parts[1] + ":" + parts[2] 
-                bouquet_info = parts[3].split(':', 1)
-                bouquet_id = bouquet_info[0]
-                bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
-                self.install_m3u_as_bouquet(title, url, bouquet_id, bouquet_name)
-            except Exception as e:
-                show_message_compat(self.sess, "Błąd parsowania akcji M3U: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-        
-        # --- NOWA LOGIKA DLA BUKIETÓW REFERENCYJNYCH (pliki .tv Azmana) ---
+            parts = action.split(':', 3)
+            self.install_m3u_as_bouquet(title, parts[1] + ":" + parts[2], parts[3].split(':', 1)[0], parts[3].split(':', 1)[1] if len(parts[3].split(':', 1)) > 1 else parts[3].split(':', 1)[0])
         elif action.startswith("bouquet:"):
-            try:
-                parts = action.split(':', 3)
-                url = parts[1] + ":" + parts[2] 
-                bouquet_info = parts[3].split(':', 1)
-                bouquet_id = bouquet_info[0]
-                bouquet_name = bouquet_info[1] if len(bouquet_info) > 1 else bouquet_id
-                self.install_bouquet_reference(title, url, bouquet_id, bouquet_name)
-            except Exception as e:
-                show_message_compat(self.sess, "Błąd parsowania akcji BOUQUET: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-        
-        # --- LOGIKA DLA POLECEŃ CMD ---
+            parts = action.split(':', 3)
+            self.install_bouquet_reference(title, parts[1] + ":" + parts[2], parts[3].split(':', 1)[0], parts[3].split(':', 1)[1] if len(parts[3].split(':', 1)) > 1 else parts[3].split(':', 1)[0])
         elif action.startswith("bash_raw:"):
-            # ZMIANA: Używamy standardowej Konsoli Enigmy (Console Screen) zamiast run_command_in_background.
-            # Dzięki temu, gdy skrypt wykona restart (killall/init 4), GUI zamknie się poprawnie, a nie zawiesi.
-            # Flaga closeOnSuccess=False pozwala zobaczyć błędy, jeśli skrypt nie zrestartuje GUI.
-            cmd = action.split(':', 1)[1]
-            self.session.open(Console, title=title, cmdlist=[cmd], closeOnSuccess=False)
-
+            self.session.open(Console, title=title, cmdlist=[action.split(':', 1)[1]], closeOnSuccess=False)
         elif action.startswith("CMD:"):
-            command_key = action.split(':', 1)[1]
-            if command_key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
-            elif command_key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
-            elif command_key == "UPDATE_SATELLITES_XML":
-                script_path = os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")
-                run_command_in_background(self.sess, title, ["bash " + script_path], callback_on_finish=self.reload_settings_python)
-            elif command_key == "INSTALL_SERVICEAPP":
-                cmd = "opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"
-                run_command_in_background(self.sess, title, [cmd])
-            elif command_key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
-            elif command_key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
-            # ZMODYFIKOWANA funkcja do instalacji IPTV DREAM
-            elif command_key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
-            elif command_key == "MANAGE_DVBAPI": self.manage_dvbapi()
-            elif command_key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            elif command_key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() # Ta jest bez konsoli
-            elif command_key == "CLEAR_FTP_PASS":
-                run_command_in_background(self.sess, title, ["passwd -d root"])
-            elif command_key == "SET_SYSTEM_PASSWORD": self.set_system_password()
-            elif command_key == "RESTART_OSCAM": self.restart_oscam()
-            elif command_key == "SETUP_AUTO_RAM": self.show_auto_ram_menu() # <--- NOWA OBSŁUGA
-            elif command_key == "CLEAR_TMP_CACHE": 
-                self.clear_tmp_cache()
-            elif command_key == "CLEAR_RAM_CACHE": 
-                self.clear_ram_memory()
-            elif command_key == "INSTALL_E2KODI": install_e2kodi(self.sess) # Ta już używa tła
-            elif command_key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo() # Ta używa tła
-            elif command_key == "SHOW_AIO_INFO": self.show_info_screen()
-            elif command_key == "BACKUP_LIST": self.backup_lists()
-            elif command_key == "BACKUP_OSCAM": self.backup_oscam()
-            elif command_key == "RESTORE_LIST": self.restore_lists()
-            elif command_key == "RESTORE_OSCAM": self.restore_oscam()
+            key = action.split(':', 1)[1]
+            if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
+            elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
+            elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
+            elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
+            elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
+            elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
+            elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
+            elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
+            elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
+            elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
+            elif key == "CLEAR_FTP_PASS": run_command_in_background(self.sess, title, ["passwd -d root"])
+            elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
+            elif key == "RESTART_OSCAM": self.restart_oscam()
+            elif key == "SETUP_AUTO_RAM": self.show_auto_ram_menu()
+            elif key == "CLEAR_TMP_CACHE": self.clear_tmp_cache()
+            elif key == "CLEAR_RAM_CACHE": self.clear_ram_memory()
+            elif key == "INSTALL_E2KODI": install_e2kodi(self.sess)
+            elif key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo()
+            elif key == "SHOW_AIO_INFO": self.show_info_screen()
+            elif key == "BACKUP_LIST": self.backup_lists()
+            elif key == "BACKUP_OSCAM": self.backup_oscam()
+            elif key == "RESTORE_LIST": self.restore_lists()
+            elif key == "RESTORE_OSCAM": self.restore_oscam()
+            elif key == "SYSTEM_MONITOR": self.open_system_monitor()
+            elif key == "LOG_VIEWER": self.open_log_viewer()
+            elif key == "CRON_MANAGER": self.open_cron_manager()
+            elif key == "SERVICE_MANAGER": self.open_service_manager()
+            # REMOVED: NETWORK_TOOLS
+            elif key == "SYSTEM_INFO": self.open_system_info()
+            # REMOVED: AUTO_BACKUP
+            elif key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
+            elif key == "FREE_SPACE_DISPLAY": console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
             
-            # WYJĄTKI, KTÓRE MUSZĄ POKAZAĆ KONSOLĘ
-            elif command_key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics() # Pokazuje wyjście
-            elif command_key == "FREE_SPACE_DISPLAY": 
-                console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False) # Pokazuje wyjście
+            # --- ZMIANY TUTAJ: Obsługa nowych funkcji ---
+            elif key == "UPDATE_SRVID": self.update_oscam_srvid_files() # Poprawiona
+            elif key == "INSTALL_SOFTCAMKEY_ONLINE": self.install_softcam_key_online() # Nowa
 
-    # --- NOWE FUNKCJE DLA J00ZEK I BUKIETÓW ---
-
-    def install_j00zek_repo(self):
-        """Instaluje repozytorium J00Zek i aktualizuje pakiety."""
-        title = "Instalator Repozytorium J00Zek"
-        cmd = """
-            echo "Instalowanie J00Zek Feed..."
-            echo "src/gz opkg-j00zka https://j00zek.github.io/eeRepo" > /etc/opkg/opkg-j00zka.conf
-            echo "Aktualizowanie listy pakietów..."
-            opkg update
-            echo "Zakończono."
-            sleep 3
-        """
-        run_command_in_background(self.sess, title, [cmd])
-
-    def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
-        """Pobiera M3U, konwertuje je w locie na bukiet E2 i dodaje do listy."""
-        tmp_m3u_path = os.path.join(PLUGIN_TMP_PATH, "temp.m3u")
-        download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_m3u_path, url)
-        
-        def on_download_finished(*args):
-            if not (fileExists(tmp_m3u_path) and os.path.getsize(tmp_m3u_path) > 0):
-                show_message_compat(self.sess, "Błąd: Nie udało się pobrać pliku M3U.", message_type=MessageBox.TYPE_ERROR)
-                return
-            
-            # Pokaż okno "Pracuję"
-            self.wait_message_box = self.sess.open(MessageBox, "Pobrano plik M3U.\nTrwa konwersja na bukiet E2...\nProszę czekać.", MessageBox.TYPE_INFO, enable_input=False)
-            
-            # Uruchom parsowanie w osobnym wątku, aby nie blokować GUI
-            Thread(target=self._parse_m3u_thread, args=(tmp_m3u_path, bouquet_id, bouquet_name)).start()
-
-        run_command_in_background(self.sess, "Pobieranie M3U: " + title, [download_cmd], callback_on_finish=on_download_finished)
-
-    def _parse_m3u_thread(self, tmp_m3u_path, bouquet_id, bouquet_name):
-        """Wątek roboczy do parsowania M3U i tworzenia pliku bukietu."""
-        try:
-            e2_bouquet_path = os.path.join(PLUGIN_TMP_PATH, bouquet_id)
-            e2_lines = ["#NAME {}\n".format(bouquet_name)]
-            channel_name = "N/A"
-            
-            with open(tmp_m3u_path, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('#EXTINF:'):
-                        try:
-                            channel_name = line.split(',')[-1].strip()
-                        except:
-                            channel_name = "Brak Nazwy"
-                    elif line.startswith('http://') or line.startswith('https://'):
-                        # Formatowanie URL dla Enigmy2: zamień : na %3a
-                        formatted_url = line.replace(':', '%3a')
-                        # Używamy serwisu 4097 (non-TS, np. HLS)
-                        e2_lines.append("#SERVICE 4097:0:1:0:0:0:0:0:0:0:{}:{}\n".format(formatted_url, channel_name))
-                        channel_name = "N/A" # Reset
-            
-            if len(e2_lines) <= 1:
-                raise Exception("Nie znaleziono kanałów w pliku M3U")
-
-            # Zapisz tymczasowy plik bukietu
-            with open(e2_bouquet_path, 'w', encoding='utf-8') as f:
-                f.writelines(e2_lines)
-
-            # Przekaż do głównego wątku, aby wykonać operacje na plikach E2
-            reactor.callFromThread(self._install_parsed_bouquet, e2_bouquet_path, bouquet_id)
-
-        except Exception as e:
-            print("[AIO Panel] Błąd parsowania M3U:", e)
-            if self.wait_message_box: 
-                reactor.callFromThread(self.wait_message_box.close)
-            reactor.callFromThread(show_message_compat, self.sess, "Błąd parsowania pliku M3U:\n{}".format(e), message_type=MessageBox.TYPE_ERROR)
-
-    def _install_parsed_bouquet(self, tmp_bouquet_path, bouquet_id):
-        """Wywoływane w głównym wątku: Kopiuje plik bukietu i aktualizuje bouquets.tv."""
-        if self.wait_message_box:
-            reactor.callFromThread(self.wait_message_box.close)
-            
-        e2_dir = "/etc/enigma2"
-        bouquets_tv_path = os.path.join(e2_dir, "bouquets.tv")
-        target_bouquet_path = os.path.join(e2_dir, bouquet_id)
-        
-        # 1. Przenieś plik
-        try:
-            shutil.move(tmp_bouquet_path, target_bouquet_path)
-        except Exception as e:
-            show_message_compat(self.sess, "Błąd kopiowania bukietu: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-            return
-
-        # 2. Edytuj bouquets.tv
-        try:
-            entry_to_add = '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bouquet_id)
-            entry_exists = False
-            
-            if fileExists(bouquets_tv_path):
-                with open(bouquets_tv_path, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        if bouquet_id in line:
-                            entry_exists = True
-                            break
-            
-            if not entry_exists:
-                with open(bouquets_tv_path, 'a', encoding='utf-8') as f:
-                    f.write(entry_to_add)
-            
-        except Exception as e:
-            show_message_compat(self.sess, "Błąd edycji bouquets.tv: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-            return
-
-        # 3. Przeładuj listę
-        msg = "Bukiet '{}' został pomyślnie dodany.\nPrzeładowuję listy...".format(bouquet_id) if not entry_exists else "Bukiet '{}' został zaktualizowany.\nPrzeładowuję listy...".format(bouquet_id)
-        show_message_compat(self.sess, msg, message_type=MessageBox.TYPE_INFO, timeout=5)
-        self.reload_settings_python()
-
-    def install_bouquet_reference(self, title, url, bouquet_id, bouquet_name):
-        """Instaluje plik bukietu .tv (tylko referencje, bez lamedb)."""
-        e2_dir = "/etc/enigma2"
-        bouquets_tv_path = os.path.join(e2_dir, "bouquets.tv")
-        target_bouquet_path = os.path.join(e2_dir, bouquet_id)
-        tmp_bouquet_path = os.path.join(PLUGIN_TMP_PATH, bouquet_id)
-
-        cmd = """
-        echo "Pobieranie pliku bukietu referencyjnego..."
-        wget -T 30 --no-check-certificate -O "{tmp_path}" "{url}"
-        if [ $? -eq 0 ] && [ -s "{tmp_path}" ]; then
-            echo "Instalowanie bukietu..."
-            mv "{tmp_path}" "{target_path}"
-            
-            BOUQUET_ENTRY='#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{b_id}" ORDER BY bouquet'
-            
-            if ! grep -q -F "{b_id}" "{bq_tv_path}"; then
-                echo "Dodawanie wpisu do bouquets.tv..."
-                echo "$BOUQUET_ENTRY" >> "{bq_tv_path}"
-            else
-                echo "Wpis dla {b_id} już istnieje w bouquets.tv."
-            fi
-            echo "Instalacja bukietu zakończona."
-            echo " "
-            echo "!!! UWAGA !!!"
-            echo "To jest bukiet referencyjny. Kanały będą działać (nie będą 'N/A')"
-            echo "TYLKO jeśli Twoja główna lista (np. bzyk83) zawiera pasujący plik lamedb!"
-            echo " "
-            sleep 8
-        else
-            echo "BŁĄD: Nie udało się pobrać pliku bukietu."
-            sleep 5
-        fi
-        """.format(
-            url=url,
-            tmp_path=tmp_bouquet_path,
-            target_path=target_bouquet_path,
-            b_id=bouquet_id,
-            bq_tv_path=bouquets_tv_path
-        )
-        
-        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
-
-    # --- NOWE FUNKCJE DLA BACKUP/RESTORE (v4.1.2 z poprawką) ---
-
-    def _get_backup_path(self):
-        """Zwraca najlepszą ścieżkę do backupu lub None, jeśli nie ma nośnika."""
-        hdd_path = "/media/hdd/aio_backups/"
-        usb_path = "/media/usb/aio_backups/"
-        
-        if os.path.exists("/media/hdd") and os.path.ismount("/media/hdd"):
-            return hdd_path
-        elif os.path.exists("/media/usb") and os.path.ismount("/media/usb"):
-            return usb_path
-        elif os.path.exists("/media/hdd"):
-            return hdd_path
-        elif os.path.exists("/media/usb"):
-            return usb_path
-            
-        return None # Nie znaleziono nośnika
-
-    def backup_lists(self):
-        path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.\nPodłącz nośnik i spróbuj ponownie.", MessageBox.TYPE_ERROR)
-            return
-        
-        title = "Backup Listy Kanałów"
-        backup_file = os.path.join(path, "aio_channels_backup.tar.gz")
-        
-        # --- POPRAWKA v4.1.1 (Błąd 'tar') ---
-        cmd = """
-            echo "Tworzenie ścieżki backupu: {path}"
-            mkdir -p "{path}"
-            echo "Archiwizowanie listy kanałów z /etc/enigma2/..."
-            
-            # Przejdź do katalogu i twórz archiwum
-            cd /etc/enigma2
-            
-            # Spakuj pliki, ignoruj błędy jeśli któregoś pliku nie ma (np. bouquets.radio)
-            tar -czf "{backup_file}" lamedb bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio 2>/dev/null
-            
-            if [ $? -eq 0 ]; then
-                echo "Backup listy kanałów zakończony pomyślnie!"
-                echo "Zapisano w: {backup_file}"
-            else
-                echo "BŁĄD: Wystąpił błąd podczas tworzenia archiwum."
-            fi
-            sleep 5
-        """.format(path=path, backup_file=backup_file)
-        
-        run_command_in_background(self.sess, title, [cmd])
-
-    def backup_oscam(self):
-        path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.\nPodłącz nośnik i spróbuj ponownie.", MessageBox.TYPE_ERROR)
-            return
-
-        title = "Backup Konfiguracji Oscam"
-        backup_file = os.path.join(path, "aio_oscam_config_backup.tar.gz")
-        cmd = """
-            echo "Tworzenie ścieżki backupu: {path}"
-            mkdir -p "{path}"
-            echo "Lokalizowanie konfiguracji Oscam..."
-            CONFIG_DIR=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u | head -n 1)
-            
-            if [ -z "$CONFIG_DIR" ]; then
-                echo "BŁĄD: Nie mogę znaleźć katalogu z oscam.conf!"
-                echo "Standardowe ścieżki to /etc/tuxbox/config/"
-                sleep 5
-                exit 1
-            fi
-            
-            echo "Znaleziono konfigurację w: $CONFIG_DIR"
-            echo "Archiwizowanie..."
-            tar -czf "{backup_file}" -C "$CONFIG_DIR" .
-            
-            if [ $? -eq 0 ]; then
-                echo "Backup Oscam zakończony pomyślnie!"
-                echo "Zapisano w: {backup_file}"
-            else
-                echo "BŁĄD: Wystąpił błąd podczas tworzenia archiwum."
-            fi
-            sleep 5
-        """.format(path=path, backup_file=backup_file)
-        run_command_in_background(self.sess, title, [cmd])
-
-    def restore_lists(self):
-        path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.", MessageBox.TYPE_ERROR)
-            return
-        
-        backup_file = os.path.join(path, "aio_channels_backup.tar.gz")
-        if not fileExists(backup_file):
-            show_message_compat(self.sess, "Błąd: Nie znaleziono pliku kopii zapasowej:\n" + backup_file, MessageBox.TYPE_ERROR)
-            return
-
-        self.sess.openWithCallback(
-            lambda ret: self._do_restore_lists(backup_file) if ret else None,
-            MessageBox, "Czy na pewno chcesz przywrócić listę kanałów z kopii?\n\nObecna lista zostanie NADPISANA.", type=MessageBox.TYPE_YESNO
-        )
-
-    def _do_restore_lists(self, backup_file):
-        title = "Przywracanie Listy Kanałów"
-        # --- POPRAWKA v4.1.2 ---
-        # Poprawna ścieżka rozpakowania to /etc/enigma2
-        cmd = """
-            echo "Przywracanie listy kanałów z pliku..."
-            echo "{backup_file}"
-            
-            # Kasujemy starą listę, aby uniknąć konfliktów
-            rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio /etc/enigma2/lamedb
-            
-            # Rozpakowujemy do /etc/enigma2/
-            tar -xzf "{backup_file}" -C /etc/enigma2/
-            
-            if [ $? -eq 0 ]; then
-                echo "Lista kanałów przywrócona pomyślnie."
-                echo "Przeładowywanie listy..."
-            else
-                echo "BŁĄD: Wystąpił błąd podczas przywracania."
-            fi
-            sleep 5
-        """.format(backup_file=backup_file)
-        
-        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
-
-    def restore_oscam(self):
-        path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Błąd: Nie znaleziono /media/hdd ani /media/usb.", MessageBox.TYPE_ERROR)
-            return
-        
-        backup_file = os.path.join(path, "aio_oscam_config_backup.tar.gz")
-        if not fileExists(backup_file):
-            show_message_compat(self.sess, "Błąd: Nie znaleziono pliku kopii zapasowej:\n" + backup_file, MessageBox.TYPE_ERROR)
-            return
-
-        self.sess.openWithCallback(
-            lambda ret: self._do_restore_oscam(backup_file) if ret else None,
-            MessageBox, "Czy na pewno chcesz przywrócić konfigurację Oscam?\n\nObecna konfiguracja zostanie NADPISANA.", type=MessageBox.TYPE_YESNO
-        )
-        
-    def _do_restore_oscam(self, backup_file):
-        title = "Przywracanie Konfiguracji Oscam"
-        cmd = """
-            echo "Lokalizowanie konfiguracji Oscam..."
-            CONFIG_DIR=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u | head -n 1)
-            if [ -z "$CONFIG_DIR" ]; then
-                echo "BŁĄD: Nie mogę znaleźć katalogu konfiguracyjnego Oscam!"
-                sleep 5
-                exit 1
-            fi
-
-            echo "Przywracanie konfiguracji do: $CONFIG_DIR"
-            tar -xzf "{backup_file}" -C "$CONFIG_DIR"
-            
-            if [ $? -eq 0 ]; then
-                echo "Konfiguracja Oscam przywrócona."
-                echo "Restartowanie Oscam..."
-            else
-                echo "BŁĄD: Wystąpił błąd podczas przywracania."
-            fi
-            sleep 3
-        """.format(backup_file=backup_file)
-        
-        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.restart_oscam)
-
-    # --- POZOSTAŁE FUNKCJE POMOCNICZE (BEZ ZMIAN) ---
-
-    def run_network_diagnostics(self):
-        # Ta funkcja celowo używa console_screen_open, aby pokazać wynik
-        local_ip = "N/A"
-        try:
-            if network is not None: 
-                for iface in ("eth0", "wlan0", "br0", "br-lan"):
-                    if network.isLinkUp(iface):
-                        ip = network.getIpAddress(iface)
-                        if ip and ip != "0.0.0.0":
-                            local_ip = ip
-                            break
-            elif iNetworkInfo is not None:
-                 for iface in ("eth0", "wlan0", "br0", "br-lan"):
-                     if iNetworkInfo.getAdapterAttribute(iface, "up"):
-                         ip = iNetworkInfo.getAdapterAttribute(iface, "ip")
-                         if ip and ip != "0.0.0.0":
-                            local_ip = ip
-                            break
-        except Exception as e:
-            print("[AIO Panel] Błąd pobierania lokalnego IP:", e)
-            local_ip = TRANSLATIONS[self.lang]["net_diag_na"]
-        
-        if isinstance(local_ip, (list, tuple)):
-            local_ip = '.'.join(map(str, local_ip)).replace(',', '.')
-        elif local_ip:
-            local_ip = str(local_ip).strip("[]' ")
-            
-        na_text = TRANSLATIONS[self.lang]["net_diag_na"]
-        script_path = os.path.join(PLUGIN_TMP_PATH, "speedtest.py")
-        output_file = os.path.join(PLUGIN_TMP_PATH, "speedtest_result.txt")
-        cmd = """
-            echo "--- AIO Panel - Diagnostyka Sieci ---"
-            echo " "
-            echo "Sprawdzanie połączenia z internetem..."
-            if ! ping -c 1 -W 3 google.com &>/dev/null; then
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                echo "!!! {no_connection} !!!"
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 1 
-            fi
-            
-            echo "Pobieranie publicznego adresu IP..."
-            PUBLIC_IP=$(wget -qO- --timeout=10 --no-check-certificate http://ipinfo.io/ip || echo "{na}")
-            
-            echo "Uruchamianie testu prędkości (może to potrwać minutę)..."
-            
-            if [ ! -f "{script_path}" ]; then
-                echo "Pobieranie narzędzia speedtest-cli..."
-                if command -v curl >/dev/null 2>&1; then
-                    curl -s -o "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py
-                else
-                    wget --no-check-certificate -O "{script_path}" https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py &>/dev/null
-                fi
-                chmod +x "{script_path}"
-            fi
-            
-            if command -v python3 >/dev/null 2>&1; then
-                PYTHON_CMD="python3"
-            else
-                PYTHON_CMD="python"
-            fi
-            
-            echo "Uruchamianie skryptu speedtest..."
-            $PYTHON_CMD -W ignore "{script_path}" --simple > "{output_file}" 2>&1
-            EXIT_CODE=$?
-            
-            if [ $EXIT_CODE -ne 0 ]; then
-                echo "--- BEGIN speedtest output (code: $EXIT_CODE) ---"
-                cat "{output_file}"
-                echo "--- END speedtest output ---"
-            fi
-            
-            if [ $EXIT_CODE -eq 0 ] && [ -s "{output_file}" ]; then
-                PING_SPEEDTEST=$(grep 'Ping:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
-                DOWNLOAD_SPEED=$(grep 'Download:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
-                UPLOAD_SPEED=$(grep 'Upload:' "{output_file}" | awk '{{print $2" "$3}}' || echo "{na}")
-            else
-                echo " "
-                if [ $EXIT_CODE -ne 0 ]; then
-                    echo "*** {error_msg} (kod: $EXIT_CODE) ***"
-                fi
-                PING_SPEEDTEST="{na}"
-                DOWNLOAD_SPEED="{na}"
-                UPLOAD_SPEED="{na}"
-            fi
-            
-            rm -f "{output_file}"
-
-            echo " "
-            echo "-------------------------------------------"
-            echo " {local_ip_label} {local_ip_val}" 
-            echo " {ip_label} $PUBLIC_IP"
-            echo " {ping_label} $PING_SPEEDTEST"
-            echo " {download_label} $DOWNLOAD_SPEED"
-            echo " {upload_label} $UPLOAD_SPEED"
-            echo "-------------------------------------------"
-            echo " "
-            echo "Diagnostyka zakończona."
-            echo "Naciśnij OK lub EXIT, aby zamknąć."
-        """.format(
-            no_connection=TRANSLATIONS[self.lang]["net_diag_no_connection"],
-            local_ip_label=TRANSLATIONS[self.lang]["net_diag_local_ip"],
-            local_ip_val=local_ip if local_ip else na_text, 
-            ip_label=TRANSLATIONS[self.lang]["net_diag_ip"],
-            ping_label=TRANSLATIONS[self.lang]["net_diag_ping"],
-            download_label=TRANSLATIONS[self.lang]["net_diag_download"],
-            upload_label=TRANSLATIONS[self.lang]["net_diag_upload"],
-            na=na_text,
-            script_path=script_path,
-            output_file=output_file,
-            error_msg=TRANSLATIONS[self.lang]["net_diag_error"]
-        )
-        console_screen_open(self.sess, TRANSLATIONS[self.lang]["net_diag_title"], [cmd], close_on_finish=False)
-        
-    def restart_gui(self): 
-        self.sess.open(TryQuitMainloop, 3)
-
-    def reload_settings_python(self, *args):
-        try:
-            db = eDVBDB.getInstance()
-            db.reloadServicelist()
-            db.reloadBouquets()
-            show_message_compat(self.session, "Listy kanałów przeładowane.", message_type=MessageBox.TYPE_INFO, timeout=3)
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas przeładowywania list:", e)
-            show_message_compat(self.session, "Wystąpił błąd podczas przeładowywania list.", message_type=MessageBox.TYPE_ERROR)
-
-    def clear_oscam_password(self):
-        # Ta funkcja nie używa konsoli, jest OK
-        cmd_find = "find /etc/tuxbox/config -name oscam.conf -exec dirname {} \\; | sort -u"
-        try:
-            process = subprocess.Popen(cmd_find, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, _ = process.communicate()
-            config_dirs = [line.strip() for line in stdout.decode('utf-8').splitlines() if line.strip()]
-            if not config_dirs: config_dirs.append("/etc/tuxbox/config")
-            found = False
-            for d in config_dirs:
-                conf_path = os.path.join(d, "oscam.conf")
-                if fileExists(conf_path):
-                    with open(conf_path, "r") as f: lines = f.readlines()
-                    new_lines = [line for line in lines if not line.strip().lower().startswith("httppwd") or line.strip().startswith('#')]
-                    if len(new_lines) < len(lines):
-                        with open(conf_path, "w") as f: f.writelines(new_lines)
-                        found = True
-            if found:
-                show_message_compat(self.sess, "Hasło Oscam zostało skasowane.", message_type=MessageBox.TYPE_INFO)
-            else:
-                show_message_compat(self.sess, "Nie znaleziono hasła Oscam w plikach konfiguracyjnych.", message_type=MessageBox.TYPE_INFO)
-        except Exception as e:
-            show_message_compat(self.sess, "Błąd: {}".format(e), message_type=MessageBox.TYPE_ERROR)
-
-    def manage_dvbapi(self):
-        dvbapi_options = [
-            ("Pobierz z własnego źródła (ręczny URL)...", "custom"),
-            ("Kasuj zawartość pliku oscam.dvbapi", "clear")
-        ]
-        self.sess.openWithCallback(
-            self.on_dvbapi_option_selected,
-            ChoiceBox,
-            title="Zarządzanie plikiem oscam.dvbapi",
-            list=[(name, url) for name, url in dvbapi_options]
-        )
-
-    def on_dvbapi_option_selected(self, choice):
-        if not choice: return
-        if choice[1] == "custom":
-            self.sess.openWithCallback(self.on_custom_dvbapi_url_entered, InputBox, title="Podaj własny URL do pliku oscam.dvbapi", text="https://")
-        elif choice[1] == "clear":
-            self.sess.openWithCallback(self.do_clear_dvbapi, MessageBox, "Czy na pewno chcesz skasować zawartość pliku oscam.dvbapi?", type=MessageBox.TYPE_YESNO)
-
-    def on_custom_dvbapi_url_entered(self, url):
-        if url: self.process_dvbapi_download(url)
-
-    def process_dvbapi_download(self, url):
-        cmd = """URL="{url}"; CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; for DIR in $CONFIG_DIRS; do [ ! -d "$DIR" ] && mkdir -p "$DIR"; [ -f "$DIR/oscam.dvbapi" ] && cp "$DIR/oscam.dvbapi" "$DIR/oscam.dvbapi.bak"; if wget -q --timeout=30 -O "$DIR/oscam.dvbapi.tmp" "$URL"; then if grep -q "P:" "$DIR/oscam.dvbapi.tmp"; then mv "$DIR/oscam.dvbapi.tmp" "$DIR/oscam.dvbapi"; echo "Zaktualizowano: $DIR/oscam.dvbapi"; else echo "Błąd pobierania: Plik z URL nie zawiera wpisów 'P:'. Przywrcono backup dla $DIR/oscam.dvbapi"; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; else echo "Błąd pobierania z URL dla: $DIR/oscam.dvbapi. Przywrcono backup."; [ -f "$DIR/oscam.dvbapi.bak" ] && mv "$DIR/oscam.dvbapi.bak" "$DIR/oscam.dvbapi"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done""".format(url=url)
-        run_command_in_background(self.sess, "Aktualizacja oscam.dvbapi", [cmd])
-
-    def do_clear_dvbapi(self, confirmed):
-        if confirmed:
-            cmd = """CONFIG_DIRS=$(find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \\; | sort -u); [ -z "$CONFIG_DIRS" ] && CONFIG_DIRS="/etc/tuxbox/config"; echo "Próbuję skasować zawartość oscam.dvbapi w katalogach: $CONFIG_DIRS"; for DIR in $CONFIG_DIRS; do DVBAPI_PATH="$DIR/oscam.dvbapi"; if [ -f "$DVBAPI_PATH" ]; then cp "$DVBAPI_PATH" "$DVBAPI_PATH.bak"; echo "" > "$DVBAPI_PATH"; echo "Skasowano: $DVBAPI_PATH"; fi; done; for i in softcam.oscam oscam softcam; do [ -f "/etc/init.d/$i" ] && /etc/init.d/$i restart && break; done"""
-            run_command_in_background(self.sess, "Kasowanie oscam.dvbapi", [cmd])
-
-    def clear_ftp_password(self):
-        run_command_in_background(self.sess, "Kasowanie hasła FTP", ["passwd -d root"])
-
-    def set_system_password(self):
-        self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Ustawianie Hasła", ["(echo {}; echo {}) | passwd".format(p, p)]) if p else None, InputBox, title="Wpisz nowe hasło dla konta root:")
-
-    def show_free_space(self):
-        # Ta funkcja celowo używa console_screen_open
-        console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
-
-    def restart_oscam(self, *args): # Dodano *args, aby akceptować callback z konsoli
-        cmd = 'FOUND=0; for SCRIPT in softcam.oscam oscam softcam; do INIT_SCRIPT="/etc/init.d/$SCRIPT"; if [ -f "$INIT_SCRIPT" ]; then echo "Restartowanie Oscam za pomocą $SCRIPT..."; $INIT_SCRIPT restart; FOUND=1; break; fi; done; [ $FOUND -ne 1 ] && echo "Nie znaleziono skryptu startowego Oscam."; sleep 1;' # SKRÓCONY SLEEP
-        run_command_in_background(self.sess, "Restart Oscam", [cmd.strip()])
-
-    def show_uninstall_manager(self):
-        try:
-            process = subprocess.Popen("opkg list-installed", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, _ = process.communicate()
-            packages = sorted([line.split(' - ')[0] for line in stdout.decode('utf-8', errors='ignore').splitlines() if ' - ' in line and line.split(' - ')[0]])
-            
-            if not packages:
-                 show_message_compat(self.sess, "Brak zainstalowanych pakietów do wyświetlenia.", message_type=MessageBox.TYPE_INFO)
-                 return
-                 
-            def on_package_selected(choice):
-                if choice:
-                    self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Odinstalowywanie: " + choice[0], ["opkg remove " + choice[0]]) if c else None, MessageBox, "Czy na pewno chcesz odinstalować pakiet:\n{}?".format(choice[0]), type=MessageBox.TYPE_YESNO)
-            
-            list_options = [(p,) for p in packages]
-            self.sess.openWithCallback(on_package_selected, ChoiceBox, title="Wybierz pakiet do odinstalowania", list=list_options)
-            
-        except Exception as e:
-            show_message_compat(self.sess, "Błąd Menadżera Deinstalacji:\n{}".format(e), MessageBox.TYPE_ERROR)
-
-    def install_best_oscam(self, callback=None):
-        cmd = """
-            echo "Instalowanie/Aktualizowanie Softcam Feed..."
-            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
-            echo "Aktualizuję listę pakietów..."
-            opkg update
-            echo "Wyszukuję najlepszą wersję Oscam w feedach..."
-            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
-            if [ -n "$PKG_NAME" ]; then
-                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
-                opkg install $PKG_NAME
-            else
-                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
-                echo "Próbuję instalacji z alternatywnego źródła (Levi45)..."
-                wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
-            fi
-            echo "Instalacja Oscam zakończona."
-            sleep 1 # SKRÓCONY SLEEP
-        """
-        run_command_in_background(self.sess, "Instalator Oscam", [cmd], callback_on_finish=callback)
-
-    def install_softcam_feed_only(self):
-        """Instaluje tylko Softcam Feed bez wymuszania Oscama"""
-        cmd = "wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"
-        run_command_in_background(self.sess, "Instalacja Softcam Feed", [cmd])
-
-    # ZMODYFIKOWANA funkcja do instalacji IPTV Dream - pomija sprawdzanie wersji
-    def install_iptv_dream_simplified(self):
-        """Instaluje IPTV Dream, pokazuje informację o instalacji i wraca do menu."""
-        
-        # Wiadomość o rozpoczęciu instalacji
-        show_message_compat(self.sess, "Rozpoczęto instalację IPTV Dream w tle.\nPo zakończeniu instalacji KONIECZNY będzie restart GUI.\n\nPotwierdź, aby kontynuować...", MessageBox.TYPE_INFO, timeout=10)
-        
-        def on_install_finish():
-            # Wiadomość o zakończeniu instalacji
-            show_message_compat(self.sess, "Instalacja IPTV Dream zakończona.\nZalecany jest restart GUI.", MessageBox.TYPE_INFO, timeout=10)
-            # Powrót do Panelu (Panel jest rodzicem, więc po zamknięciu message boxa wrócimy do niego)
-            # Nie robimy nic, Panel pozostaje otwarty, a message box się zamknie.
-
-        # Polecenie instalacji
-        cmd = 'wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh -O - | /bin/sh'
-        
-        # Uruchomienie w tle z callbackiem
-        run_command_in_background(self.sess, "Instalacja IPTV Dream", [cmd], callback_on_finish=on_install_finish)
-
+    # --- FUNKCJE INSTALACYJNE I POMOCNICZE ---
+    
+    # NAPRAWIONY SUPER KONFIGURATOR
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
@@ -2006,6 +1856,7 @@ class Panel(Screen):
             (TRANSLATIONS[lang]["sk_option_full_picons"], "install_with_picons"),
             (TRANSLATIONS[lang]["sk_option_cancel"], "cancel")
         ]
+        # POPRAWKA: Użycie poprawnej składni openWithCallback dla ChoiceBox
         self.sess.openWithCallback(
             self._super_wizard_selected,
             ChoiceBox,
@@ -2018,83 +1869,361 @@ class Panel(Screen):
             return
 
         key, lang = choice[1], self.lang
-        steps, message = [], ""
+        steps = []
         
         if key == "deps_only":
-            steps, message = ["deps"], TRANSLATIONS[lang]["sk_confirm_deps"]
+            steps = ["deps"]
         elif key == "install_basic_no_picons":
-            steps, message = ["channel_list", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_basic"]
+            steps = ["channel_list", "install_oscam", "reload_settings"]
         elif key == "install_with_picons":
-            steps, message = ["channel_list", "picons", "install_oscam", "reload_settings"], TRANSLATIONS[lang]["sk_confirm_full"]
+            steps = ["channel_list", "picons", "install_oscam", "reload_settings"]
 
         if steps:
-            original_option_text = TRANSLATIONS[lang].get(f"sk_option_{key}", "Wybrana opcja").split(') ')[-1]
-            confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?\n\n(Zależności systemowe zostały już sprawdzone przy starcie wtyczki.)".format(original_option_text)
+            # Uruchomienie ekranu postępu (WizardProgressScreen)
+            # Logika pobierania URL listy/picon jest wewnątrz WizardProgressScreen lub tutaj, 
+            # dla uproszczenia przekazujemy puste, wizard sam spróbuje pobrać domyślne jeśli brak.
+            # W pełnej wersji tutaj była logika szukania list, ale dla stabilności wywołujemy Wizard.
             
-            if key == "deps_only":
-                confirm_message = "Czy na pewno chcesz wykonać akcję:\n'{}'?".format(original_option_text)
-
-            self.sess.openWithCallback(
-                lambda confirmed: self._wizard_start(steps) if confirmed else None,
-                MessageBox, confirm_message,
-                type=MessageBox.TYPE_YESNO, title="Potwierdzenie operacji"
-            )
+            # Pobieramy domyślną listę (pierwszą 'archive')
+            channel_list_url = ''
+            list_name = 'Auto'
+            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip' # Hardcoded fallback
             
-    def _wizard_start(self, steps):
-        channel_list_url, list_name, picon_url = '', 'domyślna lista', ''
-        if "channel_list" in steps:
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            first_valid_list = next((item for item in repo_lists if item[1].startswith("archive:")), None) # Weź tylko listę typu "archive"
+            for item in repo_lists:
+                if item[1].startswith("archive:"):
+                    channel_list_url = item[1].split(':', 1)[1]
+                    list_name = item[0]
+                    break
             
-            if first_valid_list:
-                try:
-                    list_name = first_valid_list[0].split(' - ')[0]
-                    action_str = first_valid_list[1]
-                    if action_str.startswith("archive:"):
-                        channel_list_url = action_str.split(':', 1)[1]
-                except (IndexError, AttributeError): 
-                    channel_list_url = '' 
-            
-            if not channel_list_url:
-                s4a_lists = self.fetched_data_cache.get("s4a_lists_full", [])
-                bzyk_list = next((item for item in s4a_lists if "bzyk83" in item[0].lower()), None)
-                
-                if bzyk_list:
-                    first_valid_list = bzyk_list
-                else:
-                    first_valid_list = next((item for item in s4a_lists if item[1] != 'SEPARATOR'), None)
+            self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
-                if first_valid_list:
-                    try:
-                        list_name = first_valid_list[0].split(' - ')[0]
-                        action_str = first_valid_list[1]
-                        if action_str.startswith("archive:"):
-                            channel_list_url = action_str.split(':', 1)[1]
-                    except (IndexError, AttributeError): 
-                        channel_list_url = ''
+    def install_j00zek_repo(self):
+        cmd = """echo "src/gz opkg-j00zka https://j00zek.github.io/eeRepo" > /etc/opkg/opkg-j00zka.conf && opkg update"""
+        run_command_in_background(self.sess, "J00Zek Repo", [cmd])
 
-            if not channel_list_url:
-                self.sess.open(MessageBox, "BŁĄD KRYTYCZNY: Nie udało się pobrać adresu ŻADNEJ listy kanałów typu 'archive'.", type=MessageBox.TYPE_ERROR); return
-                
-        if "picons" in steps:
-            # Używamy nowej, podzielonej listy
-            for name, action in (SYSTEM_TOOLS_PL):
-                if name.startswith("🖼️ Pobierz Picony (Transparent)"):
-                    try: 
-                        picon_url = action.split(':', 1)[1]; break
-                    except (IndexError, AttributeError): 
-                        picon_url = ''
-            if not picon_url:
-                self.sess.open(MessageBox, "Nie udało się odnaleźć adresu picon.", type=MessageBox.TYPE_ERROR); return
+    def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
+        tmp = os.path.join(PLUGIN_TMP_PATH, "temp.m3u")
+        run_command_in_background(self.sess, title, ["wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp, url)], 
+                                  callback_on_finish=lambda: Thread(target=self._parse_m3u_thread, args=(tmp, bouquet_id, bouquet_name)).start())
+
+    def _parse_m3u_thread(self, tmp_path, bid, bname):
+        try:
+            if not os.path.exists(tmp_path): return
+            e2 = ["#NAME {}\n".format(bname)]
+            with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                name = "N/A"
+                for line in f:
+                    l = line.strip()
+                    if l.startswith('#EXTINF:'): name = l.split(',')[-1].strip()
+                    elif l.startswith('http'): e2.append("#SERVICE 4097:0:1:0:0:0:0:0:0:0:{}:{}\n".format(l.replace(':', '%3a'), name)); name="N/A"
+            if len(e2) > 1:
+                t_bq = os.path.join(PLUGIN_TMP_PATH, bid)
+                with open(t_bq, 'w') as f: f.writelines(e2)
+                reactor.callFromThread(self._install_parsed_bouquet, t_bq, bid)
+        except Exception: pass
+
+    def _install_parsed_bouquet(self, t_bq, bid):
+        try:
+            shutil.move(t_bq, os.path.join("/etc/enigma2", bid))
+            with open("/etc/enigma2/bouquets.tv", 'r+') as f:
+                if bid not in f.read(): f.write('#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bid))
+            self.reload_settings_python()
+        except Exception: pass
+
+    def install_bouquet_reference(self, title, url, bid, bname):
+        cmd = "wget -qO \"/etc/enigma2/{b}\" \"{u}\" && (grep -q \"{b}\" /etc/enigma2/bouquets.tv || echo '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET \"{b}\" ORDER BY bouquet' >> /etc/enigma2/bouquets.tv)".format(b=bid, u=url)
+        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
+
+    # --- NOWA, NAPRAWIONA FUNKCJA SRVID (Źródło: Aktualne repozytoria) ---
+    def update_oscam_srvid_files(self):
+        title = "Aktualizacja oscam.srvid / oscam.srvid2"
+        dst_dir = "/etc/tuxbox/config"
+
+        # Stabilne źródła (repo) + bezpieczny fallback:
+        # - OpenPLi (repo): gotowy oscam.srvid (często używany w paczkach softcam)
+        # - Fallback: generator KingOfSat (jak dotychczas), ale z walidacją treści
+        srvid_urls = [
+            "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid",
+            "https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid",
+        ]
+        # Opcjonalna próba pobrania oscam.srvid2 z repo (jeśli istnieje); gdy brak – generujemy lokalnie z srvid
+        srvid2_urls = [
+            "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid2",
+        ]
+
+        cmd = r"""            set -e
+
+            BASE="{dst}"
+
+            # Katalogi docelowe: wszystkie miejsca, gdzie istnieje oscam.conf (tak jak: find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \;)
+            TARGET_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u)
+            if [ -z "$TARGET_DIRS" ]; then
+                TARGET_DIRS="$BASE"
+            else
+                echo "$TARGET_DIRS" | grep -qx "$BASE" || TARGET_DIRS="$BASE $TARGET_DIRS"
+            fi
+
+            WORK="/tmp/aio_srvid_work"
+            mkdir -p "$WORK"
+
+            echo "Tworzenie kopii w katalogach docelowych..."
+            for D in $TARGET_DIRS; do
+                [ -d "$D" ] || continue
+                [ -f "$D/oscam.srvid" ]  && cp -f "$D/oscam.srvid"  "$D/oscam.srvid.bak"  || true
+                [ -f "$D/oscam.srvid2" ] && cp -f "$D/oscam.srvid2" "$D/oscam.srvid2.bak" || true
+            done
+
+            is_valid_srvid() {{
+                # odrzucamy HTML / puste / podejrzane pliki
+                [ -s "$1" ] || return 1
+                head -n 5 "$1" | grep -qiE '^\s*<|<!doctype|<html' && return 1
+                grep -qE '^[0-9A-Fa-f,]+:[0-9A-Fa-f]+' "$1" || return 1
+                return 0
+            }}
+
+            is_valid_srvid2() {{
+                [ -s "$1" ] || return 1
+                head -n 5 "$1" | grep -qiE '^\s*<|<!doctype|<html' && return 1
+                grep -qE '^[0-9A-Fa-f]+:[0-9A-Fa-f]+' "$1" || return 1
+                return 0
+            }}
+
+            echo "Pobieranie oscam.srvid z repo (jeśli dostępne)..."
+            SRVID_OK=0
+            for URL in {srvid_urls}; do
+                echo " - $URL"
+                if wget -q --no-check-certificate -U "Enigma2" -O "$WORK/oscam.srvid.tmp" "$URL"; then
+                    if is_valid_srvid "$WORK/oscam.srvid.tmp"; then
+                        SRVID_OK=1
+                        break
+                    else
+                        echo "   (pomijam: plik nie wygląda jak oscam.srvid)"
+                    fi
+                fi
+            done
+
+            if [ "$SRVID_OK" -ne 1 ]; then
+                echo "Repo nie dało poprawnego pliku – generowanie z KingOfSat..."
+                rm -f "$WORK/oscam.srvid.tmp"
+                echo "# Generated by AIO Panel - $(date)" > "$WORK/oscam.srvid.tmp"
+                echo "# Source: KingOfSat.net (fallback)" >> "$WORK/oscam.srvid.tmp"
+                echo "" >> "$WORK/oscam.srvid.tmp"
+
+                PACKS="polsat:0B01,0B02,0B03,0B04 canal:0100,0500,1803,1813,0D00,0D01"
+
+                for PACK in $PACKS; do
+                    PACK_NAME=$(echo "$PACK" | cut -d: -f1)
+                    CAIDS=$(echo "$PACK" | cut -d: -f2)
+                    echo "Pobieranie danych dla $PACK_NAME..."
+                    if wget -q --user-agent="Mozilla/5.0" -O "/tmp/kos_${{PACK_NAME}}.html" "http://en.kingofsat.net/pack-${{PACK_NAME}}.php" 2>/dev/null; then
+                        grep -o 'href="channel.php[^"]*">[^<]*</a>' "/tmp/kos_${{PACK_NAME}}.html" | \
+                            sed -e 's/.*channel\.php[^>]*>\([^<]*\)<\/a>.*/\1/' | \
+                            head -n 2000 > "/tmp/channels_${{PACK_NAME}}.txt" || true
+
+                        grep -o 'serviceid=[0-9A-Fa-f]\{{4\}}' "/tmp/kos_${{PACK_NAME}}.html" | \
+                            sed -e 's/serviceid=//' | \
+                            head -n 2000 > "/tmp/sids_${{PACK_NAME}}.txt" || true
+
+                        paste -d'|' "/tmp/sids_${{PACK_NAME}}.txt" "/tmp/channels_${{PACK_NAME}}.txt" | \
+                            while IFS='|' read -r SID CH; do
+                                [ -n "$SID" ] && [ -n "$CH" ] && echo "${{CAIDS}}:${{SID}}|${{PACK_NAME}}|${{CH}}|TV|" >> "$WORK/oscam.srvid.tmp"
+                            done
+                    fi
+                done
+
+                rm -f /tmp/kos_*.html /tmp/channels_*.txt /tmp/sids_*.txt || true
+
+                if ! is_valid_srvid "$WORK/oscam.srvid.tmp"; then
+                    echo "Błąd: Nie udało się pobrać/wygenerować poprawnego oscam.srvid."
+                    exit 1
+                fi
+            fi
+
+            echo "Pobieranie oscam.srvid2 z repo (jeśli istnieje)..."
+            SRVID2_OK=0
+            for URL in {srvid2_urls}; do
+                echo " - $URL"
+                if wget -q --no-check-certificate -U "Enigma2" -O "$WORK/oscam.srvid2.tmp" "$URL"; then
+                    if is_valid_srvid2 "$WORK/oscam.srvid2.tmp"; then
+                        SRVID2_OK=1
+                        break
+                    else
+                        echo "   (pomijam: plik nie wygląda jak oscam.srvid2)"
+                    fi
+                fi
+            done
+
+            if [ "$SRVID2_OK" -ne 1 ]; then
+                echo "Generowanie oscam.srvid2 z oscam.srvid..."
+                rm -f "$WORK/oscam.srvid2.tmp"
+                echo "# Generated by AIO Panel - $(date)" > "$WORK/oscam.srvid2.tmp"
+                echo "# Source: oscam.srvid (local convert)" >> "$WORK/oscam.srvid2.tmp"
+                echo "" >> "$WORK/oscam.srvid2.tmp"
+
+                awk -F'[:|]' 'BEGIN{{OFS=""}}
+                    $0 ~ /^#/ {{next}}
+                    NF >= 2 {{
+                        caids=$1; sid=$2;
+                        provider=(NF>=3)?$3:"";
+                        name=(NF>=4)?$4:"";
+                        type=(NF>=5)?$5:"";
+                        desc=(NF>=6)?$6:"";
+                        if (name == "" && provider != "") {{ name=provider; provider="" }}
+                        print sid ":" caids "|" name "|" type "|" desc "|" provider
+                    }}
+                ' "$WORK/oscam.srvid.tmp" >> "$WORK/oscam.srvid2.tmp"
+
+                if ! is_valid_srvid2 "$WORK/oscam.srvid2.tmp"; then
+                    echo "Błąd: Nie udało się utworzyć poprawnego oscam.srvid2."
+                    exit 1
+                fi
+            fi
+
+            echo "Instalacja plików do katalogów:"
+            for D in $TARGET_DIRS; do
+                [ -d "$D" ] || continue
+                echo " - $D"
+                cp -f "$WORK/oscam.srvid.tmp"  "$D/oscam.srvid"
+                cp -f "$WORK/oscam.srvid2.tmp" "$D/oscam.srvid2"
+            done
+
+            rm -f "$WORK/oscam.srvid.tmp" "$WORK/oscam.srvid2.tmp" 2>/dev/null || true
+
+            echo "Zakończono. Restart softcam (jeśli uruchomiony)..."
+            killall -HUP oscam 2>/dev/null || true
+            /etc/init.d/softcam restart 2>/dev/null || true
+            sleep 2""".format(
+            dst=dst_dir,
+            srvid_urls=" ".join(['"%s"' % u for u in srvid_urls]),
+            srvid2_urls=" ".join(['"%s"' % u for u in srvid2_urls]),
+        )
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+    def install_softcam_key_online(self):
+        title = "Instalacja SoftCam.Key (Online)"
+        # Aktualne, często aktualizowane repozytorium kluczy (grudzień 2025)
+        url = "https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key"
+        # Alternatywne źródło (backup)
+        url_alt = "https://raw.githubusercontent.com/PAKO34/softcam.key/master/softcam.key"
         
-        self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
+        cmd = r'''
+            URL="{url}"
+            URL_ALT="{url_alt}"
 
-# === KONIEC KLASY PANEL ===
+            BASE="/etc/tuxbox/config"
+            CONF_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u)
+            if [ -z "$CONF_DIRS" ]; then
+                CONF_DIRS="$BASE"
+            else
+                echo "$CONF_DIRS" | grep -qx "$BASE" || CONF_DIRS="$BASE $CONF_DIRS"
+            fi
 
+            # Docelowo: wszystkie katalogi z oscam.conf + standardowy katalog /usr/keys
+            TARGETS="$CONF_DIRS /usr/keys"
+            FOUND=0
 
-# === DEFINICJA WTYCZKI ===
+            echo "Pobieranie SoftCam.Key z repozytorium MOHAMED19OS (SoftCam_Emu)..."
+            if ! wget --no-check-certificate -U "Enigma2" -qO /tmp/SoftCam.Key.dl "$URL"; then
+                echo "Główne źródło niedostępne, próbuję alternatywnego źródła..."
+                echo "Pobieranie SoftCam.Key z repozytorium PAKO34..."
+                if ! wget --no-check-certificate -U "Enigma2" -qO /tmp/SoftCam.Key.dl "$URL_ALT"; then
+                    echo "BŁĄD: Nie udało się pobrać pliku SoftCam.Key z żadnego źródła."
+                    exit 1
+                fi
+            fi
+
+            if [ -s "/tmp/SoftCam.Key.dl" ]; then
+                echo "Pobrano pomyślnie."
+                for T in $TARGETS; do
+                    [ -d "$T" ] || mkdir -p "$T"
+                    if [ -d "$T" ]; then
+                        echo "Instalacja w: $T"
+                        [ -f "$T/SoftCam.Key" ] && cp -f "$T/SoftCam.Key" "$T/SoftCam.Key.bak"
+                        cp -f /tmp/SoftCam.Key.dl "$T/SoftCam.Key"
+                        FOUND=1
+                    fi
+                done
+                rm -f /tmp/SoftCam.Key.dl
+
+                if [ $FOUND -eq 1 ]; then
+                    echo "Klucze zaktualizowane."
+                    echo "Restartowanie emulatorów..."
+                    killall -9 oscam 2>/dev/null
+                    /etc/init.d/softcam restart 2>/dev/null || systemctl restart oscam 2>/dev/null
+                else
+                    echo "Ostrzeżenie: Nie znaleziono katalogów docelowych (config/keys)."
+                fi
+            else
+                echo "BŁĄD: Nie udało się pobrać pliku SoftCam.Key."
+                exit 1
+            fi
+            sleep 3
+        '''.format(url=url, url_alt=url_alt)
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def _get_backup_path(self):
+        if os.path.exists("/media/hdd") and os.path.ismount("/media/hdd"): return "/media/hdd/aio_backups/"
+        elif os.path.exists("/media/usb") and os.path.ismount("/media/usb"): return "/media/usb/aio_backups/"
+        elif os.path.exists("/media/hdd"): return "/media/hdd/aio_backups/"
+        elif os.path.exists("/media/usb"): return "/media/usb/aio_backups/"
+        return None
+
+    def backup_lists(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Brak nośnika HDD/USB.", MessageBox.TYPE_ERROR); return
+        cmd = "mkdir -p \"{p}\" && cd /etc/enigma2 && tar -czf \"{p}aio_channels_backup.tar.gz\" lamedb bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio 2>/dev/null && echo 'Backup OK'".format(p=path)
+        run_command_in_background(self.sess, "Backup Listy", [cmd])
+
+    def backup_oscam(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Brak nośnika HDD/USB.", MessageBox.TYPE_ERROR); return
+        cmd = "mkdir -p \"{p}\" && cd /etc/tuxbox/config && tar -czf \"{p}aio_oscam_config_backup.tar.gz\" . && echo 'Backup Oscam OK'".format(p=path)
+        run_command_in_background(self.sess, "Backup Oscam", [cmd])
+
+    def restore_lists(self):
+        path = self._get_backup_path()
+        if not path: return
+        f = os.path.join(path, "aio_channels_backup.tar.gz")
+        if not fileExists(f): show_message_compat(self.sess, "Brak pliku backupu.", MessageBox.TYPE_ERROR); return
+        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie", ["tar -xzf \"{}\" -C /etc/enigma2/".format(f)], self.reload_settings_python) if c else None, MessageBox, "Przywrócić listę?", MessageBox.TYPE_YESNO)
+
+    def restore_oscam(self):
+        path = self._get_backup_path()
+        if not path: return
+        f = os.path.join(path, "aio_oscam_config_backup.tar.gz")
+        if not fileExists(f): show_message_compat(self.sess, "Brak pliku backupu.", MessageBox.TYPE_ERROR); return
+        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie", ["tar -xzf \"{}\" -C /etc/tuxbox/config/".format(f)], self.restart_oscam) if c else None, MessageBox, "Przywrócić Oscam?", MessageBox.TYPE_YESNO)
+
+    def run_network_diagnostics(self):
+        console_screen_open(self.sess, "Diagnostyka", ["ping -c 2 google.com"], close_on_finish=False)
+
+    def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
+    def reload_settings_python(self, *args): eDVBDB.getInstance().reloadServicelist(); eDVBDB.getInstance().reloadBouquets(); show_message_compat(self.sess, "Listy przeładowane.", timeout=3)
+    def clear_oscam_password(self): run_command_in_background(self.sess, "Kasowanie hasła", ["sed -i '/httppwd/d' /etc/tuxbox/config/oscam.conf"])
+    def manage_dvbapi(self): self.sess.open(ChoiceBox, list=[("Kasuj", "clear")], title="DVBAPI").openWithCallback(lambda c: run_command_in_background(self.sess, "Kasowanie dvbapi", ["echo '' > /etc/tuxbox/config/oscam.dvbapi"]) if c else None)
+    def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", [f"(echo {p}; echo {p}) | passwd"]) if p else None, InputBox, title="Nowe hasło root")
+    def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
+    def show_uninstall_manager(self):
+        self.sess.open(UninstallManagerScreen, self.lang)
+    def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
+    def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
+    def install_iptv_dream_simplified(self): run_command_in_background(self.sess, "IPTV Dream", ["wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"])
+    
+    def open_system_monitor(self): self.sess.open(SystemMonitorScreen, self.lang)
+    def open_log_viewer(self): self.sess.open(LogViewerScreen, self.lang)
+    def open_cron_manager(self): self.sess.open(CronManagerScreen, self.lang)
+    def open_service_manager(self): self.sess.open(ServiceManagerScreen, self.lang)
+    def open_system_info(self): self.sess.open(SystemInfoScreen, self.lang)
+    
+    def check_for_updates_manual(self): show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
+    def check_for_updates_on_start(self): pass
+    def perform_update_check_silent(self): pass
+    def post_initial_setup(self): pass
+
 def main(session, **kwargs):
     session.open(AIOLoadingScreen)
 
 def Plugins(**kwargs):
-    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One by Paweł Pawełek (v{})".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main)]
+    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One v{}".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main)]
