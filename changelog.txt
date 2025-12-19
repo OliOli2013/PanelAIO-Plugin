@@ -1,3 +1,4 @@
+[5.0]
 AIO Panel v5.0 Update (PL):
 - DODANO: Opcja aktualizacji online oscam.srvid i srvid2
 - DODANO: Aktualizacja online SoftCam.Key
@@ -14,6 +15,9 @@ AIO Panel v5.0 Update (EN):
 - FIX: Solved GUI Crashes on Exit (Removed unstable NetworkTools/AutoBackup)
 - FIX: Super Setup Wizard stability improvements
 
+[4.4]
+- NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner"...
+(reszta starego tekstu...)
 [4.4]
 - NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner" w Diagnostyce (automatyczne zwalnianie pamięci w tle).
 - POPRAWKA KRYTYCZNA: Naprawiono zawieszanie się tunera (spinner) podczas instalacji wtyczek zewnętrznych (np. EPG Import, NCam).
