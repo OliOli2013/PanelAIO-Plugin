@@ -346,6 +346,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
+    ("📦 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
@@ -370,6 +371,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
+    ("📦 IPTV Configuration - dependencies", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
@@ -1789,7 +1791,7 @@ class Panel(Screen):
         actions_no_confirm = [
             "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
-            "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
+            "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
             "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
         ]
@@ -1885,6 +1887,7 @@ class Panel(Screen):
             elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
             elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
+            elif key == "IPTV_DEPS": self.install_iptv_deps()
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
@@ -2296,6 +2299,22 @@ class Panel(Screen):
     def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
     def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
     def install_iptv_dream_simplified(self): run_command_in_background(self.sess, "IPTV Dream", ["wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"])
+    def install_iptv_deps(self):
+        title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV Configuration - dependencies"
+        cmds = [
+            "opkg update",
+            "opkg install enigma2-plugin-systemplugins-serviceapp",
+            "opkg install exteplayer3",
+            "opkg install ffmpeg",
+            "opkg install python3-youtube-dl",
+            "opkg install python3-yt-dlp",
+            "opkg install enigma2-plugin-extensions-ytdlpwrapper",
+            "opkg install enigma2-plugin-extensions-ytdlwrapper",
+            "opkg install enigma2-plugin-extensions-streamlinkwrapper",
+            "opkg install streamlinksrv",
+        ]
+        console_screen_open(self.sess, title, cmds, close_on_finish=False)
+
     
     def open_system_monitor(self): self.sess.open(SystemMonitorScreen, self.lang)
     def open_log_viewer(self): self.sess.open(LogViewerScreen, self.lang)
