@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 5.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 6.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 FIXED & UPDATED (SuperWizard Fix + New URLs + REMOVED Unstable Modules)
 """
 from __future__ import print_function
@@ -16,6 +16,27 @@ from Screens.ChoiceBox import ChoiceBox
 from Screens.InputBox import InputBox
 from Components.ActionMap import ActionMap
 from Components.Label import Label
+try:
+    from Components.config import config, ConfigSubsection, ConfigSelection, configfile
+except Exception:
+    config = None
+    ConfigSubsection = None
+    ConfigSelection = None
+    configfile = None
+
+# --- Persistent settings (v6.0) ---
+if config is not None:
+    try:
+        if not hasattr(config.plugins, "panelaio"):
+            config.plugins.panelaio = ConfigSubsection()
+        if not hasattr(config.plugins.panelaio, "auto_ram_interval"):
+            config.plugins.panelaio.auto_ram_interval = ConfigSelection(
+                default="off",
+                choices=[("off", "off"), ("10", "10"), ("30", "30"), ("60", "60")]
+            )
+    except Exception as e:
+        print("[AIO Panel] Config init error:", e)
+
 try:
     from Components.ScrollLabel import ScrollLabel
 except Exception:
@@ -62,6 +83,24 @@ def run_auto_ram_clean_task():
 
 # Podpięcie funkcji pod timer
 g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
+def _apply_auto_ram_from_config():
+    """Restore Auto RAM Cleaner setting after GUI/system restart."""
+    global g_auto_ram_active
+    try:
+        if config is None or not hasattr(config.plugins, "panelaio") or not hasattr(config.plugins.panelaio, "auto_ram_interval"):
+            return
+        val = getattr(config.plugins.panelaio.auto_ram_interval, "value", "off")
+        if val and val != "off":
+            minutes = int(val)
+            g_auto_ram_timer.start(minutes * 60000, False)
+            g_auto_ram_active = True
+            print("[AIO Panel] Auto RAM Cleaner restored: {} min".format(minutes))
+        else:
+            g_auto_ram_timer.stop()
+            g_auto_ram_active = False
+    except Exception as e:
+        print("[AIO Panel] Auto RAM apply error:", e)
+
 
 
 # === GLOBALNE ===
@@ -70,7 +109,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "5.0"
+VER = "6.0"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -305,6 +344,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("🧩 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -329,6 +369,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("🧩 IPTV configuration - dependencies", "CMD:IPTV_DEPS"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -682,8 +723,23 @@ class AIOLoadingScreen(Screen):
     def start_loading_process(self):
         self.check_dependencies()
 
+    def _is_deps_ok(self):
+        """Return True only if dependencies flag matches current plugin version.
+
+        This ensures a one-time dependency check also after upgrading from older versions
+        that may have left an older .deps_ok flag in place.
+        """
+        try:
+            if not os.path.exists(self.flag_file):
+                return False
+            with open(self.flag_file, 'r') as f:
+                content = (f.read() or '').strip()
+            return content == ('ok:' + str(VER))
+        except Exception:
+            return False
+
     def check_dependencies(self):
-        if os.path.exists(self.flag_file):
+        if self._is_deps_ok():
             self.start_async_data_load()
             return
 
@@ -713,7 +769,7 @@ class AIOLoadingScreen(Screen):
     def on_dependencies_installed_safe(self, *args):
         try:
             with open(self.flag_file, 'w') as f:
-                f.write('ok')
+                f.write('ok:' + str(VER))
         except Exception as e:
             print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
             
@@ -1752,7 +1808,7 @@ class Panel(Screen):
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
-            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
+            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:IPTV_DEPS", "CMD:SETUP_AUTO_RAM"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -1775,17 +1831,51 @@ class Panel(Screen):
             self.sess.open(MessageBox, "Błąd: {}".format(e), MessageBox.TYPE_ERROR)
 
     def show_auto_ram_menu(self):
-        self.sess.openWithCallback(self.set_auto_ram_timer, ChoiceBox, title="Auto RAM Cleaner", list=[("Wyłącz", "off"), ("Co 10 min", "10"), ("Co 30 min", "30"), ("Co 60 min", "60")])
+        current = "off"
+        try:
+            if config is not None and hasattr(config.plugins, "panelaio") and hasattr(config.plugins.panelaio, "auto_ram_interval"):
+                current = config.plugins.panelaio.auto_ram_interval.value
+        except Exception:
+            pass
+        title = "Auto RAM Cleaner (aktualnie: {} min)".format(current) if self.lang == 'PL' else "Auto RAM Cleaner (current: {} min)".format(current)
+        self.sess.openWithCallback(
+            self.set_auto_ram_timer,
+            ChoiceBox,
+            title=title,
+            list=[("Wyłącz", "off"), ("Co 10 min", "10"), ("Co 30 min", "30"), ("Co 60 min", "60")]
+        )
 
     def set_auto_ram_timer(self, choice):
         global g_auto_ram_active
-        if not choice: return
-        if choice[1] == "off":
-            g_auto_ram_timer.stop(); g_auto_ram_active = False
-            show_message_compat(self.sess, "Auto RAM Cleaner WYŁĄCZONY.", MessageBox.TYPE_INFO)
+        if not choice:
+            return
+        value = choice[1]
+
+        # Persist setting
+        try:
+            if config is not None and hasattr(config.plugins, "panelaio") and hasattr(config.plugins.panelaio, "auto_ram_interval"):
+                config.plugins.panelaio.auto_ram_interval.value = value
+                config.plugins.panelaio.auto_ram_interval.save()
+                if configfile:
+                    configfile.save()
+        except Exception as e:
+            print("[AIO Panel] Auto RAM save error:", e)
+
+        if value == "off":
+            g_auto_ram_timer.stop()
+            g_auto_ram_active = False
+            show_message_compat(self.sess, "Auto RAM Cleaner WYŁĄCZONY." if self.lang == 'PL' else "Auto RAM Cleaner DISABLED.", MessageBox.TYPE_INFO)
         else:
-            g_auto_ram_timer.start(int(choice[1]) * 60000, False); g_auto_ram_active = True
-            show_message_compat(self.sess, "Auto RAM Cleaner WŁĄCZONY ({} min).".format(choice[1]), MessageBox.TYPE_INFO)
+            try:
+                minutes = int(value)
+                g_auto_ram_timer.start(minutes * 60000, False)
+                g_auto_ram_active = True
+                msg = "Auto RAM Cleaner WŁĄCZONY ({} min).".format(minutes) if self.lang == 'PL' else "Auto RAM Cleaner ENABLED ({} min).".format(minutes)
+                show_message_compat(self.sess, msg, MessageBox.TYPE_INFO)
+            except Exception as e:
+                print("[AIO Panel] Auto RAM start error:", e)
+                show_message_compat(self.sess, "Błąd ustawień Auto RAM Cleaner." if self.lang == 'PL' else "Auto RAM Cleaner configuration error.", MessageBox.TYPE_ERROR)
+
 
     def show_info_screen(self): self.session.open(AIOInfoScreen)
     def post_initial_setup(self): reactor.callLater(1, self.check_for_updates_on_start)
@@ -1815,6 +1905,7 @@ class Panel(Screen):
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
+            elif key == "IPTV_DEPS": self.run_iptv_dependencies()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
@@ -1884,17 +1975,22 @@ class Panel(Screen):
             # dla uproszczenia przekazujemy puste, wizard sam spróbuje pobrać domyślne jeśli brak.
             # W pełnej wersji tutaj była logika szukania list, ale dla stabilności wywołujemy Wizard.
             
-            # Pobieramy domyślną listę (pierwszą 'archive')
-            channel_list_url = ''
-            list_name = 'Auto'
+            # Domyślna lista dla Super Konfiguratora (v6.0): Paweł Pawełek 13E
             picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip' # Hardcoded fallback
-            
-            repo_lists = self.fetched_data_cache.get("repo_lists", [])
-            for item in repo_lists:
-                if item[1].startswith("archive:"):
-                    channel_list_url = item[1].split(':', 1)[1]
-                    list_name = item[0]
-                    break
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Pawel_Pawelek_HB_13E_04.01.2026.zip'
+            list_name = 'Paweł Pawełek HB 13E (04.01.2026)'
+
+            try:
+                repo_lists = self.fetched_data_cache.get("repo_lists", [])
+                for item in repo_lists:
+                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
+                        t = str(item[0]).lower()
+                        if "pawel" in t and "13e" in t and "dual" not in t:
+                            channel_list_url = str(item[1]).split(':', 1)[1]
+                            list_name = str(item[0]).replace("📡 ", "")
+                            break
+            except Exception:
+                pass
             
             self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
 
@@ -2195,14 +2291,22 @@ class Panel(Screen):
         f = os.path.join(path, "aio_oscam_config_backup.tar.gz")
         if not fileExists(f): show_message_compat(self.sess, "Brak pliku backupu.", MessageBox.TYPE_ERROR); return
         self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie", ["tar -xzf \"{}\" -C /etc/tuxbox/config/".format(f)], self.restart_oscam) if c else None, MessageBox, "Przywrócić Oscam?", MessageBox.TYPE_YESNO)
-
     def run_network_diagnostics(self):
-        console_screen_open(self.sess, "Diagnostyka", ["ping -c 2 google.com"], close_on_finish=False)
+        self.sess.open(NetworkDiagnosticsSummaryScreen, self.lang)
 
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
     def reload_settings_python(self, *args): eDVBDB.getInstance().reloadServicelist(); eDVBDB.getInstance().reloadBouquets(); show_message_compat(self.sess, "Listy przeładowane.", timeout=3)
     def clear_oscam_password(self): run_command_in_background(self.sess, "Kasowanie hasła", ["sed -i '/httppwd/d' /etc/tuxbox/config/oscam.conf"])
-    def manage_dvbapi(self): self.sess.open(ChoiceBox, list=[("Kasuj", "clear")], title="DVBAPI").openWithCallback(lambda c: run_command_in_background(self.sess, "Kasowanie dvbapi", ["echo '' > /etc/tuxbox/config/oscam.dvbapi"]) if c else None)
+    def manage_dvbapi(self):
+        opt = [("Kasuj", "clear")] if self.lang == 'PL' else [("Clear", "clear")]
+        self.sess.openWithCallback(self._manage_dvbapi_selected, ChoiceBox, title="DVBAPI", list=opt)
+
+    def _manage_dvbapi_selected(self, choice):
+        if not choice:
+            return
+        if choice[1] == "clear":
+            cmd = "mkdir -p /etc/tuxbox/config && : > /etc/tuxbox/config/oscam.dvbapi"
+            run_command_in_background(self.sess, "Kasowanie dvbapi" if self.lang == 'PL' else "Clearing dvbapi", [cmd])
     def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", [f"(echo {p}; echo {p}) | passwd"]) if p else None, InputBox, title="Nowe hasło root")
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
@@ -2210,6 +2314,23 @@ class Panel(Screen):
     def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
     def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
     def install_iptv_dream_simplified(self): run_command_in_background(self.sess, "IPTV Dream", ["wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"])
+
+    def run_iptv_dependencies(self):
+        title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV configuration - dependencies"
+        cmds = [
+            'opkg update',
+            'opkg install enigma2-plugin-systemplugins-serviceapp',
+            'opkg install exteplayer3 || opkg install extplayer3',
+            'opkg install ffmpeg',
+            'opkg install python3-youtube-dl || opkg install python-youtube-dl',
+            'opkg install python3-yt-dlp || opkg install python-yt-dlp',
+            'opkg install enigma2-plugin-extensions-ytdlpwrapper',
+            'opkg install enigma2-plugin-extensions-ytdlwrapper',
+            'opkg install enigma2-plugin-extensions-streamlinkwrapper',
+            'opkg install streamlinksrv',
+        ]
+        console_screen_open(self.sess, title, cmds, close_on_finish=False)
+
     
     def open_system_monitor(self): self.sess.open(SystemMonitorScreen, self.lang)
     def open_log_viewer(self): self.sess.open(LogViewerScreen, self.lang)
@@ -2222,8 +2343,256 @@ class Panel(Screen):
     def perform_update_check_silent(self): pass
     def post_initial_setup(self): pass
 
+
+# === Network Diagnostics: readable summary screen (v6.0) ===
+class NetworkDiagnosticsSummaryScreen(Screen):
+    skin = """
+    <screen position="center,center" size="980,560" title="Network Diagnostics">
+        <widget name="text" position="20,20" size="940,490" font="Regular;22" />
+        <widget name="hint" position="20,520" size="940,30" font="Regular;20" halign="center" />
+    </screen>"""
+
+    def __init__(self, session, lang='PL'):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or 'PL'
+
+        if ScrollLabel:
+            self["text"] = ScrollLabel("")
+        else:
+            self["text"] = Label("")
+
+        self["hint"] = Label("OK / EXIT")
+        self["actions"] = ActionMap(["OkCancelActions"], {
+            "ok": self.close,
+            "cancel": self.close
+        }, -1)
+
+        self.onShown.append(self._start)
+
+    def _start(self):
+        self.setTitle(TRANSLATIONS[self.lang].get("net_diag_title", "Network Diagnostics"))
+        self["text"].setText(TRANSLATIONS[self.lang].get("net_diag_wait", "Please wait..."))
+        Thread(target=self._worker).start()
+
+    def _run_cmd(self, cmd):
+        try:
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            out = out or b""
+            err = err or b""
+            return p.returncode, out.decode('utf-8', 'ignore').strip(), err.decode('utf-8', 'ignore').strip()
+        except Exception as e:
+            return 1, "", str(e)
+
+    def _get_local_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(2)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return ""
+
+    def _get_route_info(self):
+        iface, gw = "", ""
+        rc, out, _ = self._run_cmd("ip route show default 2>/dev/null")
+        if rc == 0 and out:
+            m = re.search(r"default\s+via\s+([0-9\.]+)\s+dev\s+(\S+)", out)
+            if m:
+                gw, iface = m.group(1), m.group(2)
+        if not iface or not gw:
+            rc, out, _ = self._run_cmd("route -n | grep '^0.0.0.0' | head -n 1")
+            if out:
+                parts = out.split()
+                if len(parts) >= 8:
+                    gw = gw or parts[1]
+                    iface = iface or parts[7]
+        return iface, gw
+
+    def _get_dns(self):
+        dns = []
+        try:
+            if os.path.exists('/etc/resolv.conf'):
+                with open('/etc/resolv.conf', 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('nameserver'):
+                            p = line.split()
+                            if len(p) >= 2:
+                                dns.append(p[1])
+        except Exception:
+            pass
+        return dns
+
+    def _get_public_ip(self):
+        for url in (
+            'https://api.ipify.org',
+            'http://api.ipify.org',
+            'https://ifconfig.me/ip',
+            'http://ifconfig.me/ip',
+        ):
+            rc, out, _ = self._run_cmd("wget -qO- --no-check-certificate --timeout=10 %s" % url)
+            if rc == 0 and out and re.match(r"^\d{1,3}(\.\d{1,3}){3}$", out.strip()):
+                return out.strip()
+        return ""
+
+    def _ping_test(self, host='8.8.8.8'):
+        rc, out, _ = self._run_cmd('ping -c 4 -W 2 %s' % host)
+        loss, avg = "", ""
+        if out:
+            m = re.search(r"(\d+)%\s+packet\s+loss", out)
+            if m:
+                loss = m.group(1) + '%'
+            m = re.search(r"=\s*([0-9\.]+)/([0-9\.]+)/([0-9\.]+)/([0-9\.]+)", out)
+            if m:
+                avg = m.group(2) + ' ms'
+        return avg, loss
+
+    def _download_speed(self):
+        # Best-effort. Uses Python HTTP download of ~5 MiB.
+        try:
+            from urllib.request import urlopen
+        except Exception:
+            return None
+
+        candidates = [
+            ('Cloudflare', 'https://speed.cloudflare.com/__down?bytes=10000000'),
+            ('Hetzner', 'https://speed.hetzner.de/10MB.bin'),
+            ('OVH', 'https://proof.ovh.net/files/10Mb.dat'),
+        ]
+        bytes_target = 5 * 1024 * 1024
+        for name, url in candidates:
+            try:
+                start = time.time()
+                r = urlopen(url, timeout=15)
+                total = 0
+                while total < bytes_target:
+                    chunk = r.read(min(65536, bytes_target - total))
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                try:
+                    r.close()
+                except Exception:
+                    pass
+                dt = max(time.time() - start, 0.001)
+                if total >= 256 * 1024:
+                    mbps = (total * 8.0) / dt / 1e6
+                    return mbps, name
+            except Exception:
+                continue
+        return None
+
+    def _upload_speed(self):
+        # Best-effort. Uses HTTP POST upload of 1 MiB.
+        try:
+            from urllib.request import Request, urlopen
+        except Exception:
+            return None
+
+        endpoints = [
+            ('Cloudflare', 'https://speed.cloudflare.com/__up'),
+            ('httpbin', 'https://httpbin.org/post'),
+            ('postman', 'https://postman-echo.com/post'),
+        ]
+        payload = os.urandom(1024 * 1024)
+        for name, url in endpoints:
+            try:
+                req = Request(url, data=payload)
+                try:
+                    req.add_header('Content-Type', 'application/octet-stream')
+                except Exception:
+                    pass
+                start = time.time()
+                r = urlopen(req, timeout=20)
+                try:
+                    r.read(256)
+                except Exception:
+                    pass
+                try:
+                    r.close()
+                except Exception:
+                    pass
+                dt = max(time.time() - start, 0.001)
+                mbps = (len(payload) * 8.0) / dt / 1e6
+                return mbps, name
+            except Exception:
+                continue
+        return None
+
+    def _worker(self):
+        try:
+            local_ip = self._get_local_ip()
+            iface, gw = self._get_route_info()
+            dns = self._get_dns()
+            public_ip = self._get_public_ip()
+            ping_avg, ping_loss = self._ping_test('8.8.8.8')
+            dl = self._download_speed()
+            ul = self._upload_speed()
+
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            na = TRANSLATIONS[self.lang].get('net_diag_na', 'N/A')
+
+            lines = []
+            lines.append(TRANSLATIONS[self.lang].get('net_diag_results_title', 'Network Diagnostics Results'))
+            lines.append('')
+            lines.append('Data/Czas: %s' % now)
+            lines.append('')
+            lines.append('%s %s' % (TRANSLATIONS[self.lang].get('net_diag_local_ip', 'Tuner IP (Local):'), local_ip or na))
+            lines.append('Interfejs: %s' % (iface or na))
+            lines.append('Brama (Gateway): %s' % (gw or na))
+            lines.append('DNS: %s' % (', '.join(dns) if dns else na))
+            lines.append('%s %s' % (TRANSLATIONS[self.lang].get('net_diag_ip', 'Public IP:'), public_ip or na))
+            lines.append('')
+
+            lines.append('%s %s %s' % (TRANSLATIONS[self.lang].get('net_diag_ping', 'Ping:'), ping_avg or na, ('(loss: %s)' % ping_loss) if ping_loss else ''))
+
+            if dl:
+                lines.append('%s %.2f Mbps (%s)' % (TRANSLATIONS[self.lang].get('net_diag_download', 'Download:'), dl[0], dl[1]))
+            else:
+                lines.append('%s %s' % (TRANSLATIONS[self.lang].get('net_diag_download', 'Download:'), na))
+
+            if ul:
+                lines.append('%s %.2f Mbps (%s)' % (TRANSLATIONS[self.lang].get('net_diag_upload', 'Upload:'), ul[0], ul[1]))
+            else:
+                lines.append('%s %s' % (TRANSLATIONS[self.lang].get('net_diag_upload', 'Upload:'), na))
+
+            # Show additional interface details if available
+            if iface:
+                rc, out, _ = self._run_cmd('ip addr show %s 2>/dev/null' % iface)
+                if out:
+                    lines.append('')
+                    lines.append('--- %s ---' % iface)
+                    for ln in out.splitlines()[:12]:
+                        lines.append(ln)
+
+            result = "\n".join(lines)
+        except Exception as e:
+            result = TRANSLATIONS[self.lang].get('net_diag_error', 'Error') + "\n" + str(e)
+
+        reactor.callFromThread(self._show_results, result)
+
+    def _show_results(self, text):
+        try:
+            self["text"].setText(text)
+        except Exception:
+            pass
 def main(session, **kwargs):
     session.open(AIOLoadingScreen)
 
+
+def sessionstart(reason, session=None, **kwargs):
+    # reason == 0: start, reason == 1: shutdown
+    if reason == 0:
+        try:
+            _apply_auto_ram_from_config()
+        except Exception as e:
+            print("[AIO Panel] sessionstart error:", e)
 def Plugins(**kwargs):
-    return [PluginDescriptor(name="AIO Panel", description="Panel All-In-One v{}".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main)]
+    return [
+        PluginDescriptor(name="AIO Panel", description="Panel All-In-One v{}".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main),
+        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart)
+    ]
