@@ -344,7 +344,6 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Wtyczki Online ---", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
-    ("🧩 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -369,7 +368,6 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
     ("--- Online Plugins ---", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
-    ("🧩 IPTV configuration - dependencies", "CMD:IPTV_DEPS"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -723,23 +721,8 @@ class AIOLoadingScreen(Screen):
     def start_loading_process(self):
         self.check_dependencies()
 
-    def _is_deps_ok(self):
-        """Return True only if dependencies flag matches current plugin version.
-
-        This ensures a one-time dependency check also after upgrading from older versions
-        that may have left an older .deps_ok flag in place.
-        """
-        try:
-            if not os.path.exists(self.flag_file):
-                return False
-            with open(self.flag_file, 'r') as f:
-                content = (f.read() or '').strip()
-            return content == ('ok:' + str(VER))
-        except Exception:
-            return False
-
     def check_dependencies(self):
-        if self._is_deps_ok():
+        if os.path.exists(self.flag_file):
             self.start_async_data_load()
             return
 
@@ -769,7 +752,7 @@ class AIOLoadingScreen(Screen):
     def on_dependencies_installed_safe(self, *args):
         try:
             with open(self.flag_file, 'w') as f:
-                f.write('ok:' + str(VER))
+                f.write('ok')
         except Exception as e:
             print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
             
@@ -1808,7 +1791,7 @@ class Panel(Screen):
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
-            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:IPTV_DEPS", "CMD:SETUP_AUTO_RAM"
+            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -1905,7 +1888,6 @@ class Panel(Screen):
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
-            elif key == "IPTV_DEPS": self.run_iptv_dependencies()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
@@ -2314,23 +2296,6 @@ class Panel(Screen):
     def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
     def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
     def install_iptv_dream_simplified(self): run_command_in_background(self.sess, "IPTV Dream", ["wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"])
-
-    def run_iptv_dependencies(self):
-        title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV configuration - dependencies"
-        cmds = [
-            'opkg update',
-            'opkg install enigma2-plugin-systemplugins-serviceapp',
-            'opkg install exteplayer3 || opkg install extplayer3',
-            'opkg install ffmpeg',
-            'opkg install python3-youtube-dl || opkg install python-youtube-dl',
-            'opkg install python3-yt-dlp || opkg install python-yt-dlp',
-            'opkg install enigma2-plugin-extensions-ytdlpwrapper',
-            'opkg install enigma2-plugin-extensions-ytdlwrapper',
-            'opkg install enigma2-plugin-extensions-streamlinkwrapper',
-            'opkg install streamlinksrv',
-        ]
-        console_screen_open(self.sess, title, cmds, close_on_finish=False)
-
     
     def open_system_monitor(self): self.sess.open(SystemMonitorScreen, self.lang)
     def open_log_viewer(self): self.sess.open(LogViewerScreen, self.lang)
@@ -2338,10 +2303,86 @@ class Panel(Screen):
     def open_service_manager(self): self.sess.open(ServiceManagerScreen, self.lang)
     def open_system_info(self): self.sess.open(SystemInfoScreen, self.lang)
     
-    def check_for_updates_manual(self): show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
-    def check_for_updates_on_start(self): pass
-    def perform_update_check_silent(self): pass
-    def post_initial_setup(self): pass
+    # === NOWA LOGIKA AKTUALIZACJI ===
+
+    def check_for_updates_manual(self):
+        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji...", type=MessageBox.TYPE_INFO, timeout=3)
+        # Callback uruchomi się po zamknięciu komunikatu, ale lepiej uruchomić sprawdzanie w tle
+        self._check_update(silent=False)
+
+    def _manual_update_callback(self, result):
+        pass
+
+    def check_for_updates_on_start(self):
+        # Uruchamiamy w wątku, aby nie blokować GUI przy starcie
+        Thread(target=self.perform_update_check_silent).start()
+
+    def perform_update_check_silent(self):
+        # Wersja cicha - uruchamiana w tle
+        self._check_update(silent=True)
+
+    def _check_update(self, silent=False):
+        # URL do pliku version.txt w Twoim repozytorium
+        version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
+        tmp_ver_path = "/tmp/aio_version.txt"
+        
+        try:
+            # Pobieranie pliku wersji (używamy wget dla kompatybilności z E2)
+            os.system("wget -q -T 10 -O {} {}".format(tmp_ver_path, version_url))
+            
+            if not os.path.exists(tmp_ver_path):
+                if not silent:
+                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_check_error"], MessageBox.TYPE_ERROR)
+                return
+
+            with open(tmp_ver_path, 'r') as f:
+                remote_ver_str = f.read().strip()
+            
+            # Proste porównanie wersji (np. 6.0 > 5.0)
+            try:
+                local_ver = float(VER)
+                remote_ver = float(remote_ver_str)
+            except ValueError:
+                # Fallback jeśli wersja zawiera litery (np. 6.0b)
+                local_ver = VER
+                remote_ver = remote_ver_str
+
+            if remote_ver > local_ver:
+                # Znaleziono nową wersję!
+                changelog_text = "Aktualizacja zalecana."
+                # Opcjonalnie: pobierz changelog tutaj, jeśli chcesz
+                
+                msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
+                    latest_ver=remote_ver_str, 
+                    current_ver=VER, 
+                    changelog=changelog_text
+                )
+                
+                reactor.callFromThread(self.sess.openWithCallback, self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
+            else:
+                if not silent:
+                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER), MessageBox.TYPE_INFO)
+                    
+        except Exception as e:
+            print("[AIO Panel] Update check error:", e)
+            if not silent:
+                reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_generic_error"], MessageBox.TYPE_ERROR)
+
+    def _do_update_action(self, confirmed):
+        if not confirmed:
+            return
+        
+        # Uruchomienie installera z GitHuba
+        installer_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
+        cmd = "wget -qO- --no-check-certificate {} | /bin/sh".format(installer_url)
+        
+        # Bezpieczniej uruchomić to w konsoli widocznej dla usera:
+        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], close_on_finish=False)
+
+    def post_initial_setup(self):
+        # Opóźnienie startowe sprawdzenia aktualizacji
+        reactor.callLater(5, self.check_for_updates_on_start)
+
 
 
 # === Network Diagnostics: readable summary screen (v6.0) ===
