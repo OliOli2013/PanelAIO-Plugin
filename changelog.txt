@@ -1,3 +1,20 @@
+[6.0]
+AIO Panel v6.0 Update (PL):
+- ZMIANA: Podniesiono wersję wtyczki do 6.0
+- SUPER KONFIGURATOR: Domyślna instalowana lista kanałów została zmieniona na "Paweł Pawełek 13E"
+- POPRAWKA: Naprawiono funkcję "oscam.dvbapi - zarządzaj" (stabilne działanie, bez crash/blue screen)
+- POPRAWKA: Auto RAM Cleaner zapamiętuje ustawienie po restarcie GUI oraz po restarcie systemu
+- ULEPSZENIE: Diagnostyka sieci pokazuje czytelne podsumowanie procesu (download/upload, ping, IP tunera, publiczne IP i kluczowe parametry sieci)
+- DODANO: "Konfiguracja IPTV - zależności" (opkg update + instalacja: ServiceApp, ExtPlayer3, ffmpeg, python3-youtube-dl, python3-yt-dlp, ytdlpwrapper, ytdlwrapper, streamlinkwrapper, streamlinksrv)
+
+AIO Panel v6.0 Update (EN):
+- CHANGE: Bumped plugin version to 6.0
+- SUPER SETUP: Default channel list installation changed to "Paweł Pawełek 13E"
+- FIX: Fixed "oscam.dvbapi - manage" action (stable handling, no crash/blue screen)
+- FIX: Auto RAM Cleaner now persists its setting across GUI restarts and full reboots
+- IMPROVEMENT: Network diagnostics now shows a clear summary (download/upload, ping, tuner IP, public IP and key network parameters)
+- ADDED: "IPTV Configuration - dependencies" (opkg update + installs: ServiceApp, ExtPlayer3, ffmpeg, python3-youtube-dl, python3-yt-dlp, ytdlpwrapper, ytdlwrapper, streamlinkwrapper, streamlinksrv)
+
 [5.0]
 AIO Panel v5.0 Update (PL):
 - DODANO: Opcja aktualizacji online oscam.srvid i srvid2
