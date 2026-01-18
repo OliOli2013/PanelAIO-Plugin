@@ -109,7 +109,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "6.0"
+VER = "6.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -1620,20 +1620,143 @@ class UninstallManagerScreen(Screen):
             close_on_finish=True
         )
 
+
+# === OPISY FUNKCJI DLA SYSTEMU TOOLTIP (v6.1) ===
+FUNCTION_DESCRIPTIONS = {
+    "PL": {
+        # Lista kanałów
+        "📺 Listy Kanałów": "Zarządzanie listami kanałów: instalacja, aktualizacja i przywracanie.\nObsługa importu list IPTV (M3U) oraz szybki powrót do poprzedniego stanu.",
+        "📡 Paweł Pawełek HB 13E (04.01.2026)": "Oficjalna lista kanałów dla HotBird 13E.\nInstalacja listy wraz z automatycznym odświeżeniem bouquetów w Enigma2.",
+        "📺 XStreamity - Instalator": "Instaluje XStreamity (IPTV).\nObsługa M3U oraz Xtream Codes; po instalacji uruchom z menu Wtyczki.",
+        "📺 IPTV Dream - Instalator": "Instaluje IPTV Dream (zaawansowany odtwarzacz IPTV).\nWymagane biblioteki możesz doinstalować z pozycji zależności IPTV.",
+        "📦 Konfiguracja IPTV - zależności": "Instaluje wymagane zależności/biblioteki dla wtyczek IPTV.\nZalecane uruchomienie przed instalacją playerów IPTV.",
+
+        # Softcam i Wtyczki
+        "🔑 Softcam i Wtyczki": "Sekcja narzędzi CAM i instalatorów wtyczek.\nWybierz pozycję, aby zainstalować lub uruchomić daną funkcję.",
+        "🔄 Restart Oscam": "Restartuje usługę Oscam (jeśli działa w systemie).\nPrzydatne po zmianie konfiguracji lub po zawieszeniu emulatora.",
+        "🧹 Kasuj hasło Oscam": "Czyści hasło dostępu do WWW Oscam (jeśli jest ustawione).\nUłatwia odzyskanie dostępu do panelu bez reinstalacji.",
+        "⚙️ oscam.dvbapi - zarządzaj": "Edycja/zarządzanie plikiem oscam.dvbapi.\nPozwala dodać/usunąć wpisy i uporządkować priorytety kart/CAID.",
+        "📥 Softcam Feed - Instalator": "Instaluje Softcam Feed w obrazie (repozytorium pakietów).\nPo instalacji możesz pobierać softcamy z: Pobierz wtyczki → Pakiety softcam.",
+        "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu (gdy dostępny).\nPo instalacji zalecany restart GUI.",
+        "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
+        "⚙️ ServiceApp - Instalator": "Instaluje ServiceApp (alternatywny odtwarzacz) dla lepszej obsługi streamów IPTV.\nMoże wymagać restartu Enigma2 po instalacji.",
+        "🛠 AJPanel - Instalator": "Instaluje AJPanel – zestaw narzędzi serwisowych i administracyjnych.\nPrzydatne do szybkiej diagnostyki i obsługi systemu.",
+        "▶️ E2iPlayer Master - Instalacja/Aktualizacja": "Instaluje lub aktualizuje E2iPlayer (Master).\nDostarcza dostęp do wielu serwisów VOD/stream i narzędzi multimedialnych.",
+        "📅 EPG Import - Instalator": "Instaluje EPGImport – automatyczny import programu TV.\nPo instalacji skonfiguruj źródła EPG i harmonogram aktualizacji.",
+        "🔄 S4aUpdater - Instalator": "Instaluje S4aUpdater do aktualizacji wybranych dodatków.\nUłatwia utrzymanie wtyczek w aktualnej wersji bez ręcznej instalacji.",
+        "📺 JediMakerXtream - Instalator": "Instaluje JediMakerXtream do budowy bukietów IPTV z kont Xtream.\nPo instalacji dodaj dane logowania i wygeneruj listę/bukiety.",
+        "▶️ YouTube - Instalator": "Instaluje wtyczkę YouTube dla Enigma2.\nMoże wymagać dodatkowych bibliotek zależnych od obrazu.",
+        "📦 J00zeks Feed (Repo Installer)": "Dodaje repozytorium J00zeks (feed) do systemu.\nPo instalacji możesz pobierać jego wtyczki z poziomu Menedżera wtyczek.",
+        "📺 E2Kodi v2 - Instalator (j00zek)": "Instaluje E2Kodi v2 (wersja z feedu j00zek).\nUmożliwia uruchomienie środowiska Kodi na Enigma2 (zależności zależą od obrazu).",
+        "🖼️ Picon Updater - Instalator (Picony)": "Instaluje narzędzie do aktualizacji piconów.\nUłatwia pobieranie i odświeżanie ikon kanałów w systemie.",
+
+        # Narzędzia Systemowe
+        "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
+        "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
+        "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
+        "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
+        "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) i zapisuje w docelowym katalogu.\nMoże nadpisać istniejące pliki; po zakończeniu zalecany restart GUI.",
+        "📊 Monitor Systemowy": "Podgląd wykorzystania CPU, RAM, temperatury",
+        "📄 Przeglądarka Logów": "Przeglądanie logów systemowych i Enigmy2",
+        "⏰ Menedżer Cron": "Zarządzanie zadaniami harmonogramu",
+        "🔌 Menedżer Usług": "Zarządzanie usługami systemowymi (SSH, FTP itd.)",
+        "ℹ️ Informacje o Systemie": "Szczegółowe informacje o sprzęcie i oprogramowaniu",
+        "🔄 Aktualizuj oscam.srvid/srvid2": "Aktualizacja listy identyfikatorów kanałów",
+        "🔑 Instaluj SoftCam.Key (Online)": "Automatyczna instalacja kluczy SoftCam",
+        "💾 Backup Listy Kanałów": "Kopia zapasowa list kanałów",
+        "💾 Backup Konfiguracji Oscam": "Kopia zapasowa konfiguracji Oscam",
+        "♻️ Restore Listy Kanałów": "Przywracanie list kanałów z backupu",
+        "♻️ Restore Konfiguracji Oscam": "Przywracanie konfiguracji Oscam z backupu",
+
+        # Info i Diagnostyka
+        "ℹ️ Info i Diagnostyka": "Informacje o wtyczce i narzędzia diagnostyczne",
+        "ℹ️ Informacje o AIO Panel": "Informacje o wersji, licencji i autorze",
+        "🔄 Aktualizacja Wtyczki": "Sprawdzenie i instalacja aktualizacji AIO Panel",
+        "🌐 Diagnostyka Sieci": "Test prędkości i parametrów połączenia internetowego",
+        "💾 Wolne miejsce (dysk/flash)": "Informacja o wykorzystaniu pamięci",
+        "⏱️ Auto RAM Cleaner (Konfiguruj)": "Automatyczne czyszczenie pamięci RAM",
+        "🧹 Wyczyść Pamięć Tymczasową": "Usunięcie plików tymczasowych z /tmp",
+        "🧹 Wyczyść Pamięć RAM": "Ręczne czyszczenie pamięci RAM",
+        "🔑 Kasuj hasło FTP": "Usuwa hasło użytkownika root (FTP/SSH).\nPo wykonaniu logowanie odbywa się bez hasła (jeśli obraz na to pozwala).",
+        "🔑 Ustaw Hasło FTP": "Ustawia nowe hasło dla użytkownika root (FTP/SSH).\nZwiększa bezpieczeństwo dostępu do tunera z sieci.",
+    },
+    "EN": {
+        # Channel Lists
+        "📺 Channel Lists": "Manage channel lists: install, update and restore.\nIncludes IPTV list import (M3U) and safe rollback to the previous state.",
+        "📡 Paweł Pawełek HB 13E (04.01.2026)": "Official channel list for HotBird 13E.\nInstalls the bouquets and refreshes the Enigma2 channel lists automatically.",
+        "📺 XStreamity - Installer": "Installs XStreamity (IPTV).\nSupports M3U and Xtream Codes; launch it from the Plugins menu after install.",
+        "📺 IPTV Dream - Installer": "Installs IPTV Dream (advanced IPTV player).\nIf needed, install IPTV dependencies from the dedicated dependencies entry.",
+        "📦 IPTV Configuration - dependencies": "Installs required IPTV packages/libraries.\nRecommended to run before installing IPTV players.",
+
+        # Softcam & Plugins
+        "🔑 Softcam & Plugins": "CAM/tools and plugin installers section.\nSelect an item to install, update or run the selected function.",
+        "🔄 Restart Oscam": "Restarts the Oscam service (if available on your image).\nUseful after config changes or when the emulator becomes unresponsive.",
+        "🧹 Clear Oscam Password": "Clears the Oscam WebIF password (if configured).\nHelps regain panel access without reinstalling.",
+        "⚙️ oscam.dvbapi - manage": "Manage/edit oscam.dvbapi.\nAdd/remove entries and adjust card/CAID priorities.",
+        "📥 Softcam Feed - Installer": "Installs Softcam Feed repository on your image.\nAfter install: Download plugins → Softcam packages to pick your emulator.",
+        "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed (when available).\nGUI restart is recommended after installation.",
+        "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
+        "⚙️ ServiceApp - Installer": "Installs ServiceApp (alternative playback engine) for improved IPTV/stream handling.\nMay require Enigma2 restart after installation.",
+        "🛠 AJPanel - Installer": "Installs AJPanel – a set of service/administration tools.\nUseful for quick maintenance and diagnostics.",
+        "▶️ E2iPlayer Master - Install/Update": "Installs or updates E2iPlayer (Master).\nProvides access to multiple streaming/VOD sources and media tools.",
+        "📅 EPG Import - Installer": "Installs EPGImport for automatic EPG data import.\nAfter install, set sources and schedule periodic updates.",
+        "🔄 S4aUpdater - Installer": "Installs S4aUpdater to keep selected add-ons up to date.\nReduces manual package installs/updates.",
+        "📺 JediMakerXtream - Installer": "Installs JediMakerXtream to build IPTV bouquets from Xtream accounts.\nAdd your credentials and generate bouquets after installation.",
+        "▶️ YouTube - Installer": "Installs the YouTube plugin for Enigma2.\nRequired dependencies vary by image.",
+        "📦 J00zeks Feed (Repo Installer)": "Adds the J00zek feed repository to your system.\nAfterwards, install his plugins via the Plugin Manager.",
+        "📺 E2Kodi v2 - Installer (j00zek)": "Installs E2Kodi v2 (j00zek build).\nLets you run Kodi on Enigma2; dependencies vary by image.",
+        "🖼️ Picon Updater - Installer (Picons)": "Installs a picon update utility.\nHelps download and refresh channel icons on the receiver.",
+
+        # System Tools
+        "⚙️ System Tools": "Advanced system administration tools",
+        "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
+        "🗑️ Uninstallation Manager": "Uninstall packages from system",
+        "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
+        "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set and writes it to the target folder.\nMay overwrite existing files; GUI restart recommended.",
+        "📊 System Monitor": "View CPU, RAM, temperature usage",
+        "📄 Log Viewer": "Browse system and Enigma2 logs",
+        "⏰ Cron Manager": "Manage scheduled tasks",
+        "🔌 Service Manager": "Manage system services (SSH, FTP, etc.)",
+        "ℹ️ System Information": "Detailed hardware and software info",
+        "🔄 Update oscam.srvid/srvid2": "Update channel identifier list",
+        "🔑 Install SoftCam.Key (Online)": "Automatic SoftCam keys installation",
+        "💾 Backup Channel List": "Backup channel lists",
+        "💾 Backup Oscam Config": "Backup Oscam configuration",
+        "♻️ Restore Channel List": "Restore channel lists from backup",
+        "♻️ Restore Oscam Config": "Restore Oscam config from backup",
+
+        # Info & Diagnostics
+        "ℹ️ Info & Diagnostics": "Plugin info and diagnostic tools",
+        "ℹ️ About AIO Panel": "Version, license and author info",
+        "🔄 Update Plugin": "Check and install AIO Panel updates",
+        "🌐 Network Diagnostics": "Internet speed and connection test",
+        "💾 Free Space (disk/flash)": "Memory usage information",
+        "⏱️ Auto RAM Cleaner (Setup)": "Automatic RAM cleaning",
+        "🧹 Clear Temporary Cache": "Remove temporary files from /tmp",
+        "🧹 Clear RAM Cache": "Manual RAM cache clearing",
+        "🔑 Clear FTP Password": "Removes the root password (FTP/SSH).\nAfterwards, login may be passwordless (depends on image security settings).",
+        "🔑 Set FTP Password": "Sets a new password for the root user (FTP/SSH).\nImproves security for network access to the receiver.",
+    }
+}
+# === KONIEC OPISÓW FUNKCJI ===
 class Panel(Screen):
     # Nowy skin z jedną listą i informacją o zakładkach
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1100,660' title='Panel AIO'>
+    <screen name='PanelAIO' position='center,center' size='1100,690' title='Panel AIO'>
         <widget name='qr_code_small' position='15,15' size='90,90' pixmap="{}" alphatest='blend' />
         <widget name="support_label" position="125,15" size="400,90" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
         <widget name="title_label" position="500,15" size="585,40" font="Regular;32" halign="right" valign="center" transparent="1" />
-        
+
         <widget name='tabs_display' position='15,115' size='1070,30' font='Regular;26' halign='center' />
-        
-        <widget name='menu' position='15,165' size='1070,420' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
-        
-        <widget name='legend' position='15,600'  size='1070,28'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,630' size='1070,28' font='Regular;16' halign='center' foregroundColor='lightgrey'/>
+
+        <widget name='menu' position='15,165' size='1070,380' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+
+        <!-- Expanded function tooltip (more space + standout color) -->
+        <widget name='function_description' position='15,550' size='1070,78' font='Regular;22' halign='left' valign='top' foregroundColor='#00FFD200' backgroundColor='#00101010' transparent='0' />
+
+        <!-- Bottom legend + footer moved up to avoid clipping on 690px height screens -->
+        <widget name='legend' position='15,630'  size='1070,26'  font='Regular;20' halign='center'/>
+        <widget name='footer' position='center,658' size='1070,24' font='Regular;16' halign='center' valign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
 
     def __init__(self, session, fetched_data):
@@ -1669,16 +1792,14 @@ class Panel(Screen):
         self.tab_titles_def = COL_TITLES 
         self.all_data = ([], [], [], []) 
 
-        # Inicjalizacja komponentów skin
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
         self["tabs_display"] = Label("") 
         self["menu"] = MenuList([])
+        self["function_description"] = Label("") # Tooltip z opisem funkcji
         self["legend"] = Label(" ") 
         self["footer"] = Label(FOOT)
-        
-        # MAPA KLAWISZY
         self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
             "ok": self.run_with_confirmation,
             "cancel": self.close,
@@ -1687,8 +1808,10 @@ class Panel(Screen):
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
             "left": self.prev_tab,
-            "right": self.next_tab
-        }, -1) 
+            "right": self.next_tab,
+            "up": self.menu_up,
+            "down": self.menu_down
+        }, -1)
         
         self.onShown.append(self.post_initial_setup)
         self.set_language(self.lang) 
@@ -1705,28 +1828,82 @@ class Panel(Screen):
     def switch_tab(self, tab_index):
         self.active_tab = tab_index
         lang = self.lang
-        
+
         all_titles = self.tab_titles_def[lang]
-        
+
         active_color = r"\c00ffff00" # Żółty
         inactive_color = r"\c00999999" # Szary
         reset_color = r"\c00ffffff" # Biały
-        
+
         tabs_display_text_list = []
         for i, title in enumerate(all_titles):
             if i == self.active_tab:
                 tabs_display_text_list.append("{color}► {title} ◄{reset}".format(color=active_color, title=title, reset=reset_color))
             else:
                 tabs_display_text_list.append("{color}{title}{reset}".format(color=inactive_color, title=title, reset=reset_color))
-        
+
         self["tabs_display"].setText(" | ".join(tabs_display_text_list))
-        
+
         data_list = self.all_data[self.active_tab]
         if data_list:
             menu_items = [str(item[0]) for item in data_list]
             self["menu"].setList(menu_items)
+            # Wyświetl opis pierwszego elementu
+            self.update_function_description()
         else:
             self["menu"].setList([(TRANSLATIONS[lang]["loading_error_text"],)])
+            self["function_description"].setText("")
+    def update_function_description(self):
+        """Aktualizuje opis funkcji na podstawie zaznaczonego elementu"""
+        try:
+            data_list = self.all_data[self.active_tab]
+            if not data_list:
+                self["function_description"].setText("")
+                return
+
+            selected_index = self["menu"].getSelectionIndex()
+            if selected_index is None or selected_index >= len(data_list):
+                self["function_description"].setText("")
+                return
+
+            item = data_list[selected_index]
+            if not item or len(item) < 1:
+                self["function_description"].setText("")
+                return
+
+            # Pobierz nazwę funkcji
+            func_name = str(item[0])
+
+            # Sprawdź czy to separator
+            if len(item) > 1 and item[1] == "SEPARATOR":
+                self["function_description"].setText("")
+                return
+
+            # Pobierz opis z słownika
+            descriptions = FUNCTION_DESCRIPTIONS.get(self.lang, FUNCTION_DESCRIPTIONS["PL"])
+            description = descriptions.get(func_name, "")
+
+            # Jeśli nie ma dokładnego dopasowania, spróbuj znaleźć podobny
+            if not description:
+                # Spróbuj dopasować po początku stringa (bez emoji)
+                clean_name = func_name.lstrip('📺📡🔑⚙️ℹ️🔄🧹💾♻️🗑️📊📄⏰🔌✨🌐⏱️🖼️🛠▶️📅🔄📦')
+                description = descriptions.get(clean_name.strip(), "")
+
+            self["function_description"].setText(description)
+
+        except Exception as e:
+            # W przypadku błędu po prostu wyczyść opis
+            self["function_description"].setText("")
+
+    def menu_up(self):
+        """Przejście w górę w menu z aktualizacją opisu"""
+        self["menu"].up()
+        self.update_function_description()
+
+    def menu_down(self):
+        """Przejście w dół w menu z aktualizacją opisu"""
+        self["menu"].down()
+        self.update_function_description()
 
     def set_language(self, lang):
         self.lang = lang
@@ -1777,6 +1954,7 @@ class Panel(Screen):
             print("[AIO Panel] Błąd danych:", e)
             self.all_data = ([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")], [], [], [])
             self.switch_tab(0)
+            self.update_function_description()
 
     def set_lang_headers_and_legends(self):
         self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
@@ -1862,11 +2040,21 @@ class Panel(Screen):
                 show_message_compat(self.sess, "Błąd ustawień Auto RAM Cleaner." if self.lang == 'PL' else "Auto RAM Cleaner configuration error.", MessageBox.TYPE_ERROR)
 
 
-    def show_info_screen(self): self.session.open(AIOInfoScreen)
-    def post_initial_setup(self): reactor.callLater(1, self.check_for_updates_on_start)
-    def check_for_updates_on_start(self): Thread(target=self.perform_update_check_silent).start()
-    def perform_update_check_silent(self): pass 
-    def check_for_updates_manual(self): show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
+    def show_info_screen(self):
+        self.session.open(AIOInfoScreen)
+
+    def post_initial_setup(self):
+        reactor.callLater(1, self.check_for_updates_on_start)
+        reactor.callLater(0.5, self.update_function_description)
+
+    def check_for_updates_on_start(self):
+        Thread(target=self.perform_update_check_silent).start()
+
+    def perform_update_check_silent(self):
+        pass
+
+    def check_for_updates_manual(self):
+        show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
 
     # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
