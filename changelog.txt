@@ -1,5 +1,6 @@
 [6.1]
-[PL]
+
+2026-01-18  Version 6.1 (PL)
 NOWA FUNKCJONALNOŚĆ: OPISY FUNKCJI PO NAJECHANIU
 - Automatyczne wyświetlanie opisów podczas nawigacji strzałkami (↑↓).
 - Nowy widget 'function_description' na dole ekranu (żółty pasek).
@@ -7,10 +8,8 @@ NOWA FUNKCJONALNOŚĆ: OPISY FUNKCJI PO NAJECHANIU
 - Obsługa dwóch języków: Polski (PL) i Angielski (EN).
 - Automatyczna zmiana języka opisów przy zmianie języka wtyczki.
 - Intuicyjna nawigacja z podglądem opisów.
-
 --------------------------------------------------------------------------------
-
-[EN]
+(EN)
 NEW FEATURE: FUNCTION DESCRIPTIONS ON HOVER
 - Automatic description display while navigating with arrow keys (↑↓).
 - New 'function_description' widget added to the bottom of the screen (yellow bar).
