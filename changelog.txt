@@ -1,5 +1,4 @@
 [6.1]
-
 2026-01-18  Version 6.1 (PL)
 NOWA FUNKCJONALNOŚĆ: OPISY FUNKCJI PO NAJECHANIU
 - Automatyczne wyświetlanie opisów podczas nawigacji strzałkami (↑↓).
