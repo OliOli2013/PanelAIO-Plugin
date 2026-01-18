@@ -1,5 +1,5 @@
 #!/bin/sh
-# Skrypt instalacyjny dla wtyczki PanelAIO (v6.0)
+# Skrypt instalacyjny dla wtyczki PanelAIO (v6.1)
 
 # --- Konfiguracja ---
 PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
