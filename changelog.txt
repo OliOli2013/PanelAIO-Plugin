@@ -1,3 +1,24 @@
+[6.1]
+[PL]
+NOWA FUNKCJONALNOŚĆ: OPISY FUNKCJI PO NAJECHANIU
+- Automatyczne wyświetlanie opisów podczas nawigacji strzałkami (↑↓).
+- Nowy widget 'function_description' na dole ekranu (żółty pasek).
+- Kompletny słownik opisów dla wszystkich funkcji (70+).
+- Obsługa dwóch języków: Polski (PL) i Angielski (EN).
+- Automatyczna zmiana języka opisów przy zmianie języka wtyczki.
+- Intuicyjna nawigacja z podglądem opisów.
+
+--------------------------------------------------------------------------------
+
+[EN]
+NEW FEATURE: FUNCTION DESCRIPTIONS ON HOVER
+- Automatic description display while navigating with arrow keys (↑↓).
+- New 'function_description' widget added to the bottom of the screen (yellow bar).
+- Complete description dictionary covering all functions (70+).
+- Dual language support: Polish (PL) and English (EN).
+- Automatic description language synchronization when changing plugin language.
+- Intuitive navigation with instant description preview.
+
 [6.0]
 AIO Panel v6.0 Update (PL):
 - ZMIANA: Podniesiono wersję wtyczki do 6.0
