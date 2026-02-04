@@ -1,53 +1,19 @@
-AIO Panel – Changelog
-======================
-
 Wersja: 7.0
 Data: 2026-02-04
-Środowisko: Enigma2 / Python 3 (wszystkie wydania)
+GLOWNE ZMIANY:
+1. INTEGRACJA Z SYSTEMEM
+- Wtyczka przeniesiona do SystemPlugins.
+- Widoczna w Menu Glownym i Ustawieniach.
+- Automatyczna naprawa zaleznosci.
+2. POPRAWKI
+- Naprawiono czyszczenie oscam.dvbapi (Fix permission).
+- Poprawiono skrypty instalacyjne (Brak bledu 126).
+- Uporzadkowano menu Softcamy.
+3. INTERFEJS
+- Kolorowe naglowki sekcji dla lepszej czytelnosci.
+- Nowe opisy w Super Konfiguratorze.
+---------------------------------------------------
 
-Zmiany / poprawki
-----------------
-1) Integracja z menu systemu (Enigma2)
-   - Dodano widoczność wtyczki w:
-     • Menu główne (Main Menu)
-     • Menu → Ustawienia → System
-     • Wtyczki (Plugin Menu)
-   - Wtyczka umieszczona w ścieżce SystemPlugins (dla pełnej zgodności z obrazami E2/Python3).
-
-2) Oscam / dvbapi
-   - Zmieniono nazwę oraz logikę opcji:
-     „oscam.dvbapi - zarządzaj” → „oscam.dvbapi - kasowanie zawartości”
-   - Naprawiono działanie kasowania zawartości pliku oscam.dvbapi (wcześniej w wielu przypadkach nie czyściło pliku).
-   - Zachowano kompatybilność: w razie występowania literówkowego pliku „oscam.dvbap” również może zostać wyczyszczony.
-
-3) Softcamy – porządek i nazewnictwo
-   - Do sekcji „Softcamy” przeniesiono:
-     • Aktualizuj oscam.srvid/srvid2
-     • Instaluj SoftCam.Key (online)
-   - Zmieniono nazwę pozycji na:
-     • „Aktualizuj SoftCam.Key (Online)”
-
-4) Interfejs – czytelność listy narzędzi
-   - Nagłówki sekcji (np. „--- Konfigurator ---”, „--- Narzędzia Systemowe ---” itd.) mają inny kolor,
-     aby wyraźniej rozróżnić grupy funkcji.
-   - Uporządkowano rozmieszczenie pozycji w menu (logiczniejsze grupowanie narzędzi, m.in. elementów Oscam).
-
-5) „Super Konfigurator” (Pierwsza Instalacja)
-   - Dodano opis/tooltip po najechaniu kursorem na pozycję „Super Konfigurator”, wyjaśniający działanie.
-   - Poprawiono stabilność wykonania końcowego pełnego restartu systemu tunera (bardziej pewne wywołanie restartu).
-   - Zachowano dotychczasową kolejność działań:
-     1) instalacja listy kanałów „Paweł Pawełek”,
-     2) instalacja softcam,
-     3) instalacja najnowszego Oscam z feed (z uwzględnieniem rodzaju tunera/procesora),
-     4) pobranie piconów (transparent),
-     5) restart całego systemu.
-
-6) Zależności (pierwsze uruchomienie)
-   - Weryfikacja zależności przy pierwszym uruchomieniu dla poprawnego działania na różnych obrazach E2/Python3.
-   - Dodatkowo: jeżeli po aktualizacji/reinstalacji istnieje znacznik „deps OK”, wtyczka może ponownie
-     zweryfikować krytyczne narzędzia/komponenty i w razie braków uruchomić instalację zależności.
-
-Uwagi
------
-- Nie usunięto żadnych narzędzi ani funkcjonalności – zmiany dotyczą wyłącznie porządku, integracji z menu,
-  czytelności oraz poprawek działania wskazanych elementów.
+Wersja: 6.0
+Data: 2025-01-01
+- (Starsze zmiany...)
