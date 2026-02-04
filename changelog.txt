@@ -1,28 +1,27 @@
-# AIO Panel v7.0
+AIO Panel v7.0
+Data: 2026-02-04
+Kompatybilność: Enigma2 / Python 3
 
-**Data wydania:** 2026-02-04
-**Kompatybilność:** Enigma2 / Python 3
+GLOWNE ZMIANY:
 
-## 🚀 Najważniejsze zmiany
+1. INTEGRACJA Z SYSTEMEM
+- Pełna integracja z menu Enigma2: wtyczka widoczna w Menu Głównym, Ustawieniach Systemowych oraz Menu Wtyczek.
+- Przeniesienie wtyczki do lokalizacji SystemPlugins (lepsza zgodność z systemem).
+- Automatyczna naprawa i weryfikacja zależności przy starcie.
 
-### 🔌 Integracja z systemem
-* [cite_start]Pełna integracja z menu Enigma2 – wtyczka jest teraz widoczna w **Menu Głównym**, ustawieniach systemowych oraz menu wtyczek[cite: 1].
-* [cite_start]Przeniesienie wtyczki do ścieżki `SystemPlugins` dla lepszej zgodności z obrazami E2[cite: 1].
-* [cite_start]Ulepszona weryfikacja i doinstalowywanie brakujących zależności przy pierwszym uruchomieniu[cite: 9, 10].
+2. OSCAM I SOFTCAMY
+- POPRAWKA: Naprawiono funkcję czyszczenia pliku oscam.dvbapi (wcześniej nie zawsze działała).
+- Zmiana nazwy funkcji na: "oscam.dvbapi - kasowanie zawartości".
+- Przeniesienie aktualizacji oscam.srvid i SoftCam.Key do sekcji "Softcamy".
 
-### 🛠️ Oscam i Softcamy
-* [cite_start]**Poprawka krytyczna:** Naprawiono funkcję czyszczenia zawartości pliku `oscam.dvbapi` (wcześniej funkcja nie zawsze działała poprawnie)[cite: 2].
-* [cite_start]Zmiana nazewnictwa na bardziej precyzyjne: „oscam.dvbapi - kasowanie zawartości”[cite: 2].
-* [cite_start]Uporządkowanie sekcji **Softcamy**: przeniesiono tu aktualizacje `oscam.srvid` oraz instalację `SoftCam.Key` (Online)[cite: 4].
+3. INTERFEJS (GUI)
+- Dodano kolorowe nagłówki dla lepszej czytelności sekcji (np. Konfigurator, Narzędzia).
+- Nowe, logiczne grupowanie narzędzi w menu.
+- Dodano opisy pomocnicze (tooltip) dla funkcji Super Konfigurator.
 
-### 🎨 Interfejs i UX
-* [cite_start]Dodano **kolorowe nagłówki sekcji** (np. dla Konfiguratora i Narzędzi), co znacznie poprawia czytelność listy[cite: 4].
-* [cite_start]Logiczniejsze grupowanie narzędzi w menu[cite: 5].
-* [cite_start]Dodano opisy (tooltipy) wyjaśniające działanie funkcji „Super Konfigurator”[cite: 6].
+4. SUPER KONFIGURATOR
+- Poprawiono stabilność restartu systemu po zakończeniu konfiguracji.
+- Zachowano kolejność: Lista kanałów -> Softcam -> Oscam (feed) -> Picony -> Restart.
 
-### ⚙️ Super Konfigurator
-* [cite_start]Poprawiono stabilność pełnego restartu systemu po zakończeniu konfiguracji[cite: 7].
-* [cite_start]Zachowano sprawdzoną kolejność działań: Lista kanałów → Softcam → Oscam (feed) → Picony → Restart[cite: 8].
-
----
-[cite_start]*Uwaga: Aktualizacja ma charakter porządkowy i naprawczy – żadne dotychczasowe funkcje nie zostały usunięte[cite: 11].*
+UWAGA:
+Aktualizacja ma charakter porządkowy i naprawczy. Żadne funkcje nie zostały usunięte.
