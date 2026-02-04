@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 6.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 7.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 FIXED & UPDATED (SuperWizard Fix + New URLs + REMOVED Unstable Modules)
 """
 from __future__ import print_function
@@ -109,7 +109,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "6.1"
+VER = "7.0"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -335,14 +335,16 @@ def install_e2kodi(session):
 
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
-    ("--- Softcamy ---", "SEPARATOR"),
+    (r"\c00FFD200--- Softcamy ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
-    ("⚙️ oscam.dvbapi - zarządzaj", "CMD:MANAGE_DVBAPI"),
+    ("⚙️ oscam.dvbapi - kasowanie zawartości", "CMD:MANAGE_DVBAPI"),
+    ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
+    ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam Feed - Instalator", "CMD:INSTALL_SOFTCAM_FEED"),
     ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
-    ("--- Wtyczki Online ---", "SEPARATOR"),
+    (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
@@ -359,15 +361,18 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🖼️ Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
 
+
 SOFTCAM_AND_PLUGINS_EN = [
-    ("--- Softcams ---", "SEPARATOR"),
+    (r"\c00FFD200--- Softcams ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
-    ("⚙️ oscam.dvbapi - manage", "CMD:MANAGE_DVBAPI"),
+    ("⚙️ oscam.dvbapi - clear file", "CMD:MANAGE_DVBAPI"),
+    ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
+    ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam Feed - Installer", "CMD:INSTALL_SOFTCAM_FEED"),
     ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
-    ("--- Online Plugins ---", "SEPARATOR"),
+    (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
@@ -384,11 +389,12 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🖼️ Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
 ]
 
+
 # === NOWE PODZIELONE LISTY MENU (PL) ===
 SYSTEM_TOOLS_PL = [
-    ("--- Konfigurator ---", "SEPARATOR"),
+    (r"\c00FFD200--- Konfigurator ---\c00ffffff", "SEPARATOR"),
     ("✨ Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
-    ("--- Narzędzia Systemowe ---", "SEPARATOR"),
+    (r"\c00FFD200--- Narzędzia Systemowe ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -397,19 +403,18 @@ SYSTEM_TOOLS_PL = [
     ("⏰ Menedżer Cron", "CMD:CRON_MANAGER"),
     ("🔌 Menedżer Usług", "CMD:SERVICE_MANAGER"),
     ("ℹ️ Informacje o Systemie", "CMD:SYSTEM_INFO"),
-    ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
-    ("🔑 Instaluj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
-    ("--- Backup & Restore ---", "SEPARATOR"),
+    (r"\c00FFD200--- Backup & Restore ---\c00ffffff", "SEPARATOR"),
     ("💾 Backup Listy Kanałów", "CMD:BACKUP_LIST"),
     ("💾 Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
     ("♻️ Restore Listy Kanałów", "CMD:RESTORE_LIST"),
     ("♻️ Restore Konfiguracji Oscam", "CMD:RESTORE_OSCAM"),
 ]
 
+
 SYSTEM_TOOLS_EN = [
-    ("--- Configurator ---", "SEPARATOR"),
+    (r"\c00FFD200--- Configurator ---\c00ffffff", "SEPARATOR"),
     ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
-    ("--- System Tools ---", "SEPARATOR"),
+    (r"\c00FFD200--- System Tools ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -418,23 +423,22 @@ SYSTEM_TOOLS_EN = [
     ("⏰ Cron Manager", "CMD:CRON_MANAGER"),
     ("🔌 Service Manager", "CMD:SERVICE_MANAGER"),
     ("ℹ️ System Information", "CMD:SYSTEM_INFO"),
-    ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
-    ("🔑 Install SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
-    ("--- Backup & Restore ---", "SEPARATOR"),
+    (r"\c00FFD200--- Backup & Restore ---\c00ffffff", "SEPARATOR"),
     ("💾 Backup Channel List", "CMD:BACKUP_LIST"),
     ("💾 Backup Oscam Config", "CMD:BACKUP_OSCAM"),
     ("♻️ Restore Channel List", "CMD:RESTORE_LIST"),
     ("♻️ Restore Oscam Config", "CMD:RESTORE_OSCAM"),
 ]
 
+
 DIAGNOSTICS_PL = [
-    ("--- Informacje i Aktualizacje ---", "SEPARATOR"),
+    (r"\c00FFD200--- Informacje i Aktualizacje ---\c00ffffff", "SEPARATOR"),
     ("ℹ️ Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("🔄 Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
-    ("--- Diagnostyka ---", "SEPARATOR"),
+    (r"\c00FFD200--- Diagnostyka ---\c00ffffff", "SEPARATOR"),
     ("🌐 Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
-    ("--- Czyszczenie i Bezpieczeństwo ---", "SEPARATOR"),
+    (r"\c00FFD200--- Czyszczenie i Bezpieczeństwo ---\c00ffffff", "SEPARATOR"),
     ("⏱️ Auto RAM Cleaner (Konfiguruj)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
@@ -442,20 +446,22 @@ DIAGNOSTICS_PL = [
     ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
 ]
 
+
 DIAGNOSTICS_EN = [
-    ("--- Info & Updates ---", "SEPARATOR"),
+    (r"\c00FFD200--- Info & Updates ---\c00ffffff", "SEPARATOR"),
     ("ℹ️ About AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("🔄 Update Plugin", "CMD:CHECK_FOR_UPDATES"),
-    ("--- Diagnostics ---", "SEPARATOR"),
+    (r"\c00FFD200--- Diagnostics ---\c00ffffff", "SEPARATOR"),
     ("🌐 Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
-    ("--- Cleaning & Security ---", "SEPARATOR"),
+    (r"\c00FFD200--- Cleaning & Security ---\c00ffffff", "SEPARATOR"),
     ("⏱️ Auto RAM Cleaner (Setup)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
 ]
+
 
 # === NOWE 4 KATEGORIE ===
 COL_TITLES = {
@@ -695,13 +701,19 @@ class WizardProgressScreen(Screen):
             print("[AIO Panel] Błąd podczas przeładowywania list w wizardzie:", e)
         self._wizard_run_next_step()
 
+
     def _on_wizard_finish(self, *args, **kwargs):
-        self["message"].setText("Instalacja zakończona!\n\nZa chwilę nastąpi restart interfejsu GUI...")
+        self["message"].setText(
+            "Instalacja zakończona!\n\nZa chwilę nastąpi restart całego systemu tunera...\n\n"
+            "Installation completed!\n\nThe receiver will reboot now..."
+        )
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
-        self.close(self.session.open(TryQuitMainloop, 2))
-
+        try:
+            self.session.open(TryQuitMainloop, 2)
+        finally:
+            self.close()
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
 class AIOLoadingScreen(Screen):
@@ -723,10 +735,58 @@ class AIOLoadingScreen(Screen):
     def start_loading_process(self):
         self.check_dependencies()
 
+    def _deps_present(self):
+        """Verify runtime prerequisites on the current image.
+
+        The plugin uses external tools (wget/tar/unzip) and CA certificates
+        for HTTPS downloads. Some users may reinstall/upgrade without wiping
+        the plugin directory; in that case the .deps_ok marker might exist
+        even though packages are missing on a different image.
+        """
+        try:
+            which = shutil.which
+        except Exception:
+            which = None
+
+        def _has_cmd(cmd):
+            try:
+                if which is not None:
+                    return which(cmd) is not None
+            except Exception:
+                pass
+            # Fallback
+            try:
+                return os.system("which %s >/dev/null 2>&1" % cmd) == 0
+            except Exception:
+                return False
+
+        has_wget = _has_cmd("wget")
+        has_tar = _has_cmd("tar")
+        has_unzip = _has_cmd("unzip")
+
+        ca_paths = [
+            "/etc/ssl/certs/ca-certificates.crt",
+            "/etc/ssl/certs/ca-bundle.crt",
+            "/etc/ssl/cert.pem",
+            "/etc/ssl/certs/ca-certificates.pem",
+        ]
+        has_ca = any(os.path.exists(p) for p in ca_paths)
+
+        return has_wget and has_tar and has_unzip and has_ca
+
     def check_dependencies(self):
-        if os.path.exists(self.flag_file):
+        # If marker exists, still verify that dependencies are really present.
+        # This guarantees correct behavior across different Python3 images.
+        if os.path.exists(self.flag_file) and self._deps_present():
             self.start_async_data_load()
             return
+
+        # Marker exists but deps are missing (or partial) -> force re-check.
+        if os.path.exists(self.flag_file):
+            try:
+                os.remove(self.flag_file)
+            except Exception:
+                pass
 
         self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
@@ -734,7 +794,8 @@ class AIOLoadingScreen(Screen):
         # Usunięto 'opkg update', aby uniknąć zawieszania się na wolnej sieci
         cmd = """
         echo "AIO Panel: Cicha instalacja zależności (bez opkg update)..."
-        opkg install wget ca-certificates > /dev/null 2>&1
+        # ca-certificates is common, but some images provide ca-bundle instead.
+        opkg install wget ca-certificates ca-bundle > /dev/null 2>&1
         opkg install tar > /dev/null 2>&1 || echo 'Info: Pakiet tar pominięty.'
         opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
         echo "AIO Panel: Zakończono."
@@ -1635,7 +1696,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔑 Softcam i Wtyczki": "Sekcja narzędzi CAM i instalatorów wtyczek.\nWybierz pozycję, aby zainstalować lub uruchomić daną funkcję.",
         "🔄 Restart Oscam": "Restartuje usługę Oscam (jeśli działa w systemie).\nPrzydatne po zmianie konfiguracji lub po zawieszeniu emulatora.",
         "🧹 Kasuj hasło Oscam": "Czyści hasło dostępu do WWW Oscam (jeśli jest ustawione).\nUłatwia odzyskanie dostępu do panelu bez reinstalacji.",
-        "⚙️ oscam.dvbapi - zarządzaj": "Edycja/zarządzanie plikiem oscam.dvbapi.\nPozwala dodać/usunąć wpisy i uporządkować priorytety kart/CAID.",
+        "⚙️ oscam.dvbapi - kasowanie zawartości": "Czyści (kasuje zawartość) pliku oscam.dvbapi w konfiguracji Oscam.\nPrzydatne, gdy plik zawiera błędne wpisy lub chcesz zacząć od zera.",
         "📥 Softcam Feed - Instalator": "Instaluje Softcam Feed w obrazie (repozytorium pakietów).\nPo instalacji możesz pobierać softcamy z: Pobierz wtyczki → Pakiety softcam.",
         "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu (gdy dostępny).\nPo instalacji zalecany restart GUI.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
@@ -1653,6 +1714,7 @@ FUNCTION_DESCRIPTIONS = {
         # Narzędzia Systemowe
         "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
         "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
+        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Paweł Pawełek)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
         "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) i zapisuje w docelowym katalogu.\nMoże nadpisać istniejące pliki; po zakończeniu zalecany restart GUI.",
@@ -1662,7 +1724,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔌 Menedżer Usług": "Zarządzanie usługami systemowymi (SSH, FTP itd.)",
         "ℹ️ Informacje o Systemie": "Szczegółowe informacje o sprzęcie i oprogramowaniu",
         "🔄 Aktualizuj oscam.srvid/srvid2": "Aktualizacja listy identyfikatorów kanałów",
-        "🔑 Instaluj SoftCam.Key (Online)": "Automatyczna instalacja kluczy SoftCam",
+        "🔑 Aktualizuj SoftCam.Key (Online)": "Pobiera i aktualizuje plik SoftCam.Key (Online) w typowych lokalizacjach kluczy.\nPo zakończeniu wykonuje restart emulatora (jeśli uruchomiony).",
         "💾 Backup Listy Kanałów": "Kopia zapasowa list kanałów",
         "💾 Backup Konfiguracji Oscam": "Kopia zapasowa konfiguracji Oscam",
         "♻️ Restore Listy Kanałów": "Przywracanie list kanałów z backupu",
@@ -1692,7 +1754,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔑 Softcam & Plugins": "CAM/tools and plugin installers section.\nSelect an item to install, update or run the selected function.",
         "🔄 Restart Oscam": "Restarts the Oscam service (if available on your image).\nUseful after config changes or when the emulator becomes unresponsive.",
         "🧹 Clear Oscam Password": "Clears the Oscam WebIF password (if configured).\nHelps regain panel access without reinstalling.",
-        "⚙️ oscam.dvbapi - manage": "Manage/edit oscam.dvbapi.\nAdd/remove entries and adjust card/CAID priorities.",
+        "⚙️ oscam.dvbapi - clear file": "Clears/truncates the oscam.dvbapi file in Oscam config directories.\nUseful if the file contains wrong entries or you want a clean start.",
         "📥 Softcam Feed - Installer": "Installs Softcam Feed repository on your image.\nAfter install: Download plugins → Softcam packages to pick your emulator.",
         "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed (when available).\nGUI restart is recommended after installation.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
@@ -1710,6 +1772,7 @@ FUNCTION_DESCRIPTIONS = {
         # System Tools
         "⚙️ System Tools": "Advanced system administration tools",
         "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
+        ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Paweł Pawełek)\n- install softcam\n- install the newest Oscam from feed (auto-detect tuner/CPU)\n- download picons (Transparent)\nFinally triggers a full system reboot.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
         "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set and writes it to the target folder.\nMay overwrite existing files; GUI restart recommended.",
@@ -1719,7 +1782,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔌 Service Manager": "Manage system services (SSH, FTP, etc.)",
         "ℹ️ System Information": "Detailed hardware and software info",
         "🔄 Update oscam.srvid/srvid2": "Update channel identifier list",
-        "🔑 Install SoftCam.Key (Online)": "Automatic SoftCam keys installation",
+        "🔑 Update SoftCam.Key (Online)": "Downloads and updates SoftCam.Key (Online) to common key/config locations.\nRestarts the emulator (if running).",
         "💾 Backup Channel List": "Backup channel lists",
         "💾 Backup Oscam Config": "Backup Oscam configuration",
         "♻️ Restore Channel List": "Restore channel lists from backup",
@@ -1940,7 +2003,7 @@ class Panel(Screen):
             
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "Oscam Feed - {}" if lang == 'PL' else "Oscam Feed - {}"
+                    oscam_text = "📥 Oscam Feed - {}" if lang == 'PL' else "📥 Oscam Feed - {}"
                     softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
             
             for i, (name, action) in enumerate(tools_menu):
@@ -2140,7 +2203,7 @@ class Panel(Screen):
         elif key == "install_basic_no_picons":
             steps = ["channel_list", "install_oscam", "reload_settings"]
         elif key == "install_with_picons":
-            steps = ["channel_list", "picons", "install_oscam", "reload_settings"]
+            steps = ["channel_list", "install_oscam", "picons", "reload_settings"]
 
         if steps:
             # Uruchomienie ekranu postępu (WizardProgressScreen)
@@ -2369,7 +2432,7 @@ class Panel(Screen):
         )
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
     def install_softcam_key_online(self):
-        title = "Instalacja SoftCam.Key (Online)"
+        title = "Aktualizacja SoftCam.Key (Online)"
         # Aktualne, często aktualizowane repozytorium kluczy (grudzień 2025)
         url = "https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key"
         # Alternatywne źródło (backup)
@@ -2471,15 +2534,37 @@ class Panel(Screen):
     def reload_settings_python(self, *args): eDVBDB.getInstance().reloadServicelist(); eDVBDB.getInstance().reloadBouquets(); show_message_compat(self.sess, "Listy przeładowane.", timeout=3)
     def clear_oscam_password(self): run_command_in_background(self.sess, "Kasowanie hasła", ["sed -i '/httppwd/d' /etc/tuxbox/config/oscam.conf"])
     def manage_dvbapi(self):
-        opt = [("Kasuj", "clear")] if self.lang == 'PL' else [("Clear", "clear")]
-        self.sess.openWithCallback(self._manage_dvbapi_selected, ChoiceBox, title="DVBAPI", list=opt)
+        opt = [("Kasuj zawartość", "clear")] if self.lang == 'PL' else [("Clear file", "clear")]
+        self.sess.openWithCallback(self._manage_dvbapi_selected, ChoiceBox, title="oscam.dvbapi", list=opt)
 
     def _manage_dvbapi_selected(self, choice):
         if not choice:
             return
         if choice[1] == "clear":
-            cmd = "mkdir -p /etc/tuxbox/config && : > /etc/tuxbox/config/oscam.dvbapi"
-            run_command_in_background(self.sess, "Kasowanie dvbapi" if self.lang == 'PL' else "Clearing dvbapi", [cmd])
+            cmd = r"""
+                BASE="/etc/tuxbox/config"
+                TARGET_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {} \; 2>/dev/null | sort -u)
+                if [ -z "$TARGET_DIRS" ]; then
+                    TARGET_DIRS="$BASE"
+                else
+                    echo "$TARGET_DIRS" | grep -qx "$BASE" || TARGET_DIRS="$BASE $TARGET_DIRS"
+                fi
+
+                for D in $TARGET_DIRS; do
+                    [ -d "$D" ] || mkdir -p "$D"
+                    : > "$D/oscam.dvbapi"
+                    # kompatybilność (stare/literówka): jeśli istnieje, wyczyść też oscam.dvbap
+                    [ -f "$D/oscam.dvbap" ] && : > "$D/oscam.dvbap" || true
+                done
+                sync
+                sleep 1
+            """
+            run_command_in_background(
+                self.sess,
+                "Kasowanie oscam.dvbapi" if self.lang == 'PL' else "Clearing oscam.dvbapi",
+                [cmd]
+            )
+
     def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", [f"(echo {p}; echo {p}) | passwd"]) if p else None, InputBox, title="Nowe hasło root")
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
@@ -2839,8 +2924,27 @@ def sessionstart(reason, session=None, **kwargs):
             _apply_auto_ram_from_config()
         except Exception as e:
             print("[AIO Panel] sessionstart error:", e)
+def menu(menuid, **kwargs):
+    # Register in:
+    # - Main Menu (MENU button): menuid == "mainmenu"
+    # - Setup -> System: menuid == "system"
+    if menuid in ("system", "mainmenu"):
+        # Use different entry ids to avoid any potential collisions in some images.
+        if menuid == "mainmenu":
+            return [("AIO Panel", main, "aio_panel_main", 45)]
+        return [("AIO Panel", main, "aio_panel", 45)]
+    return []
+
 def Plugins(**kwargs):
     return [
-        PluginDescriptor(name="AIO Panel", description="Panel All-In-One v{}".format(VER), where=PluginDescriptor.WHERE_PLUGINMENU, icon="logo.png", fnc=main),
-        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart)
+        PluginDescriptor(
+            name="AIO Panel",
+            description="Panel All-In-One v{}".format(VER),
+            where=PluginDescriptor.WHERE_PLUGINMENU,
+            icon="logo.png",
+            fnc=main
+        ),
+        # Menu -> Setup -> System
+        PluginDescriptor(where=PluginDescriptor.WHERE_MENU, fnc=menu),
+        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart),
     ]

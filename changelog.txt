@@ -1,143 +1,28 @@
-[6.1]
-2026-01-18  Version 6.1 (PL)
-NOWA FUNKCJONALNOŚĆ: OPISY FUNKCJI PO NAJECHANIU
-- Automatyczne wyświetlanie opisów podczas nawigacji strzałkami (↑↓).
-- Nowy widget 'function_description' na dole ekranu (żółty pasek).
-- Kompletny słownik opisów dla wszystkich funkcji (70+).
-- Obsługa dwóch języków: Polski (PL) i Angielski (EN).
-- Automatyczna zmiana języka opisów przy zmianie języka wtyczki.
-- Intuicyjna nawigacja z podglądem opisów.
---------------------------------------------------------------------------------
-(EN)
-NEW FEATURE: FUNCTION DESCRIPTIONS ON HOVER
-- Automatic description display while navigating with arrow keys (↑↓).
-- New 'function_description' widget added to the bottom of the screen (yellow bar).
-- Complete description dictionary covering all functions (70+).
-- Dual language support: Polish (PL) and English (EN).
-- Automatic description language synchronization when changing plugin language.
-- Intuitive navigation with instant description preview.
+# AIO Panel v7.0
 
-[6.0]
-AIO Panel v6.0 Update (PL):
-- ZMIANA: Podniesiono wersję wtyczki do 6.0
-- SUPER KONFIGURATOR: Domyślna instalowana lista kanałów została zmieniona na "Paweł Pawełek 13E"
-- POPRAWKA: Naprawiono funkcję "oscam.dvbapi - zarządzaj" (stabilne działanie, bez crash/blue screen)
-- POPRAWKA: Auto RAM Cleaner zapamiętuje ustawienie po restarcie GUI oraz po restarcie systemu
-- ULEPSZENIE: Diagnostyka sieci pokazuje czytelne podsumowanie procesu (download/upload, ping, IP tunera, publiczne IP i kluczowe parametry sieci)
-- DODANO: "Konfiguracja IPTV - zależności" (opkg update + instalacja: ServiceApp, ExtPlayer3, ffmpeg, python3-youtube-dl, python3-yt-dlp, ytdlpwrapper, ytdlwrapper, streamlinkwrapper, streamlinksrv)
+**Data wydania:** 2026-02-04
+**Kompatybilność:** Enigma2 / Python 3
 
-AIO Panel v6.0 Update (EN):
-- CHANGE: Bumped plugin version to 6.0
-- SUPER SETUP: Default channel list installation changed to "Paweł Pawełek 13E"
-- FIX: Fixed "oscam.dvbapi - manage" action (stable handling, no crash/blue screen)
-- FIX: Auto RAM Cleaner now persists its setting across GUI restarts and full reboots
-- IMPROVEMENT: Network diagnostics now shows a clear summary (download/upload, ping, tuner IP, public IP and key network parameters)
-- ADDED: "IPTV Configuration - dependencies" (opkg update + installs: ServiceApp, ExtPlayer3, ffmpeg, python3-youtube-dl, python3-yt-dlp, ytdlpwrapper, ytdlwrapper, streamlinkwrapper, streamlinksrv)
+## 🚀 Najważniejsze zmiany
 
-[5.0]
-AIO Panel v5.0 Update (PL):
-- DODANO: Opcja aktualizacji online oscam.srvid i srvid2
-- DODANO: Aktualizacja online SoftCam.Key
-- NOWOŚĆ: Interfejs z zakładkami (nawigacja Lewo/Prawo)
-- DODANO: Monitor Systemowy, Przeglądarka Logów, Menedżer Cron, Menedżer Usług, Menedżer Deinstalacji
-- POPRAWKA: Naprawiono restarty GUI przy wyjściu (usunięto niestabilne Narzędzia Sieciowe/AutoBackup)
-- POPRAWKA: Ulepszona stabilność Super Konfiguratora
+### 🔌 Integracja z systemem
+* [cite_start]Pełna integracja z menu Enigma2 – wtyczka jest teraz widoczna w **Menu Głównym**, ustawieniach systemowych oraz menu wtyczek[cite: 1].
+* [cite_start]Przeniesienie wtyczki do ścieżki `SystemPlugins` dla lepszej zgodności z obrazami E2[cite: 1].
+* [cite_start]Ulepszona weryfikacja i doinstalowywanie brakujących zależności przy pierwszym uruchomieniu[cite: 9, 10].
 
-AIO Panel v5.0 Update (EN):
-- ADDED: Online update option for oscam.srvid and srvid2
-- ADDED: Online SoftCam.Key updater
-- NEW: Tabbed Interface (Left/Right navigation)
-- ADDED: System Monitor, Log Viewer, Cron Manager, Service Manager, Uninstall Manager
-- FIX: Solved GUI Crashes on Exit (Removed unstable NetworkTools/AutoBackup)
-- FIX: Super Setup Wizard stability improvements
+### 🛠️ Oscam i Softcamy
+* [cite_start]**Poprawka krytyczna:** Naprawiono funkcję czyszczenia zawartości pliku `oscam.dvbapi` (wcześniej funkcja nie zawsze działała poprawnie)[cite: 2].
+* [cite_start]Zmiana nazewnictwa na bardziej precyzyjne: „oscam.dvbapi - kasowanie zawartości”[cite: 2].
+* [cite_start]Uporządkowanie sekcji **Softcamy**: przeniesiono tu aktualizacje `oscam.srvid` oraz instalację `SoftCam.Key` (Online)[cite: 4].
 
-[4.4]
-- NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner"...
-(reszta starego tekstu...)
-[4.4]
-- NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner" w Diagnostyce (automatyczne zwalnianie pamięci w tle).
-- POPRAWKA KRYTYCZNA: Naprawiono zawieszanie się tunera (spinner) podczas instalacji wtyczek zewnętrznych (np. EPG Import, NCam).
-- POPRAWKA: Usunięto błąd "invalid syntax" (linia 51).
-- OPTYMALIZACJA: Przyspieszono działanie skryptów instalacyjnych i backupu.
-- ZMIANA: Usunięto przestarzały skrypt reload_bouquets.sh.
+### 🎨 Interfejs i UX
+* [cite_start]Dodano **kolorowe nagłówki sekcji** (np. dla Konfiguratora i Narzędzi), co znacznie poprawia czytelność listy[cite: 4].
+* [cite_start]Logiczniejsze grupowanie narzędzi w menu[cite: 5].
+* [cite_start]Dodano opisy (tooltipy) wyjaśniające działanie funkcji „Super Konfigurator”[cite: 6].
 
-[4.3]
-- Dodano Instalator Softcam (opcja: Softcam Feed - Instalator) do menu Softcam i Wtyczki.
-- Dodano Instalator IPTV Dream by Paweł Pawełek (instalacja jest teraz cicha i powiadamia o konieczności restartu GUI).
-- Poprawka Oscam Feed: Zmieniono nazwę pozycji menu na "Oscam Feed - [numer wersji]" w celu lepszej czytelności.
-- Ulepszenie Narzędzia do Czyszczenia Pamięci Tymczasowej: Teraz bezpiecznie usuwa popularne pliki instalacyjne (.ipk, .zip, .tar.gz) i logi z /tmp, unikając usuwania kluczowych plików wtyczki.
+### ⚙️ Super Konfigurator
+* [cite_start]Poprawiono stabilność pełnego restartu systemu po zakończeniu konfiguracji[cite: 7].
+* [cite_start]Zachowano sprawdzoną kolejność działań: Lista kanałów → Softcam → Oscam (feed) → Picony → Restart[cite: 8].
 
-[4.2]
-- Zaktualizowano adres repozytorium J00zka do nowej ścieżki (github.io)
-- Zaktualizowano instalator NCam do wersji 15.6
-- Drobne poprawki stabilności i logiki poleceń
-
-[4.1]
-- Dodano funkcje Backup/Restore dla Listy Kanałów i konfig. Oscam
-- Przeniesiono opcje (Info, Aktualizacje, Hasła) do nowej zakładki "Info i Diagnostyka"
-- Ukryto czarne okno konsoli (teraz polecenia wykonują się w tle)
-- Poprawiono błąd 'tar' przy tworzeniu backupu listy kanałów
-- Dodano instalator Ncam v15.6
-
-[4.0]
-- Gruntowna przebudowa interfejsu na 4 zakładki (Nawigacja Lewo/Prawo)
-- Przywrócenie pełnej legendy na kolorowych przyciskach (PL/EN/Restart/Aktualizuj)
-- Dodano logikę dodawania bukietów (M3U / Bouquet REF) bez kasowania listy
-- Dodano możliwość instalacji bukietów Azman (jako bukiety referencyjne)
-- Dodano instalator Repozytorium J00Zek Feed
-- Drobne poprawki stabilności
-
-[3.3]
-- Dodano inteligentne filtrowanie menu dla obrazów Hyperion/VTi.
-- Wtyczki (AJPanel, E2iPlayer, Picon Updater) są teraz widoczne na wszystkich systemach.
-- Ukrywane są tylko funkcje EMU (Oscam, NCam) oraz Super Konfigurator na systemach z własnym menedżerem.
-- dodano instalcje wtyczki Picon Updater by Paweł Pawałek
-
-[3.2]
-- Dodano instalator wtyczki Picon Updater do menu "Softcam i Wtyczki".
-- Podniesienie numeru wersj
-
-[3.1]
-- Poprawiono pętlę zależności: Wtyczka sprawdza zależności (SSL/wget) tylko przy pierwszym uruchomieniu, tworząc plik .deps_ok.
-- Naprawiono błąd instalacji zależności na OpenPli (problem z pakietem 'tar'), co odblokowuje pobieranie list z GitHub.
-
-[3.0]
-- Przebudowano start wtyczki: dodano ekran ładowania (Splash Screen), aby wyeliminować problem "pustego" okna na wolniejszych tunerach.
-- Naprawiono błąd początkowego fokusu (były zaznaczone wszystkie trzy kolumny).
-
-[2.5]
-- Poprawiono ładowanie wtyczki przy starcie (wyeliminowano błąd "zawieszania się" na ekranie powitalnym na niektórych tunerach).
-- Dodano inteligentny instalator E2Kodi z repozytorium j00zek (automatycznie wykrywa wersję Python 3.9, 3.12, 3.13).
-
-[2.4]
-- Poprawka błędu "pustego tła" przy starcie (ładowanie w tle)
-- Poprawiona logika sprawdzania aktualizacji (v2.4 > v2.3)
-- Dodano pytanie o restart GUI po instalacji wtyczek
-
-[2.3]
-- Połączono instalację Softcam Feed i Oscam w jedną inteligentną funkcję.
-- Zaktualizowano link instalatora alternatywnego (Levi45).
-- Poprawiono funkcję "Diagnostyka Sieci", aby poprawnie pokazywała IP tunera.
-- Zaktualizowano opisy i logikę w "Super Konfiguratorze".
-
-[2.2]
-- Poprawiono funkcję Diagnostyki Sieci (teraz używa speedtest-cli i poprawnie pokazuje IP tunera).
-- Poprawiono wczytywanie list kanałów z repozytorium GitHub.
-- Zmieniono wersję na 2.2.
-
-[2.1]
-- Przyspieszono start wtyczki (ładowanie danych w tle).
-- Dodano pełne tłumaczenie "Super Konfiguratora".
-- Dodano opcję "Podstawowa Konfiguracja (bez Picon)".
-
-[2.0]
-- Naprawiono krytyczny błąd (BSOD/GSOD) na nowszych systemach z Pythonem 3.11+.
-- Naprawiono zawieszanie się tunera po zakończeniu "Super Konfiguratora".
-- Usunięto błąd "Modal open" podczas pierwszego uruchomienia wtyczki.
-- Dodano alternatywną instalację Oscam, gdy nie ma go w oficjalnym feedzie.
-
-[1.9r3]
-Data wydania: 03.10.2025
-- [Super Konfigurator] Gruntowna przebudowa i uproszczenie działania.
-- [Picony] Dodano nowy, domyślny pakiet picon Transparent (Hot Bird 13°E).
-- [Picony] Poprawiono instalator, aby picony rozpakowywały się do prawidłowego katalogu.
+---
+[cite_start]*Uwaga: Aktualizacja ma charakter porządkowy i naprawczy – żadne dotychczasowe funkcje nie zostały usunięte[cite: 11].*
