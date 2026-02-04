@@ -1,19 +1,27 @@
-Wersja: 7.0
-Data: 2026-02-04
+[AIO Panel v7.0]
+Data wydania: 2026-02-04
+Kompatybilność: Enigma2 / Python 3
+
 GLOWNE ZMIANY:
+
 1. INTEGRACJA Z SYSTEMEM
 - Wtyczka przeniesiona do SystemPlugins.
-- Widoczna w Menu Glownym i Ustawieniach.
-- Automatyczna naprawa zaleznosci.
-2. POPRAWKI
-- Naprawiono czyszczenie oscam.dvbapi (Fix permission).
-- Poprawiono skrypty instalacyjne (Brak bledu 126).
-- Uporzadkowano menu Softcamy.
-3. INTERFEJS
-- Kolorowe naglowki sekcji dla lepszej czytelnosci.
-- Nowe opisy w Super Konfiguratorze.
----------------------------------------------------
+- Widoczna w Menu Glownym, Ustawieniach i Wtyczkach.
+- Automatyczna naprawa zaleznosci przy starcie.
 
-Wersja: 6.0
-Data: 2025-01-01
-- (Starsze zmiany...)
+2. OSCAM I SOFTCAMY
+- Naprawiono funkcję czyszczenia pliku oscam.dvbapi.
+- Zmiana nazwy funkcji na: "oscam.dvbapi - kasowanie zawartości".
+- Przeniesienie aktualizacji srvid i kluczy do sekcji "Softcamy".
+
+3. INTERFEJS (GUI)
+- Dodano kolorowe nagłówki dla sekcji Konfigurator i Narzędzia.
+- Nowe, logiczne grupowanie narzędzi w menu.
+- Dodano opisy pomocnicze (tooltip) dla funkcji Super Konfigurator.
+
+4. SUPER KONFIGURATOR
+- Poprawiono stabilność restartu systemu.
+- Zachowano sprawdzoną kolejność instalacji (Listy -> Softcam -> Picony).
+
+[AIO Panel v6.0]
+(tutaj ewentualnie stare zmiany...)
