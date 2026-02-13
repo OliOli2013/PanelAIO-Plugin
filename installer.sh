@@ -1,9 +1,9 @@
 #!/bin/sh
-# Skrypt instalacyjny dla wtyczki PanelAIO (v7.0)
+# Skrypt instalacyjny dla wtyczki PanelAIO (v7.1)
 # Zgodny z migracją do SystemPlugins
 
 # --- Konfiguracja ---
-# NOWA ŚCIEŻKA (SystemPlugins) - zgodnie z Changelog v7.0
+# NOWA ŚCIEŻKA (SystemPlugins) - zgodnie z Changelog v7.1
 PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO"
 # STARA ŚCIEŻKA (do usunięcia przy migracji)
 OLD_PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
@@ -14,7 +14,7 @@ LOG_FILE="/tmp/PanelAIO_Update.log"
 
 # --- Funkcja wykonująca aktualizację w tle ---
 do_background_update() {
-    echo ">>> Rozpoczynam aktualizację PanelAIO v7.0 w tle (log: $LOG_FILE)..." > "$LOG_FILE"
+    echo ">>> Rozpoczynam aktualizację PanelAIO v7.1 w tle (log: $LOG_FILE)..." > "$LOG_FILE"
     date >> "$LOG_FILE"
 
     # 1. Przygotowanie katalogu tymczasowego
@@ -26,13 +26,13 @@ do_background_update() {
     echo "--> Pobieram pliki wtyczki do /tmp..." >> "$LOG_FILE"
     
     # Lista plików do pobrania
-    wget -q "$BASE_URL/plugin.py" -O "$TMP_UPDATE_DIR/plugin.py" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/__init__.py" -O "$TMP_UPDATE_DIR/__init__.py" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/logo.png" -O "$TMP_UPDATE_DIR/logo.png" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/selection.png" -O "$TMP_UPDATE_DIR/selection.png" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/install_archive_script.sh" -O "$TMP_UPDATE_DIR/install_archive_script.sh" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/update_satellites_xml.sh" -O "$TMP_UPDATE_DIR/update_satellites_xml.sh" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$TMP_UPDATE_DIR/Kod_QR_buycoffee.png" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/plugin.py" -O "$TMP_UPDATE_DIR/plugin.py" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/__init__.py" -O "$TMP_UPDATE_DIR/__init__.py" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/logo.png" -O "$TMP_UPDATE_DIR/logo.png" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/selection.png" -O "$TMP_UPDATE_DIR/selection.png" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/install_archive_script.sh" -O "$TMP_UPDATE_DIR/install_archive_script.sh" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/update_satellites_xml.sh" -O "$TMP_UPDATE_DIR/update_satellites_xml.sh" >> "$LOG_FILE" 2>&1
+    wget -q -4 -U "Enigma2" "$BASE_URL/Kod_QR_buycoffee.png" -O "$TMP_UPDATE_DIR/Kod_QR_buycoffee.png" >> "$LOG_FILE" 2>&1
 
     # Weryfikacja pobrania kluczowego pliku
     if [ ! -f "$TMP_UPDATE_DIR/plugin.py" ]; then
@@ -83,21 +83,21 @@ do_background_update() {
     # 6. Czyszczenie końcowe
     rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
 
-    echo ">>> Aktualizacja PanelAIO v7.0 ZAKOŃCZONA." >> "$LOG_FILE"
+    echo ">>> Aktualizacja PanelAIO v7.1 ZAKOŃCZONA." >> "$LOG_FILE"
     date >> "$LOG_FILE"
     echo ">>> WYMAGANY RESTART GUI (Enigma2) ABY ZOBACZYĆ ZMIANY." >> "$LOG_FILE"
     exit 0
 }
 
 # --- Główna logika skryptu ---
-echo ">>> Uruchamiam instalator PanelAIO v7.0..."
+echo ">>> Uruchamiam instalator PanelAIO v7.1..."
 # Uruchomienie w tle
 ( do_background_update ) &
 
 # Komunikaty dla użytkownika w terminalu
 echo "-----------------------------------------------------"
 echo ">>> Rozpoczęto instalację/aktualizację w tle."
-echo ">>> Wersja docelowa: 7.0 (SystemPlugins)"
+echo ">>> Wersja docelowa: 7.1 (SystemPlugins)"
 echo ">>> Log operacji: $LOG_FILE"
 echo ""
 echo ">>> Po odczekaniu ok. 30 sekund wykonaj restart GUI,"
