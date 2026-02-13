@@ -1,3 +1,11 @@
+[7.1]
+Data wydania: 13.02.2026
+- OpenPLi 9.2 Fix: Zmodyfikowano funkcję _get_lists_from_repo_sync. Dodano flagę User-Agent (-U "Enigma2") oraz wymuszenie IPv4 w poleceniu wget (OpenPLi 9.x potrafi odrzucać połączenia do GitHuba bez User-Agenta lub mieć problemy z IPv6).
+- IPTV Dream Fix: Zmieniono sposób instalacji INSTALL_IPTV_DREAM — instalacja uruchamia się teraz w oknie Konsoli (zamiast w tle), aby pokazywać postęp i nie blokować GUI.
+- Super Konfigurator (Full) Fix: W funkcji do_restart_and_close dodano „bezpiecznik”. Jeśli TryQuitMainloop zawiesi się, po 3 sekundach nastąpi wymuszenie restartu komendą reboot.
+- Super Konfigurator Tooltips: Zastąpiono standardowy ChoiceBox nową klasą SuperWizardChoiceScreen — każda opcja ma opis wyświetlany na dole ekranu po najechaniu.
+- Wersja: Podbita do 7.1.
+
 [AIO Panel v7.0]
 Data wydania: 2026-02-04
 Kompatybilność: Enigma2 / Python 3
