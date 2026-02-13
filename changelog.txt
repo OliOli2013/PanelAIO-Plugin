@@ -1,10 +1,9 @@
 [7.1]
-Data wydania: 13.02.2026
-- OpenPLi 9.2 Fix: Zmodyfikowano funkcję _get_lists_from_repo_sync. Dodano flagę User-Agent (-U "Enigma2") oraz wymuszenie IPv4 w poleceniu wget (OpenPLi 9.x potrafi odrzucać połączenia do GitHuba bez User-Agenta lub mieć problemy z IPv6).
-- IPTV Dream Fix: Zmieniono sposób instalacji INSTALL_IPTV_DREAM — instalacja uruchamia się teraz w oknie Konsoli (zamiast w tle), aby pokazywać postęp i nie blokować GUI.
-- Super Konfigurator (Full) Fix: W funkcji do_restart_and_close dodano „bezpiecznik”. Jeśli TryQuitMainloop zawiesi się, po 3 sekundach nastąpi wymuszenie restartu komendą reboot.
-- Super Konfigurator Tooltips: Zastąpiono standardowy ChoiceBox nową klasą SuperWizardChoiceScreen — każda opcja ma opis wyświetlany na dole ekranu po najechaniu.
-- Wersja: Podbita do 7.1.
+- NAPRAWIONO: Problemy z pobieraniem list kanałów z GitHub na obrazach OpenPLi 9.2 (dodano User-Agent i wymuszenie IPv4 dla wget).
+- NAPRAWIONO: Krytyczny błąd powodujący zawieszanie się tunera podczas instalacji IPTV Dream. Proces instalacji został przeniesiony z tła do widocznego okna Konsoli.
+- NAPRAWIONO: Zawieszanie się systemu po zakończeniu działania Super Konfiguratora (tryb Pełny). Dodano zabezpieczenie, które wymusza restart systemu, jeśli standardowy restart GUI nie zadziała.
+- DODANO: Opisy i podpowiedzi dla poszczególnych opcji w Super Konfiguratorze (zastąpiono standardowe menu wyboru nowym ekranem).
+- NAPRAWIONO: Błąd składni Python w sekcji opisów funkcji (naprawa błędu "expected ':' after dictionary key").
 
 [AIO Panel v7.0]
 Data wydania: 2026-02-04
