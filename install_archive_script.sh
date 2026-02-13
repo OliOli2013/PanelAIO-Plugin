@@ -1,12 +1,12 @@
 #!/bin/sh
-# Skrypt install_archive_script.sh (v7.0) - Zgodny z AIO Panel v7.0
+# Skrypt install_archive_script.sh (v7.1) - Zgodny z AIO Panel v7.1
 # Logika: Rozpakuj -> Znajdź lamedb -> Kopiuj z naprawą uprawnień -> (Restart robi plugin.py)
 
 # LOG_FILE dla debugowania
 LOG_FILE="/tmp/aio_install.log"
 
 # Start logging
-echo "--- START install_archive_script.sh (v7.0) ---" > "$LOG_FILE"
+echo "--- START install_archive_script.sh (v7.1) ---" > "$LOG_FILE"
 echo "Argumenty: FILE='$1' TYPE='$2'" >> "$LOG_FILE"
 date >> "$LOG_FILE"
 
@@ -93,7 +93,7 @@ cp -rf "$SOURCE_DIR"/* "$TARGET_ENIGMA2_DIR/" 2>> "$LOG_FILE" || {
     COPY_ERRORS=1; 
 }
 
-# Naprawa uprawnień (Fix Permissions) - WAŻNE w v7.0
+# Naprawa uprawnień (Fix Permissions) - WAŻNE w v7.1
 echo "--> Naprawiam uprawnienia plików w $TARGET_ENIGMA2_DIR..." >> "$LOG_FILE"
 # Ustawia 644 dla plików .tv, .radio, .dat i lamedb, aby system mógł je nadpisać
 chmod 644 "$TARGET_ENIGMA2_DIR"/userbouquet.* 2>/dev/null
@@ -117,7 +117,7 @@ rm -rf "$TMP_EXTRACT_DIR"
 rm -f "$DOWNLOADED_FILE_PATH"
 
 # 7. Raport końcowy
-echo "--- KONIEC install_archive_script.sh (v7.0) ---" >> "$LOG_FILE"
+echo "--- KONIEC install_archive_script.sh (v7.1) ---" >> "$LOG_FILE"
 
 if [ $COPY_ERRORS -ne 0 ]; then
     echo ">>> Instalacja ZAKOŃCZONA Z BŁĘDAMI KOPIOWANIA." | tee -a "$LOG_FILE"
