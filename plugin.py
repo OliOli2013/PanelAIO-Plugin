@@ -2,8 +2,8 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 7.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
-FIXED & UPDATED (SuperWizard Fix + New URLs + REMOVED Unstable Modules)
+Wersja 7.1 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+FIXED & UPDATED (SuperWizard Tooltips + OpenPLi 9 Fix + IPTV Dream Fix + Syntax Error Fix)
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -69,7 +69,6 @@ from twisted.internet import reactor
 from threading import Thread
 
 # === GLOBALNE ZMIENNE DLA AUTO RAM CLEANER ===
-# Timer musi być globalny, aby nie został usunięty po zamknięciu okna wtyczki
 g_auto_ram_timer = eTimer()
 g_auto_ram_active = False
 
@@ -81,7 +80,6 @@ def run_auto_ram_clean_task():
     except Exception as e:
         print("[AIO Panel] Auto RAM Cleaner Error:", e)
 
-# Podpięcie funkcji pod timer
 g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
 def _apply_auto_ram_from_config():
     """Restore Auto RAM Cleaner setting after GUI/system restart."""
@@ -109,7 +107,7 @@ PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "7.0"
+VER = "7.1"
 DATE = str(datetime.date.today())
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
 
@@ -476,7 +474,8 @@ def _get_lists_from_repo_sync():
     tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
     prepare_tmp_dir()
     try:
-        cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_json_path, manifest_url)
+        # [FIX] OpenPLi 9.2: Wymuszenie User-Agent oraz IPv4, aby uniknąć problemów z GitHub/SSL
+        cmd = "wget --prefer-family=IPv4 --no-check-certificate -U \"Enigma2\" -q -T 20 -O {} {}".format(tmp_json_path, manifest_url)
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, stderr = process.communicate()
         ret_code = process.returncode
@@ -707,11 +706,23 @@ class WizardProgressScreen(Screen):
             "Instalacja zakończona!\n\nZa chwilę nastąpi restart całego systemu tunera...\n\n"
             "Installation completed!\n\nThe receiver will reboot now..."
         )
+        # [FIX] Czasami GUI nie zamyka się poprawnie przy dużym obciążeniu po instalacji.
+        # Wydłużamy czas do 4s i dodajemy bezpiecznik w do_restart_and_close
         reactor.callLater(4, self.do_restart_and_close)
 
     def do_restart_and_close(self):
         try:
+            # Próba "ładnego" restartu
             self.session.open(TryQuitMainloop, 2)
+            
+            # [FIX] Zabezpieczenie na wypadek zawieszenia się GUI po instalacji FULL (np. picony)
+            # Jeśli TryQuitMainloop nie zadziała w ciągu 3 sekund, wymuś reboot z poziomu systemu.
+            def force_reboot_if_hung():
+                print("[AIO Panel] Wymuszanie restartu (fallback)...")
+                os.system("reboot || killall -9 enigma2")
+            
+            reactor.callLater(3, force_reboot_if_hung)
+            
         finally:
             self.close()
 
@@ -736,13 +747,7 @@ class AIOLoadingScreen(Screen):
         self.check_dependencies()
 
     def _deps_present(self):
-        """Verify runtime prerequisites on the current image.
-
-        The plugin uses external tools (wget/tar/unzip) and CA certificates
-        for HTTPS downloads. Some users may reinstall/upgrade without wiping
-        the plugin directory; in that case the .deps_ok marker might exist
-        even though packages are missing on a different image.
-        """
+        """Verify runtime prerequisites on the current image."""
         try:
             which = shutil.which
         except Exception:
@@ -775,13 +780,10 @@ class AIOLoadingScreen(Screen):
         return has_wget and has_tar and has_unzip and has_ca
 
     def check_dependencies(self):
-        # If marker exists, still verify that dependencies are really present.
-        # This guarantees correct behavior across different Python3 images.
         if os.path.exists(self.flag_file) and self._deps_present():
             self.start_async_data_load()
             return
 
-        # Marker exists but deps are missing (or partial) -> force re-check.
         if os.path.exists(self.flag_file):
             try:
                 os.remove(self.flag_file)
@@ -790,11 +792,8 @@ class AIOLoadingScreen(Screen):
 
         self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
         
-        # --- POPRAWKA v4.0.1 (Anti-Hang) ---
-        # Usunięto 'opkg update', aby uniknąć zawieszania się na wolnej sieci
         cmd = """
         echo "AIO Panel: Cicha instalacja zależności (bez opkg update)..."
-        # ca-certificates is common, but some images provide ca-bundle instead.
         opkg install wget ca-certificates ca-bundle > /dev/null 2>&1
         opkg install tar > /dev/null 2>&1 || echo 'Info: Pakiet tar pominięty.'
         opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
@@ -1802,6 +1801,62 @@ FUNCTION_DESCRIPTIONS = {
     }
 }
 # === KONIEC OPISÓW FUNKCJI ===
+
+# === NOWA KLASA WYBORU Z OPISEM (DLA WIZARDA) ===
+class SuperWizardChoiceScreen(Screen):
+    skin = """
+    <screen position="center,center" size="800,500" title="Super Konfigurator">
+        <widget name="list" position="20,20" size="760,300" scrollbarMode="showOnDemand" />
+        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="yellow" />
+        <widget name="actions" position="20,460" size="760,30" font="Regular;20" halign="right" />
+    </screen>"""
+
+    def __init__(self, session, options, title="Wybierz opcję", description_map=None):
+        Screen.__init__(self, session)
+        self.session = session
+        self.setTitle(title)
+        
+        self.options = options
+        self.description_map = description_map or {}
+        
+        self["list"] = MenuList(self.options)
+        self["description"] = Label("Wybierz opcję...")
+        self["actions"] = Label("OK - Wybierz | EXIT - Anuluj")
+        
+        self["my_actions"] = ActionMap(["OkCancelActions", "DirectionActions"], {
+            "ok": self.ok_pressed,
+            "cancel": self.cancel_pressed,
+            "up": self.move_up,
+            "down": self.move_down
+        }, -1)
+        
+        self.onShown.append(self.update_description)
+
+    def move_up(self):
+        self["list"].up()
+        self.update_description()
+
+    def move_down(self):
+        self["list"].down()
+        self.update_description()
+
+    def update_description(self):
+        cur = self["list"].getCurrent()
+        if cur:
+            # cur = ("Label", "key")
+            key = cur[1]
+            desc = self.description_map.get(key, "")
+            self["description"].setText(desc)
+
+    def ok_pressed(self):
+        cur = self["list"].getCurrent()
+        if cur:
+            self.close(cur)
+    
+    def cancel_pressed(self):
+        self.close(None)
+
+
 class Panel(Screen):
     # Nowy skin z jedną listą i informacją o zakładkach
     skin = """
@@ -1814,10 +1869,8 @@ class Panel(Screen):
 
         <widget name='menu' position='15,165' size='1070,380' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
 
-        <!-- Expanded function tooltip (more space + standout color) -->
         <widget name='function_description' position='15,550' size='1070,78' font='Regular;22' halign='left' valign='top' foregroundColor='#00FFD200' backgroundColor='#00101010' transparent='0' />
 
-        <!-- Bottom legend + footer moved up to avoid clipping on 690px height screens -->
         <widget name='legend' position='15,630'  size='1070,26'  font='Regular;20' halign='center'/>
         <widget name='footer' position='center,658' size='1070,24' font='Regular;16' halign='center' valign='center' foregroundColor='lightgrey'/>
     </screen>""".format(PLUGIN_QR_CODE_PATH)
@@ -2174,7 +2227,7 @@ class Panel(Screen):
 
     # --- FUNKCJE INSTALACYJNE I POMOCNICZE ---
     
-    # NAPRAWIONY SUPER KONFIGURATOR
+    # NAPRAWIONY SUPER KONFIGURATOR Z OPISEM
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
@@ -2183,12 +2236,29 @@ class Panel(Screen):
             (TRANSLATIONS[lang]["sk_option_full_picons"], "install_with_picons"),
             (TRANSLATIONS[lang]["sk_option_cancel"], "cancel")
         ]
-        # POPRAWKA: Użycie poprawnej składni openWithCallback dla ChoiceBox
+        
+        # Mapa opisów dla opcji
+        desc_map = {
+            "deps_only": "Tylko podstawowe pakiety systemowe (wget, tar, unzip).\nNie zmienia konfiguracji kanałów ani softcamu.",
+            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Oscam (Softcam Feed)\n- Restart GUI\nSzybka instalacja.",
+            "install_with_picons": "Konfiguracja pełna:\n- To co wyżej + PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
+            "cancel": "Powrót do menu."
+        }
+        if lang != "PL":
+            desc_map = {
+                "deps_only": "Install only basic system packages (wget, tar, unzip).\nDoes not change channel lists or softcam.",
+                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Oscam (Softcam Feed)\n- GUI Restart\nFast installation.",
+                "install_with_picons": "Full configuration:\n- Same as above + PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
+                "cancel": "Back to menu."
+            }
+
+        # Użycie nowej klasy zamiast standardowego ChoiceBox
         self.sess.openWithCallback(
             self._super_wizard_selected,
-            ChoiceBox,
+            SuperWizardChoiceScreen,
+            options=options,
             title=TRANSLATIONS[lang]["sk_choice_title"],
-            list=options
+            description_map=desc_map
         )
 
     def _super_wizard_selected(self, choice):
@@ -2206,13 +2276,7 @@ class Panel(Screen):
             steps = ["channel_list", "install_oscam", "picons", "reload_settings"]
 
         if steps:
-            # Uruchomienie ekranu postępu (WizardProgressScreen)
-            # Logika pobierania URL listy/picon jest wewnątrz WizardProgressScreen lub tutaj, 
-            # dla uproszczenia przekazujemy puste, wizard sam spróbuje pobrać domyślne jeśli brak.
-            # W pełnej wersji tutaj była logika szukania list, ale dla stabilności wywołujemy Wizard.
-            
-            # Domyślna lista dla Super Konfiguratora (v6.0): Paweł Pawełek 13E
-            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip' # Hardcoded fallback
+            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip' 
             channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Pawel_Pawelek_HB_13E_04.01.2026.zip'
             list_name = 'Paweł Pawełek HB 13E (04.01.2026)'
 
@@ -2571,7 +2635,11 @@ class Panel(Screen):
         self.sess.open(UninstallManagerScreen, self.lang)
     def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
     def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
-    def install_iptv_dream_simplified(self): run_command_in_background(self.sess, "IPTV Dream", ["wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"])
+    def install_iptv_dream_simplified(self): 
+        # [FIX] Uruchamianie w konsoli, aby uniknąć zwisu na "wget pipe"
+        cmd = "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"
+        console_screen_open(self.sess, "IPTV Dream Installer", [cmd], close_on_finish=False)
+
     def install_iptv_deps(self):
         title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV Configuration - dependencies"
         cmds = [
@@ -2669,7 +2737,7 @@ class Panel(Screen):
         cmd = "wget -qO- --no-check-certificate {} | /bin/sh".format(installer_url)
         
         # Bezpieczniej uruchomić to w konsoli widocznej dla usera:
-        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], close_on_finish=False)
+        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 3)), close_on_finish=True)
 
     def post_initial_setup(self):
         # Opóźnienie startowe sprawdzenia aktualizacji
