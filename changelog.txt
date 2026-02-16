@@ -1,3 +1,25 @@
+[8.0]
+--------------------------------------------------
+PL (Polish):
+- Wersja: Podbita do 8.0.
+- Kompatybilność: Wtyczka działa teraz na systemach z Python 2 i Python 3 (Dual Python).
+- GitHub Install Fix: Naprawiono instalację/aktualizację z repozytorium (raw GitHub) dla Py2:
+  * dodawany/utrzymywany jest plik __init__.py (wymagany przez Python 2),
+  * wymuszona poprawna ścieżka instalacji: Plugins/SystemPlugins/PanelAIO,
+  * usuwany jest stary/błędny katalog Plugins/Extensions/PanelAIO (eliminuje ostrzeżenie „No module named PanelAIO.plugin”).
+- OpenPLi/GitHub Fix: W instalatorze dodano User-Agent "Enigma2" oraz wymuszenie IPv4 (-4) przy pobieraniu (lepsza zgodność z OpenPLi 9.x i stabilniejsze połączenia do GitHuba).
+- Po instalacji/aktualizacji: Automatyczny restart GUI.
+
+EN (English):
+- Version: Bumped to 8.0.
+- Compatibility: The plugin now works on both Python 2 and Python 3 systems (Dual Python).
+- GitHub Install Fix: Fixed installation/update from repository (raw GitHub) for Py2:
+  * adds/maintains __init__.py file (required by Python 2),
+  * enforces correct installation path: Plugins/SystemPlugins/PanelAIO,
+  * removes old/incorrect directory Plugins/Extensions/PanelAIO (eliminates "No module named PanelAIO.plugin" warning).
+- OpenPLi/GitHub Fix: Added "Enigma2" User-Agent and IPv4 enforcement (-4) to the installer (better compatibility with OpenPLi 9.x and more stable GitHub connections).
+- After install/update: Automatic GUI restart.
+
 [7.1]
 - NAPRAWIONO: Problemy z pobieraniem list kanałów z GitHub na obrazach OpenPLi 9.2 (dodano User-Agent i wymuszenie IPv4 dla wget).
 - NAPRAWIONO: Krytyczny błąd powodujący zawieszanie się tunera podczas instalacji IPTV Dream. Proces instalacji został przeniesiony z tła do widocznego okna Konsoli.
