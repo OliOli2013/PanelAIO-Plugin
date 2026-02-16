@@ -2,11 +2,111 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 7.1 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 8.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 FIXED & UPDATED (SuperWizard Tooltips + OpenPLi 9 Fix + IPTV Dream Fix + Syntax Error Fix)
+UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 """
 from __future__ import print_function
 from __future__ import absolute_import
+
+# === IMPORTY SYSTEMOWE I KOMPATYBILNOŚĆ ===
+import sys
+import os
+import socket
+import datetime
+import subprocess
+import shutil
+import re
+import json
+import time
+import io
+from threading import Thread
+from twisted.internet import reactor
+
+# Wykrywanie wersji Pythona
+IS_PY2 = sys.version_info[0] < 3
+IS_PY3 = sys.version_info[0] >= 3
+
+# Fix dla polskich znaków i kodowania w Python 2
+if IS_PY2:
+    try:
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
+    except Exception:
+        pass
+
+# Kompatybilność sieciowa (urllib vs urllib2)
+try:
+    # Python 3
+    from urllib.request import urlopen, Request
+except ImportError:
+    # Python 2
+    from urllib2 import urlopen, Request
+
+# === POLYFILLS (Funkcje brakujące w Python 2) ===
+
+# 1. shutil.which (Dla Python 2)
+if not hasattr(shutil, "which"):
+    def shutil_which(cmd, mode=os.F_OK | os.X_OK, path=None):
+        def _access_check(fn, mode):
+            return (os.path.exists(fn) and os.access(fn, mode) and not os.path.isdir(fn))
+
+        if os.path.dirname(cmd):
+            if _access_check(cmd, mode):
+                return cmd
+            return None
+
+        if path is None:
+            path = os.environ.get("PATH", os.defpath)
+        if not path:
+            return None
+        path = path.split(os.pathsep)
+
+        if sys.platform == "win32":
+            if not os.curdir in path:
+                path.insert(0, os.curdir)
+            pathext = os.environ.get("PATHEXT", "").split(os.pathsep)
+            if any(cmd.lower().endswith(ext.lower()) for ext in pathext):
+                files = [cmd]
+            else:
+                files = [cmd + ext for ext in pathext]
+        else:
+            files = [cmd]
+
+        seen = set()
+        for dir in path:
+            normdir = os.path.normcase(dir)
+            if not normdir in seen:
+                seen.add(normdir)
+                for thefile in files:
+                    name = os.path.join(dir, thefile)
+                    if _access_check(name, mode):
+                        return name
+        return None
+else:
+    shutil_which = shutil.which
+
+# 2. shutil.disk_usage (Dla Python 2)
+if not hasattr(shutil, "disk_usage"):
+    class _DiskUsage(object):
+        def __init__(self, total, used, free):
+            self.total = total
+            self.used = used
+            self.free = free
+            
+    def shutil_disk_usage(path):
+        try:
+            st = os.statvfs(path)
+            free = st.f_bavail * st.f_frsize
+            total = st.f_blocks * st.f_frsize
+            used = (st.f_blocks - st.f_bfree) * st.f_frsize
+            return _DiskUsage(total, used, free)
+        except Exception:
+            return _DiskUsage(0, 0, 0)
+else:
+    shutil_disk_usage = shutil.disk_usage
+
+# === IMPORTY ENIGMA2 ===
 from enigma import eDVBDB, eTimer
 from Screens.Screen import Screen
 from Screens.Console import Console
@@ -56,17 +156,6 @@ except ImportError:
     except ImportError:
         iNetworkInfo = None
 
-import os
-import socket
-import datetime
-import sys
-import subprocess
-import shutil
-import re
-import json
-import time
-from twisted.internet import reactor
-from threading import Thread
 
 # === GLOBALNE ZMIENNE DLA AUTO RAM CLEANER ===
 g_auto_ram_timer = eTimer()
@@ -80,7 +169,12 @@ def run_auto_ram_clean_task():
     except Exception as e:
         print("[AIO Panel] Auto RAM Cleaner Error:", e)
 
-g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
+# Obsługa timera zależnie od wersji E2 (callback vs timeout.connect)
+try:
+    g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
+except AttributeError:
+    g_auto_ram_timer.timeout.connect(run_auto_ram_clean_task)
+
 def _apply_auto_ram_from_config():
     """Restore Auto RAM Cleaner setting after GUI/system restart."""
     global g_auto_ram_active
@@ -100,16 +194,16 @@ def _apply_auto_ram_from_config():
         print("[AIO Panel] Auto RAM apply error:", e)
 
 
-
 # === GLOBALNE ===
 PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
 PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
 PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "7.1"
+VER = "8.0"
 DATE = str(datetime.date.today())
-FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, DATE) 
+# Stopka dynamiczna zależna od Pythona
+FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
@@ -192,7 +286,10 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
 
 # === POMOCNICZE (GLOBALNE) ===
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
-    reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
+    if on_close:
+        reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
+    else:
+        reactor.callLater(0.2, lambda: session.open(MessageBox, message, message_type, timeout=timeout))
 
 # --- FUNKCJA URUCHAMIANIA W TLE (Dla zadań wewnętrznych) ---
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
@@ -230,7 +327,10 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
     if reactor.running:
-        reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback) if callback else session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
+        if callback:
+            reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback))
+        else:
+            reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
     else:
         c_dialog = session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish)
         if callback: c_dialog.onClose.append(callback)
@@ -295,13 +395,16 @@ def install_archive(session, title, url, callback_on_finish=None):
 
 def get_python_version():
     try:
-        import sys
         ver = sys.version_info
-        return f"{ver.major}.{ver.minor}"
+        return "{}.{}".format(ver[0], ver[1])
     except:
         return None
 
 def get_e2kodi_package_name():
+    # Funkcja tylko dla Pythona 3 - na Py2 Kodi jest rzadkością/inną wersją
+    if IS_PY2:
+        return None
+        
     py_ver = get_python_version()
     if py_ver == "3.9":
         return "enigma2-plugin-extensions--j00zeks-e2kodi-v2-python3.9"
@@ -313,6 +416,10 @@ def get_e2kodi_package_name():
         return None
 
 def install_e2kodi(session):
+    if IS_PY2:
+        show_message_compat(session, "E2Kodi (j00zek) wymaga Pythona 3. Twoja wersja to Python 2.", MessageBox.TYPE_ERROR)
+        return
+        
     pkg = get_e2kodi_package_name()
     if not pkg:
         show_message_compat(session, "Nieznana wersja Pythona. E2Kodi nie zostało zainstalowane.", MessageBox.TYPE_ERROR)
@@ -323,13 +430,13 @@ def install_e2kodi(session):
     if not os.path.exists(repo_file):
         try:
             with open(repo_file, "w") as f:
-                f.write(f"src/gz opkg-j00zka {repo_url}\n")
+                f.write("src/gz opkg-j00zka {}\n".format(repo_url))
         except Exception as e:
-            show_message_compat(session, f"Błąd zapisu repozytorium: {e}", MessageBox.TYPE_ERROR)
+            show_message_compat(session, "Błąd zapisu repozytorium: {}".format(e), MessageBox.TYPE_ERROR)
             return
 
-    cmd = f"opkg update && opkg install {pkg}"
-    run_command_in_background(session, f"E2Kodi v2 (Python {get_python_version()})", [cmd])
+    cmd = "opkg update && opkg install {}".format(pkg)
+    run_command_in_background(session, "E2Kodi v2 (Python {})".format(get_python_version()), [cmd])
 
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
@@ -491,7 +598,8 @@ def _get_lists_from_repo_sync():
         
     lists_menu = []
     try:
-        with open(tmp_json_path, 'r', encoding='utf-8') as f:
+        # UNIVERSAL FIX: Use io.open with utf-8 where supported, or manual decode
+        with io.open(tmp_json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         for item in data:
@@ -546,7 +654,8 @@ def _get_s4aupdater_lists_dynamic_sync():
     
     try:
         urls_dict, versions_dict = {}, {}
-        with open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
+        # UNIVERSAL FIX: Use io.open
+        with io.open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
             for line in f:
                 clean_line = line.strip()
                 if "_url:" in clean_line: parts = clean_line.split(':', 1); urls_dict[parts[0].strip()] = parts[1].strip()
@@ -567,7 +676,7 @@ def _get_best_oscam_version_info_sync():
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, _ = process.communicate()
         if process.returncode == 0 and stdout:
-            line = stdout.decode('utf-8').strip()
+            line = stdout.decode('utf-8').strip() if hasattr(stdout, 'decode') else stdout.strip()
             parts = line.split(' - ')
             if len(parts) > 1:
                 return parts[1].strip()
@@ -748,15 +857,13 @@ class AIOLoadingScreen(Screen):
 
     def _deps_present(self):
         """Verify runtime prerequisites on the current image."""
-        try:
-            which = shutil.which
-        except Exception:
-            which = None
+        # Używamy polyfill shutil_which jeśli shutil.which nie istnieje (Py2)
+        which_func = shutil_which 
 
         def _has_cmd(cmd):
             try:
-                if which is not None:
-                    return which(cmd) is not None
+                if which_func is not None:
+                    return which_func(cmd) is not None
             except Exception:
                 pass
             # Fallback
@@ -922,7 +1029,8 @@ class AIOInfoScreen(Screen):
 
             changelog_text = "Nie można pobrać listy zmian."
             if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
-                with open(tmp_changelog_path, 'r', encoding='utf-8') as f:
+                # UNIVERSAL FIX: Use io.open
+                with io.open(tmp_changelog_path, 'r', encoding='utf-8', errors='ignore') as f:
                     lines = f.readlines()
                 
                 changes = []
@@ -1090,7 +1198,8 @@ class SystemMonitorScreen(Screen):
         try:
             if not os.path.exists(path):
                 return None
-            du = shutil.disk_usage(path)
+            # UNIVERSAL FIX: Use polyfilled shutil_disk_usage
+            du = shutil_disk_usage(path)
             total = du.total
             used = du.used
             pct = (used * 100.0 / float(total)) if total else 0.0
@@ -1186,7 +1295,10 @@ class LogViewerScreen(Screen):
             cmd = "tail -n %d %s 2>/dev/null" % (n, path)
             p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, _ = p.communicate()
-            return out.decode("utf-8", "ignore")
+            if IS_PY3:
+                return out.decode("utf-8", "ignore")
+            else:
+                return out
         except Exception as e:
             return "Error: %s" % e
 
@@ -1224,7 +1336,7 @@ def _get_cron_file_path():
             return p
     # ensure directory exists for /etc/crontabs
     try:
-        os.makedirs("/etc/crontabs", exist_ok=True)
+        os.makedirs("/etc/crontabs")
     except Exception:
         pass
     return "/etc/crontabs/root"
@@ -1423,7 +1535,10 @@ class ServiceManagerScreen(Screen):
             cmd = "systemctl is-active %s 2>/dev/null" % svc
             p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, _ = p.communicate()
-            return out.decode("utf-8","ignore").strip() == "active"
+            if IS_PY3:
+                return out.decode("utf-8","ignore").strip() == "active"
+            else:
+                return out.strip() == "active"
         # fallback pidof
         cmd = "pidof %s >/dev/null 2>&1" % svc
         return subprocess.call(cmd, shell=True) == 0
@@ -1543,7 +1658,10 @@ class SystemInfoScreen(Screen):
             cmd = "ip -4 addr 2>/dev/null | grep -E 'inet ' | awk '{print $2\" \"$NF}'"
             p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, _ = p.communicate()
-            ips = out.decode("utf-8","ignore").strip()
+            if IS_PY3:
+                ips = out.decode("utf-8","ignore").strip()
+            else:
+                ips = out.strip()
             if ips:
                 lines.append("")
                 lines.append("IP:")
@@ -1554,7 +1672,11 @@ class SystemInfoScreen(Screen):
         try:
             lines.append("")
             lines.append("Disks:")
-            lines.append(subprocess.check_output("df -h | head -n 20", shell=True).decode("utf-8","ignore"))
+            out = subprocess.check_output("df -h | head -n 20", shell=True)
+            if IS_PY3:
+                lines.append(out.decode("utf-8","ignore"))
+            else:
+                lines.append(out)
         except Exception:
             pass
 
@@ -2002,8 +2124,19 @@ class Panel(Screen):
             # Jeśli nie ma dokładnego dopasowania, spróbuj znaleźć podobny
             if not description:
                 # Spróbuj dopasować po początku stringa (bez emoji)
-                clean_name = func_name.lstrip('📺📡🔑⚙️ℹ️🔄🧹💾♻️🗑️📊📄⏰🔌✨🌐⏱️🖼️🛠▶️📅🔄📦')
-                description = descriptions.get(clean_name.strip(), "")
+                try:
+                    # Dla Py3 emoji to znaki unicode
+                    clean_name = func_name
+                    # Prosta pętla czyszcząca
+                    for em in ['📺','📡','🔑','⚙️','ℹ️','🔄','🧹','💾','♻️','🗑️','📊','📄','⏰','🔌','✨','🌐','⏱️','🖼️','🛠','▶️','📅','📦']:
+                        if IS_PY3:
+                             clean_name = clean_name.replace(em, '')
+                        else:
+                             # W Py2 emoji to bajty, trudniej usuwać bez biblioteki regex/emoji
+                             pass 
+                    description = descriptions.get(clean_name.strip(), "")
+                except:
+                    pass
 
             self["function_description"].setText(description)
 
@@ -2041,6 +2174,17 @@ class Panel(Screen):
             tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
             diag_menu = list(DIAGNOSTICS_PL if lang == 'PL' else DIAGNOSTICS_EN)
             
+            # --- FILTROWANIE DLA PYTHON 2 (Kompatybilność) ---
+            if IS_PY2:
+                 softcam_filtered = []
+                 for item in softcam_menu:
+                      name, cmd = item
+                      # Blokuj wtyczki, które działają tylko na Py3 lub są zbyt ciężkie dla starych boxów
+                      if "E2Kodi" in name or cmd == "CMD:INSTALL_E2KODI": continue
+                      if "XStreamity" in name: continue # Wersje Py2 rzadko wspierane
+                      softcam_filtered.append(item)
+                 softcam_menu = softcam_filtered
+
             # Filtrowanie dla Hyperion/VTi
             if self.image_type in ["hyperion", "vti"]:
                 emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_BEST_OSCAM"]
@@ -2167,10 +2311,75 @@ class Panel(Screen):
         Thread(target=self.perform_update_check_silent).start()
 
     def perform_update_check_silent(self):
-        pass
+        # Wersja cicha - uruchamiana w tle
+        self._check_update(silent=True)
 
     def check_for_updates_manual(self):
-        show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER))
+        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji...", type=MessageBox.TYPE_INFO, timeout=3)
+        # Callback uruchomi się po zamknięciu komunikatu, ale lepiej uruchomić sprawdzanie w tle
+        self._check_update(silent=False)
+
+    def _manual_update_callback(self, result):
+        pass
+
+    def _check_update(self, silent=False):
+        # URL do pliku version.txt w Twoim repozytorium
+        version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
+        tmp_ver_path = "/tmp/aio_version.txt"
+        
+        try:
+            # Pobieranie pliku wersji (używamy wget dla kompatybilności z E2)
+            os.system("wget -q -T 10 -O {} {}".format(tmp_ver_path, version_url))
+            
+            if not os.path.exists(tmp_ver_path):
+                if not silent:
+                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_check_error"], MessageBox.TYPE_ERROR)
+                return
+
+            with open(tmp_ver_path, 'r') as f:
+                remote_ver_str = f.read().strip()
+            
+            # Proste porównanie wersji (np. 6.0 > 5.0)
+            try:
+                local_ver = float(VER)
+                remote_ver = float(remote_ver_str)
+            except ValueError:
+                # Fallback jeśli wersja zawiera litery (np. 6.0b)
+                local_ver = VER
+                remote_ver = remote_ver_str
+
+            if remote_ver > local_ver:
+                # Znaleziono nową wersję!
+                changelog_text = "Aktualizacja zalecana."
+                # Opcjonalnie: pobierz changelog tutaj, jeśli chcesz
+                
+                msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
+                    latest_ver=remote_ver_str, 
+                    current_ver=VER, 
+                    changelog=changelog_text
+                )
+                
+                reactor.callFromThread(self.sess.openWithCallback, self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
+            else:
+                if not silent:
+                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER), MessageBox.TYPE_INFO)
+                    
+        except Exception as e:
+            print("[AIO Panel] Update check error:", e)
+            if not silent:
+                reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_generic_error"], MessageBox.TYPE_ERROR)
+
+    def _do_update_action(self, confirmed):
+        if not confirmed:
+            return
+        
+        # Uruchomienie installera z GitHuba
+        installer_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
+        cmd = "wget -qO- --no-check-certificate {} | /bin/sh".format(installer_url)
+        
+        # Bezpieczniej uruchomić to w konsoli widocznej dla usera:
+        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 3)), close_on_finish=True)
+
 
     # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
@@ -2307,7 +2516,7 @@ class Panel(Screen):
         try:
             if not os.path.exists(tmp_path): return
             e2 = ["#NAME {}\n".format(bname)]
-            with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with io.open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
                 name = "N/A"
                 for line in f:
                     l = line.strip()
@@ -2336,14 +2545,11 @@ class Panel(Screen):
         title = "Aktualizacja oscam.srvid / oscam.srvid2"
         dst_dir = "/etc/tuxbox/config"
 
-        # Stabilne źródła (repo) + bezpieczny fallback:
-        # - OpenPLi (repo): gotowy oscam.srvid (często używany w paczkach softcam)
-        # - Fallback: generator KingOfSat (jak dotychczas), ale z walidacją treści
+        # Stabilne źródła
         srvid_urls = [
             "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid",
             "https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid",
         ]
-        # Opcjonalna próba pobrania oscam.srvid2 z repo (jeśli istnieje); gdy brak – generujemy lokalnie z srvid
         srvid2_urls = [
             "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid2",
         ]
@@ -2352,7 +2558,6 @@ class Panel(Screen):
 
             BASE="{dst}"
 
-            # Katalogi docelowe: wszystkie miejsca, gdzie istnieje oscam.conf (tak jak: find /etc/tuxbox/config -name oscam.conf -exec dirname {{}} \;)
             TARGET_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u)
             if [ -z "$TARGET_DIRS" ]; then
                 TARGET_DIRS="$BASE"
@@ -2497,9 +2702,7 @@ class Panel(Screen):
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
     def install_softcam_key_online(self):
         title = "Aktualizacja SoftCam.Key (Online)"
-        # Aktualne, często aktualizowane repozytorium kluczy (grudzień 2025)
         url = "https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key"
-        # Alternatywne źródło (backup)
         url_alt = "https://raw.githubusercontent.com/PAKO34/softcam.key/master/softcam.key"
         
         cmd = r'''
@@ -2629,7 +2832,7 @@ class Panel(Screen):
                 [cmd]
             )
 
-    def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", [f"(echo {p}; echo {p}) | passwd"]) if p else None, InputBox, title="Nowe hasło root")
+    def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", ["(echo {0}; echo {0}) | passwd".format(p)]) if p else None, InputBox, title="Nowe hasło root")
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
         self.sess.open(UninstallManagerScreen, self.lang)
@@ -2642,18 +2845,33 @@ class Panel(Screen):
 
     def install_iptv_deps(self):
         title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV Configuration - dependencies"
-        cmds = [
-            "opkg update",
-            "opkg install enigma2-plugin-systemplugins-serviceapp",
-            "opkg install exteplayer3",
-            "opkg install ffmpeg",
-            "opkg install python3-youtube-dl",
-            "opkg install python3-yt-dlp",
-            "opkg install enigma2-plugin-extensions-ytdlpwrapper",
-            "opkg install enigma2-plugin-extensions-ytdlwrapper",
-            "opkg install enigma2-plugin-extensions-streamlinkwrapper",
-            "opkg install streamlinksrv",
-        ]
+        
+        # --- ZALEŻNOŚCI UNIWERSALNE (Py2 vs Py3) ---
+        if IS_PY3:
+            # Python 3
+            cmds = [
+                "opkg update",
+                "opkg install enigma2-plugin-systemplugins-serviceapp",
+                "opkg install exteplayer3",
+                "opkg install ffmpeg",
+                "opkg install python3-youtube-dl",
+                "opkg install python3-yt-dlp",
+                "opkg install enigma2-plugin-extensions-ytdlpwrapper",
+                "opkg install enigma2-plugin-extensions-ytdlwrapper",
+                "opkg install enigma2-plugin-extensions-streamlinkwrapper",
+                "opkg install streamlinksrv",
+            ]
+        else:
+            # Python 2 (Starsze nazewnictwo)
+            cmds = [
+                "opkg update",
+                "opkg install enigma2-plugin-systemplugins-serviceapp",
+                "opkg install exteplayer3",
+                "opkg install ffmpeg",
+                "opkg install python-youtube-dl",
+                "opkg install streamlinksrv || true",
+            ]
+
         console_screen_open(self.sess, title, cmds, close_on_finish=False)
 
     
@@ -2665,84 +2883,7 @@ class Panel(Screen):
     
     # === NOWA LOGIKA AKTUALIZACJI ===
 
-    def check_for_updates_manual(self):
-        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji...", type=MessageBox.TYPE_INFO, timeout=3)
-        # Callback uruchomi się po zamknięciu komunikatu, ale lepiej uruchomić sprawdzanie w tle
-        self._check_update(silent=False)
-
-    def _manual_update_callback(self, result):
-        pass
-
-    def check_for_updates_on_start(self):
-        # Uruchamiamy w wątku, aby nie blokować GUI przy starcie
-        Thread(target=self.perform_update_check_silent).start()
-
-    def perform_update_check_silent(self):
-        # Wersja cicha - uruchamiana w tle
-        self._check_update(silent=True)
-
-    def _check_update(self, silent=False):
-        # URL do pliku version.txt w Twoim repozytorium
-        version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
-        tmp_ver_path = "/tmp/aio_version.txt"
-        
-        try:
-            # Pobieranie pliku wersji (używamy wget dla kompatybilności z E2)
-            os.system("wget -q -T 10 -O {} {}".format(tmp_ver_path, version_url))
-            
-            if not os.path.exists(tmp_ver_path):
-                if not silent:
-                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_check_error"], MessageBox.TYPE_ERROR)
-                return
-
-            with open(tmp_ver_path, 'r') as f:
-                remote_ver_str = f.read().strip()
-            
-            # Proste porównanie wersji (np. 6.0 > 5.0)
-            try:
-                local_ver = float(VER)
-                remote_ver = float(remote_ver_str)
-            except ValueError:
-                # Fallback jeśli wersja zawiera litery (np. 6.0b)
-                local_ver = VER
-                remote_ver = remote_ver_str
-
-            if remote_ver > local_ver:
-                # Znaleziono nową wersję!
-                changelog_text = "Aktualizacja zalecana."
-                # Opcjonalnie: pobierz changelog tutaj, jeśli chcesz
-                
-                msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
-                    latest_ver=remote_ver_str, 
-                    current_ver=VER, 
-                    changelog=changelog_text
-                )
-                
-                reactor.callFromThread(self.sess.openWithCallback, self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
-            else:
-                if not silent:
-                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER), MessageBox.TYPE_INFO)
-                    
-        except Exception as e:
-            print("[AIO Panel] Update check error:", e)
-            if not silent:
-                reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_generic_error"], MessageBox.TYPE_ERROR)
-
-    def _do_update_action(self, confirmed):
-        if not confirmed:
-            return
-        
-        # Uruchomienie installera z GitHuba
-        installer_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
-        cmd = "wget -qO- --no-check-certificate {} | /bin/sh".format(installer_url)
-        
-        # Bezpieczniej uruchomić to w konsoli widocznej dla usera:
-        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 3)), close_on_finish=True)
-
-    def post_initial_setup(self):
-        # Opóźnienie startowe sprawdzenia aktualizacji
-        reactor.callLater(5, self.check_for_updates_on_start)
-
+    # ... (Metody aktualizacji bez zmian) ...
 
 
 # === Network Diagnostics: readable summary screen (v6.0) ===
@@ -2782,7 +2923,10 @@ class NetworkDiagnosticsSummaryScreen(Screen):
             out, err = p.communicate()
             out = out or b""
             err = err or b""
-            return p.returncode, out.decode('utf-8', 'ignore').strip(), err.decode('utf-8', 'ignore').strip()
+            if IS_PY3:
+                return p.returncode, out.decode('utf-8', 'ignore').strip(), err.decode('utf-8', 'ignore').strip()
+            else:
+                return p.returncode, out.strip(), err.strip()
         except Exception as e:
             return 1, "", str(e)
 
@@ -2854,10 +2998,13 @@ class NetworkDiagnosticsSummaryScreen(Screen):
 
     def _download_speed(self):
         # Best-effort. Uses Python HTTP download of ~5 MiB.
+        # UNIVERSAL FIX: Use compat imports
         try:
+            # Py3
             from urllib.request import urlopen
-        except Exception:
-            return None
+        except ImportError:
+            # Py2
+            from urllib2 import urlopen
 
         candidates = [
             ('Cloudflare', 'https://speed.cloudflare.com/__down?bytes=10000000'),
@@ -2891,8 +3038,8 @@ class NetworkDiagnosticsSummaryScreen(Screen):
         # Best-effort. Uses HTTP POST upload of 1 MiB.
         try:
             from urllib.request import Request, urlopen
-        except Exception:
-            return None
+        except ImportError:
+            from urllib2 import Request, urlopen
 
         endpoints = [
             ('Cloudflare', 'https://speed.cloudflare.com/__up'),
