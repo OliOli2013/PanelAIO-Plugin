@@ -1,86 +1,66 @@
 #!/bin/sh
-# Skrypt instalacyjny dla wtyczki PanelAIO (v5.0)
+# PanelAIO - instalacja/aktualizacja z plików w repo (działa na Py2 i Py3)
+# FIX: Python2 wymaga __init__.py w katalogu pluginu + sprzątanie starej ścieżki Extensions/PanelAIO
+set -e
 
-# --- Konfiguracja ---
-PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO"
-TMP_UPDATE_DIR="/tmp/PanelAIO_Update"
-BASE_URL="https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main"
-LOG_FILE="/tmp/PanelAIO_Update.log"
+REPO="OliOli2013/PanelAIO-Plugin"
+BRANCH="main"
+RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 
-# --- Funkcja wykonująca aktualizację w tle ---
-do_background_update() {
-    echo ">>> Rozpoczynam aktualizację PanelAIO w tle (log: $LOG_FILE)..." > "$LOG_FILE"
-    date >> "$LOG_FILE"
+BASE="/usr/lib/enigma2/python/Plugins"
+DST="$BASE/SystemPlugins/PanelAIO"
+OLD="$BASE/Extensions/PanelAIO"
 
-    # Utwórz czysty katalog tymczasowy
-    echo "--> Przygotowuję katalog tymczasowy..." >> "$LOG_FILE"
-    rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
-    mkdir -p "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
+FILES="plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png install_archive_script.sh update_satellites_xml.sh"
 
-    # Pobierz wszystkie niezbędne pliki do katalogu tymczasowego
-    echo "--> Pobieram pliki wtyczki do /tmp..." >> "$LOG_FILE"
-    wget -q "$BASE_URL/plugin.py" -O "$TMP_UPDATE_DIR/plugin.py" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/logo.png" -O "$TMP_UPDATE_DIR/logo.png" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/selection.png" -O "$TMP_UPDATE_DIR/selection.png" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/install_archive_script.sh" -O "$TMP_UPDATE_DIR/install_archive_script.sh" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/update_satellites_xml.sh" -O "$TMP_UPDATE_DIR/update_satellites_xml.sh" >> "$LOG_FILE" 2>&1
-    wget -q "$BASE_URL/Kod_QR_buycoffee.png" -O "$TMP_UPDATE_DIR/Kod_QR_buycoffee.png" >> "$LOG_FILE" 2>&1
-    
-    # UWAGA: reload_bouquets.sh został usunięty, ponieważ plugin.py obsługuje przeładowanie.
-    # UWAGA: auto_backup.sh i speedtest.py nie są pobierane (moduły usunięte).
-
-    # Sprawdź, czy pobrano kluczowy plik plugin.py
-    if [ ! -f "$TMP_UPDATE_DIR/plugin.py" ]; then
-        echo "!!! BŁĄD: Nie udało się pobrać pliku plugin.py. Przerywam instalację." >> "$LOG_FILE"
-        rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
-        exit 1
+download() {
+    url="$1"; out="$2"
+    if command -v wget >/dev/null 2>&1; then
+        # OpenPLi 9.x: UA + IPv4 (bezpieczne nawet jeśli niepotrzebne)
+        wget -4 -U "Enigma2" -O "$out" "$url"
+        return
     fi
-
-    # Usuń starą wersję wtyczki (jeśli istnieje) tuż przed przeniesieniem nowej
-    echo "--> Usuwam starą wersję wtyczki (jeśli istnieje)..." >> "$LOG_FILE"
-    if [ -d "$PLUGIN_DIR" ]; then
-        rm -rf "$PLUGIN_DIR" >> "$LOG_FILE" 2>&1
+    if command -v curl >/dev/null 2>&1; then
+        curl -L -A "Enigma2" --ipv4 -o "$out" "$url"
+        return
     fi
-
-    # Utwórz docelowy katalog i przenieś do niego pobrane pliki
-    echo "--> Instaluję nową wersję..." >> "$LOG_FILE"
-    mkdir -p "$(dirname "$PLUGIN_DIR")" >> "$LOG_FILE" 2>&1 # Upewnij się, że Extensions istnieje
-    mv "$TMP_UPDATE_DIR" "$PLUGIN_DIR" >> "$LOG_FILE" 2>&1
-
-    # Ustaw uprawnienia (już na plikach w docelowej lokalizacji)
-    echo "--> Ustawiam uprawnienia do wykonania dla skryptów .sh..." >> "$LOG_FILE"
-    chmod +x "$PLUGIN_DIR"/*.sh >> "$LOG_FILE" 2>&1
-
-    # Dodaj krótką pauzę, aby upewnić się, że operacje na plikach się zakończyły
-    sleep 3
-
-    # Usuń katalog tymczasowy (już niepotrzebny)
-    rm -rf "$TMP_UPDATE_DIR" >> "$LOG_FILE" 2>&1
-
-    echo ">>> Aktualizacja PanelAIO w tle ZAKOŃCZONA." >> "$LOG_FILE"
-    date >> "$LOG_FILE"
-    echo ">>> Można teraz RĘCZNIE zrestartować Enigma2 (GUI)." >> "$LOG_FILE"
-    exit 0
+    echo "Brak wget/curl - nie można pobrać plików."
+    exit 1
 }
 
-# --- Główna logika skryptu ---
-# Uruchom funkcję aktualizacji w tle
-echo ">>> Uruchamiam aktualizację PanelAIO w tle..."
-( do_background_update ) & # Kluczowe: uruchomienie w subshellu (&) w tle
+echo "[PanelAIO] Instalacja/aktualizacja z: $RAW"
+mkdir -p "$DST"
 
-# Wyświetl instrukcje dla użytkownika i zakończ
-echo "-----------------------------------------------------"
-echo ">>> Aktualizacja została uruchomiona w tle."
-echo ">>> Proces trwa od kilkunastu sekund do minuty."
-echo ">>> Po tym czasie można bezpiecznie zrestartować GUI."
-echo ""
-echo ">>> Możesz sprawdzić plik logu, aby upewnić się,"
-echo ">>> że aktualizacja się zakończyła:"
-echo ">>> $LOG_FILE"
-echo ""
-echo ">>> Zrestartuj Enigma2 (GUI),"
-echo ">>> aby zmiany zaczęły obowiązywać."
-echo "-----------------------------------------------------"
+# PY2 FIX: __init__.py jest wymagany (bez niego: No module named PanelAIO.plugin)
+if [ ! -f "$DST/__init__.py" ]; then
+    echo '# -*- coding: utf-8 -*-' > "$DST/__init__.py"
+fi
 
-# Zakończ skrypt wywołany przez Console natychmiast
+for f in $FILES; do
+    echo "Pobieram: $f"
+    download "$RAW/$f" "$DST/$f"
+done
+
+# uprawnienia
+chmod 644 "$DST/"*.py "$DST/"*.txt "$DST/"*.png 2>/dev/null || true
+chmod 755 "$DST/"*.sh 2>/dev/null || true
+chmod 644 "$DST/__init__.py" 2>/dev/null || true
+
+# usuń stary katalog (żeby Enigma nie próbowała ładować Extensions/PanelAIO i nie pokazywała błędu)
+if [ -d "$OLD" ]; then
+    rm -rf "$OLD"
+fi
+
+sync || true
+
+echo "[PanelAIO] Restart GUI..."
+if command -v init >/dev/null 2>&1; then
+    init 4 || true
+    sleep 2
+    init 3 || true
+else
+    killall -9 enigma2 2>/dev/null || true
+fi
+
+echo "[PanelAIO] OK"
 exit 0
