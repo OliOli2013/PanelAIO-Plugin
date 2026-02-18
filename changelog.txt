@@ -1,56 +1,122 @@
-[8.0]
---------------------------------------------------
-PL (Polish):
-- Wersja: Podbita do 8.0.
-- Kompatybilność: Wtyczka działa teraz na systemach z Python 2 i Python 3 (Dual Python).
-- GitHub Install Fix: Naprawiono instalację/aktualizację z repozytorium (raw GitHub) dla Py2:
-  * dodawany/utrzymywany jest plik __init__.py (wymagany przez Python 2),
-  * wymuszona poprawna ścieżka instalacji: Plugins/SystemPlugins/PanelAIO,
-  * usuwany jest stary/błędny katalog Plugins/Extensions/PanelAIO (eliminuje ostrzeżenie „No module named PanelAIO.plugin”).
-- OpenPLi/GitHub Fix: W instalatorze dodano User-Agent "Enigma2" oraz wymuszenie IPv4 (-4) przy pobieraniu (lepsza zgodność z OpenPLi 9.x i stabilniejsze połączenia do GitHuba).
-- Po instalacji/aktualizacji: Automatyczny restart GUI.
+[9.0]
+Data wydania: 18.02.2026
+- NOWOŚĆ: Całkowicie nowy interfejs Dashboard (Sidebar + Content) – przebudowa pod “XXII wiek”.
+- NOWOŚĆ: Podkategorie jako osobne zakładki po lewej (Softcamy, Wtyczki Online, Konfigurator, Narzędzia, Backup, Info, Diagnostyka, Czyszczenie, Skins).
+- NOWOŚĆ: Zakładka “Skins / Skórki” + instalatory skinów.
+- NOWOŚĆ: QR wsparcia w nagłówku (mały) + INFO = ekran wsparcia z powiększeniem/zoom.
+- ZMIANA: NCam instalowany z feedu systemu (opkg) – zawsze najnowsza wersja dostępna na danym obrazie.
+- UI: Ujednolicone zakładki (wszystkie w formie sekcji) + nowa kolorystyka (cyber-blue).
+- POPRAWKA: Fokus i zaznaczenie – tylko jedna aktywna kolumna (koniec podwójnego zaznaczenia).
+- POPRAWKA: Lepsza kompatybilność Py2/Py3 i stabilniejsze wykonywanie poleceń.
 
-EN (English):
-- Version: Bumped to 8.0.
-- Compatibility: The plugin now works on both Python 2 and Python 3 systems (Dual Python).
-- GitHub Install Fix: Fixed installation/update from repository (raw GitHub) for Py2:
-  * adds/maintains __init__.py file (required by Python 2),
-  * enforces correct installation path: Plugins/SystemPlugins/PanelAIO,
-  * removes old/incorrect directory Plugins/Extensions/PanelAIO (eliminates "No module named PanelAIO.plugin" warning).
-- OpenPLi/GitHub Fix: Added "Enigma2" User-Agent and IPv4 enforcement (-4) to the installer (better compatibility with OpenPLi 9.x and more stable GitHub connections).
-- After install/update: Automatic GUI restart.
+AIO Panel v5.0 Update (PL):
+- DODANO: Opcja aktualizacji online oscam.srvid i srvid2
+- DODANO: Aktualizacja online SoftCam.Key
+- NOWOŚĆ: Interfejs z zakładkami (nawigacja Lewo/Prawo)
+- DODANO: Monitor Systemowy, Przeglądarka Logów, Menedżer Cron, Menedżer Usług, Menedżer Deinstalacji
+- POPRAWKA: Naprawiono restarty GUI przy wyjściu (usunięto niestabilne Narzędzia Sieciowe/AutoBackup)
+- POPRAWKA: Ulepszona stabilność Super Konfiguratora
 
-[7.1]
-- NAPRAWIONO: Problemy z pobieraniem list kanałów z GitHub na obrazach OpenPLi 9.2 (dodano User-Agent i wymuszenie IPv4 dla wget).
-- NAPRAWIONO: Krytyczny błąd powodujący zawieszanie się tunera podczas instalacji IPTV Dream. Proces instalacji został przeniesiony z tła do widocznego okna Konsoli.
-- NAPRAWIONO: Zawieszanie się systemu po zakończeniu działania Super Konfiguratora (tryb Pełny). Dodano zabezpieczenie, które wymusza restart systemu, jeśli standardowy restart GUI nie zadziała.
-- DODANO: Opisy i podpowiedzi dla poszczególnych opcji w Super Konfiguratorze (zastąpiono standardowe menu wyboru nowym ekranem).
-- NAPRAWIONO: Błąd składni Python w sekcji opisów funkcji (naprawa błędu "expected ':' after dictionary key").
+AIO Panel v5.0 Update (EN):
+- ADDED: Online update option for oscam.srvid and srvid2
+- ADDED: Online SoftCam.Key updater
+- NEW: Tabbed Interface (Left/Right navigation)
+- ADDED: System Monitor, Log Viewer, Cron Manager, Service Manager, Uninstall Manager
+- FIX: Solved GUI Crashes on Exit (Removed unstable NetworkTools/AutoBackup)
+- FIX: Super Setup Wizard stability improvements
 
-[AIO Panel v7.0]
-Data wydania: 2026-02-04
-Kompatybilność: Enigma2 / Python 3
+[4.4]
+- NOWOŚĆ: Dodano funkcję "Auto RAM Cleaner" w Diagnostyce (automatyczne zwalnianie pamięci w tle).
+- POPRAWKA KRYTYCZNA: Naprawiono zawieszanie się tunera (spinner) podczas instalacji wtyczek zewnętrznych (np. EPG Import, NCam).
+- POPRAWKA: Usunięto błąd "invalid syntax" (linia 51).
+- OPTYMALIZACJA: Przyspieszono działanie skryptów instalacyjnych i backupu.
+- ZMIANA: Usunięto przestarzały skrypt reload_bouquets.sh.
 
-GLOWNE ZMIANY:
+[4.3]
+- Dodano Instalator Softcam (opcja: Softcam Feed - Instalator) do menu Softcam i Wtyczki.
+- Dodano Instalator IPTV Dream by Paweł Pawełek (instalacja jest teraz cicha i powiadamia o konieczności restartu GUI).
+- Poprawka Oscam Feed: Zmieniono nazwę pozycji menu na "Oscam Feed - [numer wersji]" w celu lepszej czytelności.
+- Ulepszenie Narzędzia do Czyszczenia Pamięci Tymczasowej: Teraz bezpiecznie usuwa popularne pliki instalacyjne (.ipk, .zip, .tar.gz) i logi z /tmp, unikając usuwania kluczowych plików wtyczki.
 
-1. INTEGRACJA Z SYSTEMEM
-- Wtyczka przeniesiona do SystemPlugins.
-- Widoczna w Menu Glownym, Ustawieniach i Wtyczkach.
-- Automatyczna naprawa zaleznosci przy starcie.
+[4.2]
+- Zaktualizowano adres repozytorium J00zka do nowej ścieżki (github.io)
+- Zaktualizowano instalator NCam do wersji 15.6
+- Drobne poprawki stabilności i logiki poleceń
 
-2. OSCAM I SOFTCAMY
-- Naprawiono funkcję czyszczenia pliku oscam.dvbapi.
-- Zmiana nazwy funkcji na: "oscam.dvbapi - kasowanie zawartości".
-- Przeniesienie aktualizacji srvid i kluczy do sekcji "Softcamy".
+[4.1]
+- Dodano funkcje Backup/Restore dla Listy Kanałów i konfig. Oscam
+- Przeniesiono opcje (Info, Aktualizacje, Hasła) do nowej zakładki "Info i Diagnostyka"
+- Ukryto czarne okno konsoli (teraz polecenia wykonują się w tle)
+- Poprawiono błąd 'tar' przy tworzeniu backupu listy kanałów
+- Dodano instalator Ncam v15.6
 
-3. INTERFEJS (GUI)
-- Dodano kolorowe nagłówki dla sekcji Konfigurator i Narzędzia.
-- Nowe, logiczne grupowanie narzędzi w menu.
-- Dodano opisy pomocnicze (tooltip) dla funkcji Super Konfigurator.
+[4.0]
+- Gruntowna przebudowa interfejsu na 4 zakładki (Nawigacja Lewo/Prawo)
+- Przywrócenie pełnej legendy na kolorowych przyciskach (PL/EN/Restart/Aktualizuj)
+- Dodano logikę dodawania bukietów (M3U / Bouquet REF) bez kasowania listy
+- Dodano możliwość instalacji bukietów Azman (jako bukiety referencyjne)
+- Dodano instalator Repozytorium J00Zek Feed
+- Drobne poprawki stabilności
 
-4. SUPER KONFIGURATOR
-- Poprawiono stabilność restartu systemu.
-- Zachowano sprawdzoną kolejność instalacji (Listy -> Softcam -> Picony).
+[3.3]
+- Dodano inteligentne filtrowanie menu dla obrazów Hyperion/VTi.
+- Wtyczki (AJPanel, E2iPlayer, Picon Updater) są teraz widoczne na wszystkich systemach.
+- Ukrywane są tylko funkcje EMU (Oscam, NCam) oraz Super Konfigurator na systemach z własnym menedżerem.
+- dodano instalcje wtyczki Picon Updater by Paweł Pawałek
 
-[AIO Panel v6.0]
-(tutaj ewentualnie stare zmiany...)
+[3.2]
+- Dodano instalator wtyczki Picon Updater do menu "Softcam i Wtyczki".
+- Podniesienie numeru wersj
+
+[3.1]
+- Poprawiono pętlę zależności: Wtyczka sprawdza zależności (SSL/wget) tylko przy pierwszym uruchomieniu, tworząc plik .deps_ok.
+- Naprawiono błąd instalacji zależności na OpenPli (problem z pakietem 'tar'), co odblokowuje pobieranie list z GitHub.
+
+[3.0]
+- Przebudowano start wtyczki: dodano ekran ładowania (Splash Screen), aby wyeliminować problem "pustego" okna na wolniejszych tunerach.
+- Naprawiono błąd początkowego fokusu (były zaznaczone wszystkie trzy kolumny).
+
+[2.5]
+- Poprawiono ładowanie wtyczki przy starcie (wyeliminowano błąd "zawieszania się" na ekranie powitalnym na niektórych tunerach).
+- Dodano inteligentny instalator E2Kodi z repozytorium j00zek (automatycznie wykrywa wersję Python 3.9, 3.12, 3.13).
+
+[2.4]
+- Poprawka błędu "pustego tła" przy starcie (ładowanie w tle)
+- Poprawiona logika sprawdzania aktualizacji (v2.4 > v2.3)
+- Dodano pytanie o restart GUI po instalacji wtyczek
+
+[2.3]
+- Połączono instalację Softcam Feed i Oscam w jedną inteligentną funkcję.
+- Zaktualizowano link instalatora alternatywnego (Levi45).
+- Poprawiono funkcję "Diagnostyka Sieci", aby poprawnie pokazywała IP tunera.
+- Zaktualizowano opisy i logikę w "Super Konfiguratorze".
+
+[2.2]
+- Poprawiono funkcję Diagnostyki Sieci (teraz używa speedtest-cli i poprawnie pokazuje IP tunera).
+- Poprawiono wczytywanie list kanałów z repozytorium GitHub.
+- Zmieniono wersję na 2.2.
+
+[2.1]
+- Przyspieszono start wtyczki (ładowanie danych w tle).
+- Dodano pełne tłumaczenie "Super Konfiguratora".
+- Dodano opcję "Podstawowa Konfiguracja (bez Picon)".
+
+[2.0]
+- Naprawiono krytyczny błąd (BSOD/GSOD) na nowszych systemach z Pythonem 3.11+.
+- Naprawiono zawieszanie się tunera po zakończeniu "Super Konfiguratora".
+- Usunięto błąd "Modal open" podczas pierwszego uruchomienia wtyczki.
+- Dodano alternatywną instalację Oscam, gdy nie ma go w oficjalnym feedzie.
+
+[1.9r3]
+Data wydania: 03.10.2025
+- [Super Konfigurator] Gruntowna przebudowa i uproszczenie działania.
+- [Picony] Dodano nowy, domyślny pakiet picon Transparent (Hot Bird 13°E).
+- [Picony] Poprawiono instalator, aby picony rozpakowywały się do prawidłowego katalogu.
+
+[7.0]
+Data wydania: 04.02.2026
+- Wtyczka przeniesiona do SystemPlugins + dodana pozycja w Menu → Ustawienia → System.
+- Porządek w menu: przeniesiono Aktualizuj oscam.srvid/srvid2 i Aktualizuj SoftCam.Key (Online) do sekcji Softcamy.
+- oscam.dvbapi: poprawione kasowanie zawartości (czyści plik w typowych lokalizacjach konfiguracji).
+- Wyróżnione kolorystycznie nagłówki sekcji (--- Konfigurator ---, --- Narzędzia Systemowe ---, itd.).
+- Super Konfigurator: poprawiona kolejność kroków (Picony na końcu) + stabilniejsze wywołanie pełnego restartu systemu.

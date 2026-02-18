@@ -11,7 +11,7 @@ BASE="/usr/lib/enigma2/python/Plugins"
 DST="$BASE/SystemPlugins/PanelAIO"
 OLD="$BASE/Extensions/PanelAIO"
 
-FILES="plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png install_archive_script.sh update_satellites_xml.sh"
+FILES="plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png sel_menu.png sel_sidebar.png install_archive_script.sh update_satellites_xml.sh"
 
 download() {
     url="$1"; out="$2"

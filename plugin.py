@@ -2,7 +2,7 @@
 """
 Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 8.0 - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 9.0 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 FIXED & UPDATED (SuperWizard Tooltips + OpenPLi 9 Fix + IPTV Dream Fix + Syntax Error Fix)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 """
@@ -199,15 +199,24 @@ PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
 PLUGIN_TMP_PATH = "/tmp/PanelAIO/"
 PLUGIN_ICON_PATH = os.path.join(PLUGIN_PATH, "logo.png")
 PLUGIN_SELECTION_PATH = os.path.join(PLUGIN_PATH, "selection.png")
-PLUGIN_QR_CODE_PATH = os.path.join(PLUGIN_PATH, "Kod_QR_buycoffee.png")
-VER = "8.0"
+"""QR assets.
+
+Enigma2 Pixmap widgets may crop large images if scaling isn't enabled. To make the QR reliable on
+different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
+
+ - qr_support.png : big QR for the Support screen
+ - qr_header.png  : small QR for the header
+"""
+PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
+PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
+VER = "9.0"
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
-LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj"
-LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update"
+LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
+LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update  CH±: Categories  INFO: QR"
 LEGEND_INFO = " " 
 
 # === TŁUMACZENIA ===
@@ -448,7 +457,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam Feed - Instalator", "CMD:INSTALL_SOFTCAM_FEED"),
     ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("📥 NCam 15.6 (Instalator)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("📥 NCam (Feed - najnowszy)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
@@ -476,7 +485,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam Feed - Installer", "CMD:INSTALL_SOFTCAM_FEED"),
     ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
-    ("📥 NCam 15.6 (Installer)", "bash_raw:wget https://raw.githubusercontent.com/biko-73/Ncam_EMU/main/installer.sh -O - | /bin/sh"),
+    ("📥 NCam (Feed - latest)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
@@ -565,6 +574,24 @@ DIAGNOSTICS_EN = [
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
+]
+
+
+# === SKINS / SKÓRKI ===
+SKINS_PL = [
+    ("🎨 Algare FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
+    ("🎨 Fury FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
+    ("🎨 Luka FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
+    ("🎨 Maxy FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
+    ("🎨 XDreamy - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
+]
+
+SKINS_EN = [
+    ("🎨 Algare FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
+    ("🎨 Fury FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
+    ("🎨 Luka FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
+    ("🎨 Maxy FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
+    ("🎨 XDreamy - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
 ]
 
 
@@ -960,6 +987,50 @@ class AIOLoadingScreen(Screen):
         self.close()
 
 
+
+# --- Support / QR (INFO) ---
+class AIOSupportScreen(Screen):
+    skin = """
+    <screen position="center,center" size="900,650" title="Wsparcie / Support" backgroundColor="#000B0F14">
+        <eLabel position="0,0" size="900,650" backgroundColor="#000B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="900,80" backgroundColor="#00121824" zPosition="-1" />
+        <widget name="title" position="20,18" size="860,40" font="Regular;30" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+        <widget name="qr_big" position="200,100" size="500,500" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="qr_huge" position="50,90" size="800,540" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+    </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
+
+    def __init__(self, session):
+        Screen.__init__(self, session)
+        self.session = session
+        self._huge = False
+        self["title"] = Label("Wesprzyj rozwój wtyczki / Support the plugin")
+        self["txt"] = Label("OK/ŻÓŁTY = Zoom   EXIT = Powrót")
+        self["qr_big"] = Pixmap()
+        self["qr_huge"] = Pixmap()
+        self._apply_zoom()
+
+        self["actions"] = ActionMap(["OkCancelActions", "ColorActions"], {
+            "ok": self.toggle_zoom,
+            "yellow": self.toggle_zoom,
+            "cancel": self.close,
+        }, -1)
+
+    def _apply_zoom(self):
+        try:
+            if self._huge:
+                self["qr_big"].hide()
+                self["qr_huge"].show()
+            else:
+                self["qr_huge"].hide()
+                self["qr_big"].show()
+        except Exception:
+            pass
+
+    def toggle_zoom(self):
+        self._huge = not self._huge
+        self._apply_zoom()
+
 # *** NOWA KLASA EKRANU INFO (z notą prawną) ***
 class AIOInfoScreen(Screen):
     skin = """
@@ -1096,7 +1167,7 @@ class SystemMonitorScreen(Screen):
             self._timer.callback.append(self._update)
         self._interval = 10
         self._prev_cpu = None
-        self["actions"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
+        self["actions"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions", "InfoActions"], {
             "ok": self._update,
             "cancel": self.close,
             "red": lambda: self._set_interval(5),
@@ -1821,6 +1892,7 @@ FUNCTION_DESCRIPTIONS = {
         "📥 Softcam Feed - Instalator": "Instaluje Softcam Feed w obrazie (repozytorium pakietów).\nPo instalacji możesz pobierać softcamy z: Pobierz wtyczki → Pakiety softcam.",
         "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu (gdy dostępny).\nPo instalacji zalecany restart GUI.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
+        "📥 NCam (Feed - najnowszy)": "Instaluje najnowszy NCam z feedu Twojego systemu (opkg).\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
         "⚙️ ServiceApp - Instalator": "Instaluje ServiceApp (alternatywny odtwarzacz) dla lepszej obsługi streamów IPTV.\nMoże wymagać restartu Enigma2 po instalacji.",
         "🛠 AJPanel - Instalator": "Instaluje AJPanel – zestaw narzędzi serwisowych i administracyjnych.\nPrzydatne do szybkiej diagnostyki i obsługi systemu.",
         "▶️ E2iPlayer Master - Instalacja/Aktualizacja": "Instaluje lub aktualizuje E2iPlayer (Master).\nDostarcza dostęp do wielu serwisów VOD/stream i narzędzi multimedialnych.",
@@ -1879,6 +1951,7 @@ FUNCTION_DESCRIPTIONS = {
         "📥 Softcam Feed - Installer": "Installs Softcam Feed repository on your image.\nAfter install: Download plugins → Softcam packages to pick your emulator.",
         "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed (when available).\nGUI restart is recommended after installation.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
+        "📥 NCam (Feed - latest)": "Installs the latest NCam from your system feed (opkg).\nGUI restart recommended; then select the emulator in Softcam settings.",
         "⚙️ ServiceApp - Installer": "Installs ServiceApp (alternative playback engine) for improved IPTV/stream handling.\nMay require Enigma2 restart after installation.",
         "🛠 AJPanel - Installer": "Installs AJPanel – a set of service/administration tools.\nUseful for quick maintenance and diagnostics.",
         "▶️ E2iPlayer Master - Install/Update": "Installs or updates E2iPlayer (Master).\nProvides access to multiple streaming/VOD sources and media tools.",
@@ -1929,7 +2002,7 @@ class SuperWizardChoiceScreen(Screen):
     skin = """
     <screen position="center,center" size="800,500" title="Super Konfigurator">
         <widget name="list" position="20,20" size="760,300" scrollbarMode="showOnDemand" />
-        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="yellow" />
+        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="#0000C2FF" />
         <widget name="actions" position="20,460" size="760,30" font="Regular;20" halign="right" />
     </screen>"""
 
@@ -1979,23 +2052,34 @@ class SuperWizardChoiceScreen(Screen):
         self.close(None)
 
 
+
 class Panel(Screen):
-    # Nowy skin z jedną listą i informacją o zakładkach
+    # Modern Dashboard UI v9.0 (Sidebar + Content) + QR + HealthBar
     skin = """
-    <screen name='PanelAIO' position='center,center' size='1100,690' title='Panel AIO'>
-        <widget name='qr_code_small' position='15,15' size='90,90' pixmap="{}" alphatest='blend' />
-        <widget name="support_label" position="125,15" size="400,90" font="Regular;24" halign="left" valign="center" foregroundColor="green" />
-        <widget name="title_label" position="500,15" size="585,40" font="Regular;32" halign="right" valign="center" transparent="1" />
+    <screen name='PanelAIO' position='center,center' size='1100,690' title='AIO Panel' backgroundColor='#000B0F14'>
+        <!-- HEADER -->
+        <eLabel position='0,0' size='1100,90' backgroundColor='#00121824' zPosition='-1' />
+        <!-- Small QR in header (use pre-scaled image to avoid crop on some images) -->
+        <widget name='qr_code_small' position='18,23' size='44,44' pixmap="{qr}" alphatest='blend' scale='1' />
+        <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='title_label' position='470,12' size='615,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='health' position='470,52' size='615,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
+        <eLabel position='0,90' size='1100,2' backgroundColor='#0000C2FF' />
 
-        <widget name='tabs_display' position='15,115' size='1070,30' font='Regular;26' halign='center' />
+        <!-- BODY -->
+        <widget name='sidebar' position='0,92' size='270,548' itemHeight='58' font='Regular;24' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
+        <eLabel position='270,92' size='2,548' backgroundColor='#00203346' />
+        <widget name='menu' position='285,92' size='800,468' itemHeight='44' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
+        <widget name='function_description' position='285,565' size='800,70' font='Regular;20' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
 
-        <widget name='menu' position='15,165' size='1070,380' itemHeight='40' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='selection.png'/>
+        <!-- hidden (compat with old code) -->
+        <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
 
-        <widget name='function_description' position='15,550' size='1070,78' font='Regular;22' halign='left' valign='top' foregroundColor='#00FFD200' backgroundColor='#00101010' transparent='0' />
-
-        <widget name='legend' position='15,630'  size='1070,26'  font='Regular;20' halign='center'/>
-        <widget name='footer' position='center,658' size='1070,24' font='Regular;16' halign='center' valign='center' foregroundColor='lightgrey'/>
-    </screen>""".format(PLUGIN_QR_CODE_PATH)
+        <!-- FOOTER -->
+        <eLabel position='0,640' size='1100,50' backgroundColor='#00121824' zPosition='-1' />
+        <widget name='legend' position='10,646'  size='1080,22'  font='Regular;20' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH)
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
@@ -2026,75 +2110,117 @@ class Panel(Screen):
         self.update_info = None
         self.update_prompt_shown = False
         
-        self.active_tab = 0 
-        self.tab_titles_def = COL_TITLES 
-        self.all_data = ([], [], [], []) 
+        # Tabs (left sidebar) are built dynamically from menu sections (separators).
+        # This gives each subcategory its own tab (e.g. Softcamy / Wtyczki Online / Backup & Restore ...).
+        self.active_tab = 0
+        self.tabs = []  # list of (title, items)
 
         self["qr_code_small"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
         self["tabs_display"] = Label("") 
         self["menu"] = MenuList([])
+        self["sidebar"] = MenuList([])
+        self["health"] = Label("")
+        self._focus = "menu"
+        self._prev_cpu = None
+
+        # selection callbacks
+        try:
+            self["sidebar"].onSelectionChanged.append(self._on_sidebar_changed)
+        except Exception:
+            pass
+        try:
+            self["menu"].onSelectionChanged.append(self.update_function_description)
+        except Exception:
+            pass
+
+        # health timer
+        self._health_timer = eTimer()
+        try:
+            self._health_timer_conn = self._health_timer.timeout.connect(self._update_health)
+        except Exception:
+            self._health_timer.callback.append(self._update_health)
+        self.onShown.append(self._start_health_timer)
+        self.onLayoutFinish.append(self._apply_focus)
         self["function_description"] = Label("") # Tooltip z opisem funkcji
         self["legend"] = Label(" ") 
         self["footer"] = Label(FOOT)
-        self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions"], {
-            "ok": self.run_with_confirmation,
+        self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions", "ChannelUpDownActions", "ChannelSelectBaseActions", "NumberActions", "HelpActions", "InfoActions"], {
+            "ok": self.ok_pressed,
             "cancel": self.close,
             "red": lambda: self.set_language('PL'),
             "green": lambda: self.set_language('EN'),
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
-            "left": self.prev_tab,
-            "right": self.next_tab,
+            "info": self.open_support,
+            "left": self.focus_sidebar,
+            "right": self.focus_menu,
             "up": self.menu_up,
-            "down": self.menu_down
+            "down": self.menu_down,
+            # extra navigation / compatibility
+            "channelUp": self.next_tab,
+            "channelDown": self.prev_tab,
+            "nextBouquet": self.next_tab,
+            "prevBouquet": self.prev_tab,
+            "displayHelp": self.open_support,
+            "showEventInfo": self.open_support,
+            "1": lambda: self.switch_tab(0),
+            "2": lambda: self.switch_tab(1),
+            "3": lambda: self.switch_tab(2),
+            "4": lambda: self.switch_tab(3)
         }, -1)
         
         self.onShown.append(self.post_initial_setup)
+        self.onExecBegin.append(self._on_exec_begin)
         self.set_language(self.lang) 
 
     # --- FUNKCJE ZAKŁADEK ---
     def next_tab(self):
-        new_tab_index = (self.active_tab + 1) % len(self.all_data)
+        if not self.tabs:
+            return
+        new_tab_index = (self.active_tab + 1) % len(self.tabs)
         self.switch_tab(new_tab_index)
 
     def prev_tab(self):
-        new_tab_index = (self.active_tab - 1) % len(self.all_data)
+        if not self.tabs:
+            return
+        new_tab_index = (self.active_tab - 1) % len(self.tabs)
         self.switch_tab(new_tab_index)
 
     def switch_tab(self, tab_index):
-        self.active_tab = tab_index
-        lang = self.lang
-
-        all_titles = self.tab_titles_def[lang]
-
-        active_color = r"\c00ffff00" # Żółty
-        inactive_color = r"\c00999999" # Szary
-        reset_color = r"\c00ffffff" # Biały
-
-        tabs_display_text_list = []
-        for i, title in enumerate(all_titles):
-            if i == self.active_tab:
-                tabs_display_text_list.append("{color}► {title} ◄{reset}".format(color=active_color, title=title, reset=reset_color))
-            else:
-                tabs_display_text_list.append("{color}{title}{reset}".format(color=inactive_color, title=title, reset=reset_color))
-
-        self["tabs_display"].setText(" | ".join(tabs_display_text_list))
-
-        data_list = self.all_data[self.active_tab]
-        if data_list:
-            menu_items = [str(item[0]) for item in data_list]
-            self["menu"].setList(menu_items)
-            # Wyświetl opis pierwszego elementu
-            self.update_function_description()
-        else:
-            self["menu"].setList([(TRANSLATIONS[lang]["loading_error_text"],)])
+        if not self.tabs:
+            self.active_tab = 0
+            self["menu"].setList([])
             self["function_description"].setText("")
+            return
+
+        # clamp
+        if tab_index < 0:
+            tab_index = 0
+        if tab_index >= len(self.tabs):
+            tab_index = len(self.tabs) - 1
+
+        self.active_tab = tab_index
+        try:
+            self["sidebar"].setIndex(self.active_tab)
+        except Exception:
+            pass
+
+        # Hide legacy tabs display (kept for compatibility)
+        try:
+            self["tabs_display"].setText("")
+        except Exception:
+            pass
+
+        items = self.tabs[self.active_tab][1]
+        self["menu"].setList([str(item[0]) for item in items] if items else [])
+        self.update_function_description()
+        self._apply_focus()
     def update_function_description(self):
         """Aktualizuje opis funkcji na podstawie zaznaczonego elementu"""
         try:
-            data_list = self.all_data[self.active_tab]
+            data_list = self.tabs[self.active_tab][1] if self.tabs and self.active_tab < len(self.tabs) else []
             if not data_list:
                 self["function_description"].setText("")
                 return
@@ -2145,15 +2271,33 @@ class Panel(Screen):
             self["function_description"].setText("")
 
     def menu_up(self):
-        """Przejście w górę w menu z aktualizacją opisu"""
-        self["menu"].up()
+        """Nawigacja UP zgodna z focusem (sidebar/content)."""
+        if getattr(self, "_focus", "menu") == "sidebar":
+            try:
+                self["sidebar"].up()
+            except Exception:
+                pass
+            self._on_sidebar_changed()
+            return
+        try:
+            self["menu"].up()
+        except Exception:
+            pass
         self.update_function_description()
-
     def menu_down(self):
-        """Przejście w dół w menu z aktualizacją opisu"""
-        self["menu"].down()
+        """Nawigacja DOWN zgodna z focusem (sidebar/content)."""
+        if getattr(self, "_focus", "menu") == "sidebar":
+            try:
+                self["sidebar"].down()
+            except Exception:
+                pass
+            self._on_sidebar_changed()
+            return
+        try:
+            self["menu"].down()
+        except Exception:
+            pass
         self.update_function_description()
-
     def set_language(self, lang):
         self.lang = lang
         self.set_lang_headers_and_legends()
@@ -2207,23 +2351,295 @@ class Panel(Screen):
                 if action == "CMD:SUPER_SETUP_WIZARD":
                     tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
 
-            self.all_data = (final_channel_lists, softcam_menu, tools_menu, diag_menu)
-            self.switch_tab(self.active_tab) 
+            # Build sidebar tabs from subcategories (SEPARATOR sections)
+            tabs = []
+            # 1) Channel lists (single tab)
+            tabs.append((COL_TITLES[lang][0], final_channel_lists))
+
+            # 2) Softcam & Plugins (split)
+            for sec_title, sec_items in self._split_sections(softcam_menu, COL_TITLES[lang][1]):
+                tabs.append((sec_title, sec_items))
+
+            # 3) System tools (split)
+            for sec_title, sec_items in self._split_sections(tools_menu, COL_TITLES[lang][2]):
+                tabs.append((sec_title, sec_items))
+
+            # 3b) Skins / Skórki (single tab)
+            skins_menu = list(SKINS_PL if lang == 'PL' else SKINS_EN)
+            for sec_title, sec_items in self._split_sections(skins_menu, 'Skins / Skórki' if lang == 'PL' else 'Skins'):
+                tabs.append((sec_title, sec_items))
+
+            # 4) Info/Diagnostics (split)
+            for sec_title, sec_items in self._split_sections(diag_menu, COL_TITLES[lang][3]):
+                tabs.append((sec_title, sec_items))
+
+            self._set_sidebar_tabs(tabs)
+            self.switch_tab(self.active_tab)
             
         except Exception as e:
             print("[AIO Panel] Błąd danych:", e)
-            self.all_data = ([(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")], [], [], [])
+            self._set_sidebar_tabs([(COL_TITLES[self.lang][0], [(TRANSLATIONS[self.lang]["loading_error_text"], "SEPARATOR")])])
             self.switch_tab(0)
             self.update_function_description()
 
     def set_lang_headers_and_legends(self):
         self["legend"].setText(LEGEND_PL_COLOR if self.lang == 'PL' else LEGEND_EN_COLOR)
         self["support_label"].setText(TRANSLATIONS[self.lang]["support_text"])
+        # Sidebar tabs are built dynamically in set_language(); here we only update labels.
+        try:
+            self["footer"].setText(FOOT)
+        except Exception:
+            pass
+
+
+    # --- Modern Dashboard helpers (focus/sidebar/health/QR) ---
+
+    def open_support(self):
+        try:
+            self.sess.open(AIOSupportScreen)
+        except Exception:
+            pass
+
+    def _on_exec_begin(self):
+        """Restore focus/highlight when returning from child screens."""
+        try:
+            self._apply_focus()
+        except Exception:
+            pass
+        try:
+            self.update_function_description()
+        except Exception:
+            pass
+
+    def focus_sidebar(self):
+        self._focus = "sidebar"
+        self._apply_focus()
+
+    def focus_menu(self):
+        self._focus = "menu"
+        self._apply_focus()
+
+    def _set_selection_enable(self, widget, enable):
+        """Compatibility: enable/disable selection highlight across images."""
+        val = 1 if enable else 0
+        for obj in (getattr(widget, "instance", None), getattr(widget, "l", None), widget):
+            if obj is None:
+                continue
+            for meth in ("setSelectionEnable", "setSelectionEnabled"):
+                try:
+                    fn = getattr(obj, meth, None)
+                    if fn:
+                        fn(val)
+                        return True
+                except Exception:
+                    pass
+        return False
+
+    def _apply_focus(self):
+        """Ensure only the active list shows selection highlight."""
+        try:
+            if getattr(self, "_focus", "menu") == "sidebar":
+                self._set_selection_enable(self["sidebar"], True)
+                self._set_selection_enable(self["menu"], False)
+            else:
+                self._set_selection_enable(self["menu"], True)
+                self._set_selection_enable(self["sidebar"], False)
+        except Exception:
+            pass
+
+    def ok_pressed(self):
+        # OK on sidebar => go to content; OK on content => execute
+        if getattr(self, "_focus", "menu") == "sidebar":
+            self.focus_menu()
+            return
+        return self.run_with_confirmation()
+
+
+    def _get_list_index(self, widget):
+        """Compatibility helper: returns current selection index for MenuList across images."""
+        for m in ("getSelectionIndex", "getSelectedIndex"):
+            try:
+                fn = getattr(widget, m, None)
+                if fn:
+                    i = fn()
+                    if i is not None:
+                        return i
+            except Exception:
+                pass
+        try:
+            return widget.l.getCurrentSelectionIndex()
+        except Exception:
+            return 0
+
+    
+    def _format_tab_title(self, title):
+        """Unified sidebar tab rendering."""
+        try:
+            t = self._clean_section_title(title)
+        except Exception:
+            t = str(title)
+        t = t.strip()
+        # Make every tab look like a section header
+        try:
+            return u"--- %s ---" % t
+        except Exception:
+            return "--- %s ---" % t
+
+    def _strip_color_codes(self, s):
+        try:
+            return re.sub(r"\\c[0-9A-Fa-f]{8}", "", s)
+        except Exception:
+            return s
+
+    def _clean_section_title(self, raw_title):
+        """Convert separator titles like '\c00FFD200--- Softcamy ---\c00ffffff' into 'Softcamy'."""
+        t = self._strip_color_codes(str(raw_title))
+        t = t.replace("—", "-")
+        # remove leading/trailing dashes and whitespace
+        t = t.strip().strip("-").strip()
+        # common pattern: '--- Something ---'
+        t = re.sub(r"^[- ]+", "", t)
+        t = re.sub(r"[- ]+$", "", t)
+        return t.strip()
+
+    def _split_sections(self, items, fallback_title):
+        """Split a flat menu (with SEPARATOR rows) into sections.
+
+        Returns list of (section_title, section_items) where section_items contain only actionable items.
+        """
+        sections = []
+        current_title = None
+        current_items = []
+        for entry in items:
+            try:
+                name, action = entry
+            except Exception:
+                continue
+            if action == "SEPARATOR":
+                # flush previous
+                if current_title is not None and current_items:
+                    sections.append((current_title, current_items))
+                current_title = self._clean_section_title(name)
+                if not current_title:
+                    current_title = fallback_title
+                current_items = []
+                continue
+            # normal row
+            if current_title is None:
+                current_title = fallback_title
+            current_items.append((name, action))
+
+        if current_title is not None and current_items:
+            sections.append((current_title, current_items))
+        return sections
+
+    def _set_sidebar_tabs(self, tabs):
+        """Apply tabs to the sidebar list."""
+        self.tabs = tabs
+        titles = [self._format_tab_title(t[0]) for t in tabs] if tabs else []
+        try:
+            self["sidebar"].setList(titles)
+        except Exception:
+            self["sidebar"].setList([])
+        # keep active_tab in range
+        if not self.tabs:
+            self.active_tab = 0
+            return
+        if self.active_tab >= len(self.tabs):
+            self.active_tab = 0
+        try:
+            self["sidebar"].setIndex(self.active_tab)
+        except Exception:
+            pass
+
+    def _on_sidebar_changed(self):
+        idx = self._get_list_index(self["sidebar"])
+        if idx is None:
+            return
+        if idx != getattr(self, "active_tab", 0):
+            self.switch_tab(idx)
+
+
+    def _start_health_timer(self):
+        self._update_health()
+        try:
+            self._health_timer.start(2000, True)
+        except Exception:
+            pass
+
+    def _read_cpu_percent(self):
+        try:
+            with open("/proc/stat", "r") as f:
+                line = f.readline()
+            parts = line.split()
+            if not parts or parts[0] != "cpu":
+                return None
+            nums = list(map(int, parts[1:8]))
+            total = sum(nums)
+            idle = nums[3] + nums[4]  # idle + iowait
+            if self._prev_cpu is None:
+                self._prev_cpu = (total, idle)
+                return 0.0
+            prev_total, prev_idle = self._prev_cpu
+            dt = total - prev_total
+            di = idle - prev_idle
+            self._prev_cpu = (total, idle)
+            if dt <= 0:
+                return 0.0
+            used = (dt - di) * 100.0 / float(dt)
+            return max(0.0, min(100.0, used))
+        except Exception:
+            return None
+
+    def _read_mem_pct(self):
+        try:
+            mem = {}
+            with open("/proc/meminfo", "r") as f:
+                for line in f:
+                    k, v = line.split(":", 1)
+                    mem[k.strip()] = int(v.strip().split()[0])
+            total = mem.get("MemTotal", 0)
+            avail = mem.get("MemAvailable", mem.get("MemFree", 0))
+            used = max(0, total - avail)
+            pct = (used * 100.0 / float(total)) if total else 0.0
+            return pct
+        except Exception:
+            return None
+
+    def _local_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(1.0)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return None
+
+    def _update_health(self):
+        try:
+            cpu = self._read_cpu_percent()
+            mem = self._read_mem_pct()
+            ip = self._local_ip()
+            net = "OK" if ip else "N/A"
+            cpu_s = "N/A" if cpu is None else "%d%%" % int(cpu)
+            mem_s = "N/A" if mem is None else "%d%%" % int(mem)
+            self["health"].setText("CPU: %s | RAM: %s | NET: %s" % (cpu_s, mem_s, net))
+        except Exception:
+            pass
+        try:
+            self._health_timer.start(2000, True)
+        except Exception:
+            pass
 
     def run_with_confirmation(self):
         try:
-            name, action = self.all_data[self.active_tab][self["menu"].getSelectedIndex()]
-        except (IndexError, KeyError, TypeError): return 
+            idx = self._get_list_index(self["menu"])
+            items = self.tabs[self.active_tab][1] if self.tabs and self.active_tab < len(self.tabs) else []
+            name, action = items[idx]
+        except Exception:
+            return 
         if action == "SEPARATOR": return 
 
         actions_no_confirm = [
@@ -2403,6 +2819,7 @@ class Panel(Screen):
             elif key == "IPTV_DEPS": self.install_iptv_deps()
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
             elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
+            elif key == "INSTALL_NCAM_FEED": self.install_ncam_feed()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
@@ -2838,6 +3255,11 @@ class Panel(Screen):
         self.sess.open(UninstallManagerScreen, self.lang)
     def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
     def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
+
+    def install_ncam_feed(self):
+        title = "NCam (Feed - najnowszy)" if self.lang == 'PL' else "NCam (Feed - latest)"
+        cmd = "opkg update && (opkg install --force-reinstall ncam || opkg install --force-reinstall softcam-ncam || opkg install --force-reinstall enigma2-plugin-softcams-ncam || opkg install --force-reinstall enigma2-plugin-softcams-ncam-emu)"
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
     def install_iptv_dream_simplified(self): 
         # [FIX] Uruchamianie w konsoli, aby uniknąć zwisu na "wget pipe"
         cmd = "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"
