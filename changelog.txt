@@ -1,3 +1,13 @@
+[9.1.1]
+Data wydania: 22.02.2026
+- POPRAWKA: Py2 (OpenATV 6.4 / VTi) – wymuszenie typu str (UTF-8) w listach GUI, eliminacja "<not-a-string>" i brakujących opisów.
+- POPRAWKA: Instalator e-stralker/EStalker (feed) – poprawiona nazwa pakietu (enigma2-plugin-extensions-estalker) + auto-detekcja w feedach.
+- POPRAWKA: Aktualizacja wpisów i skryptów instalacyjnych (installer.sh, install_archive_script.sh).
+
+[9.1]
+Data wydania: 22.02.2026
+- POPRAWKA: Py2 (OpenATV 6.4 / VTi) – wymuszenie typu str (UTF-8) w listach GUI, eliminacja "<not-a-string>" i brakujących opisów.
+
 [9.0]
 Data wydania: 18.02.2026
 - NOWOŚĆ: Całkowicie nowy interfejs Dashboard (Sidebar + Content) – przebudowa pod “XXII wiek”.

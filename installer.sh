@@ -1,6 +1,6 @@
 #!/bin/sh
-# PanelAIO - instalacja/aktualizacja z plików w repo (działa na Py2 i Py3)
-# FIX: Python2 wymaga __init__.py w katalogu pluginu + sprzątanie starej ścieżki Extensions/PanelAIO
+# PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
+# v9.1.1: __init__.py zawsze dostarczany + sprzątanie starej ścieżki Extensions/PanelAIO
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -11,7 +11,7 @@ BASE="/usr/lib/enigma2/python/Plugins"
 DST="$BASE/SystemPlugins/PanelAIO"
 OLD="$BASE/Extensions/PanelAIO"
 
-FILES="plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png sel_menu.png sel_sidebar.png install_archive_script.sh update_satellites_xml.sh"
+FILES="__init__.py plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png sel_menu.png sel_sidebar.png install_archive_script.sh update_satellites_xml.sh"
 
 download() {
     url="$1"; out="$2"
@@ -31,10 +31,8 @@ download() {
 echo "[PanelAIO] Instalacja/aktualizacja z: $RAW"
 mkdir -p "$DST"
 
-# PY2 FIX: __init__.py jest wymagany (bez niego: No module named PanelAIO.plugin)
-if [ ! -f "$DST/__init__.py" ]; then
-    echo '# -*- coding: utf-8 -*-' > "$DST/__init__.py"
-fi
+# PY2 FIX: __init__.py jest wymagany (fallback, gdyby pobranie pliku nie powiodło się)
+if [ ! -f "$DST/__init__.py" ]; then echo '# -*- coding: utf-8 -*-' > "$DST/__init__.py"; fi
 
 for f in $FILES; do
     echo "Pobieram: $f"

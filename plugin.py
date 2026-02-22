@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Panel AIO
+"""Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 9.0 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
-FIXED & UPDATED (SuperWizard Tooltips + OpenPLi 9 Fix + IPTV Dream Fix + Syntax Error Fix)
+Wersja 9.1 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
+
+v9.1: Fix UI lists on Python 2 (MenuList expects native str/bytes) + new online installers.
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -26,6 +26,65 @@ from twisted.internet import reactor
 # Wykrywanie wersji Pythona
 IS_PY2 = sys.version_info[0] < 3
 IS_PY3 = sys.version_info[0] >= 3
+
+# --- String helpers (critical for Python 2 Enigma2 MenuList) ---
+# Enigma2's MenuList on many Python2 images expects native `str` (bytes). Passing `unicode`
+# may render as "<not-a-string>" or randomly drop list labels depending on code-path.
+try:
+    _unicode_type = unicode  # noqa: F821 (Py2)
+except Exception:
+    _unicode_type = str
+
+def ensure_unicode(val):
+    """Return a text (unicode on Py2) representation for safe internal processing."""
+    if val is None:
+        return u"" if IS_PY2 else ""
+    if IS_PY2:
+        try:
+            if isinstance(val, _unicode_type):
+                return val
+        except Exception:
+            pass
+        # bytes -> unicode
+        try:
+            return val.decode("utf-8", "ignore")
+        except Exception:
+            try:
+                return _unicode_type(str(val), "utf-8", "ignore")
+            except Exception:
+                return u""
+    # Py3
+    try:
+        return str(val)
+    except Exception:
+        return ""
+
+def ensure_str(val):
+    """Return native string type for UI widgets.
+
+    - Py2: bytes (utf-8)
+    - Py3: str
+    """
+    if val is None:
+        return ""
+    if IS_PY2:
+        try:
+            if isinstance(val, _unicode_type):
+                return val.encode("utf-8")
+        except Exception:
+            pass
+        try:
+            # already bytes or other primitive
+            return str(val)
+        except Exception:
+            try:
+                return ensure_unicode(val).encode("utf-8")
+            except Exception:
+                return ""
+    try:
+        return str(val)
+    except Exception:
+        return ""
 
 # Fix dla polskich znaków i kodowania w Python 2
 if IS_PY2:
@@ -209,7 +268,7 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 """
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
-VER = "9.0"
+VER = "9.1"
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -473,6 +532,11 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
+    ("🖼️ ChocholousekPicons - Instalator", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
+    ("🔑 CIEFP Oscam Editor - Instalator", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
+    ("📺 e-stralker - Instalator (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'Nie znaleziono EStalker w feedach (opkg).'; exit 1)))"),
+    ("▶️ FilmXY - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/filmxy/main/installer.sh -O - | /bin/sh"),
+    ("⚽ FootOnsat - Instalator", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
 ]
 
 
@@ -501,6 +565,11 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
+    ("🖼️ ChocholousekPicons - Installer", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
+    ("🔑 CIEFP Oscam Editor - Installer", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
+    ("📺 e-stralker - Installer (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'EStalker not found in feeds (opkg).'; exit 1)))"),
+    ("▶️ FilmXY - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/filmxy/main/installer.sh -O - | /bin/sh"),
+    ("⚽ FootOnsat - Installer", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
 ]
 
 
@@ -2214,7 +2283,7 @@ class Panel(Screen):
             pass
 
         items = self.tabs[self.active_tab][1]
-        self["menu"].setList([str(item[0]) for item in items] if items else [])
+        self["menu"].setList([ensure_str(item[0]) for item in items] if items else [])
         self.update_function_description()
         self._apply_focus()
     def update_function_description(self):
@@ -2477,23 +2546,24 @@ class Panel(Screen):
         try:
             t = self._clean_section_title(title)
         except Exception:
-            t = str(title)
+            t = ensure_unicode(title)
         t = t.strip()
         # Make every tab look like a section header
-        try:
-            return u"--- %s ---" % t
-        except Exception:
-            return "--- %s ---" % t
+        return ensure_str("--- %s ---" % ensure_unicode(t))
 
     def _strip_color_codes(self, s):
         try:
-            return re.sub(r"\\c[0-9A-Fa-f]{8}", "", s)
+            txt = ensure_unicode(s)
+            return re.sub(u"\\\\c[0-9A-Fa-f]{8}", u"", txt)
         except Exception:
-            return s
+            try:
+                return re.sub(r"\\c[0-9A-Fa-f]{8}", "", s)
+            except Exception:
+                return s
 
     def _clean_section_title(self, raw_title):
         """Convert separator titles like '\c00FFD200--- Softcamy ---\c00ffffff' into 'Softcamy'."""
-        t = self._strip_color_codes(str(raw_title))
+        t = self._strip_color_codes(ensure_unicode(raw_title))
         t = t.replace("—", "-")
         # remove leading/trailing dashes and whitespace
         t = t.strip().strip("-").strip()
@@ -2536,7 +2606,7 @@ class Panel(Screen):
     def _set_sidebar_tabs(self, tabs):
         """Apply tabs to the sidebar list."""
         self.tabs = tabs
-        titles = [self._format_tab_title(t[0]) for t in tabs] if tabs else []
+        titles = [ensure_str(self._format_tab_title(t[0])) for t in tabs] if tabs else []
         try:
             self["sidebar"].setList(titles)
         except Exception:
