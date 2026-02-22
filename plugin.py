@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 9.1 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 9.1.1 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 v9.1: Fix UI lists on Python 2 (MenuList expects native str/bytes) + new online installers.
