@@ -2,22 +2,30 @@
 
 Panel AIO (All-In-One) dla Enigma2
 
-Panel AIO (wersja **4.3**) to kompletne centrum zarządzania Twoim dekoderem Enigma2. Zamiast instalować i pamiętać o wielu różnych dodatkach, AIO łączy je wszystkie w jedno, intuicyjne menu.
+## Panel AIO v9.1.1 - Python Compatibility Update
 
-Wtyczka została stworzona, aby maksymalnie uprościć konfigurację dekodera – zarówno dla początkujących, jak i zaawansowanych użytkowników.
+### 🇬🇧 English:
+* **Fixed:** Random missing descriptions/options in menu on Python 2 (OpenATV 6.4 / VTi).
+* **Compatibility:** Plugin now works on all Python systems (Py2/Py3).
+* **GUI Improvement:** Forced correct text type conversion in GUI lists (Py2: str/UTF-8 bytes, Py3: str) – eliminates display issues like `<not-a-string>` and disappearing function names.
+* **Updated/Added:** - ChocholousekPicons
+  - CIEFP Oscam Editor
+  - FilmXY
+  - FootOnsat
+  - e-stralker
 
-🚀 Nowości w wersji 4.3 (Listopad 2025)
+---
 
-Ta aktualizacja skupia się na ulepszeniu narzędzi systemowych, instalatorów oraz poprawie stabilności operacji:
-
-* **Dodano Instalator Softcam:** W sekcji Softcam i Wtyczki dodano nową, bezpośrednią opcję instalacji Softcam Feed.
-* **Dodan Instalator IPTV Dream:** Instalacja wtyczki IPTV Dream została uproszczona i teraz startuje bezpośrednio w tle, bez konieczności sprawdzania wersji, co przyspiesza proces.
-* **Poprawa Czyszczenia Cache:** Narzędzie do Czyszczenia Pamięci Tymczasowej (`/tmp`) zostało ulepszone – bezpiecznie usuwa popularne pliki instalacyjne (.ipk, .zip, .tar.gz) oraz logi, z pominięciem kluczowych dla systemu plików.
-* **Nowa Nazwa Oscam:** Pozycja "Oscam Feed - Instalator (Auto)" wyświetla teraz wykrytą wersję (np. `Oscam Feed - 11700`) dla lepszej informacji o pakiecie.
-* **Kluczowa Poprawka "Super Konfiguratora" (w 3.1):** Naprawiono błąd, który powodował zawieszanie się kreatora po instalacji listy kanałów. Cały proces (lista, picony, oscam) przechodzi płynnie do końca.
-* **Nowy Ekran Informacyjny (w 3.1):** Dodano czytelne okno z informacjami o autorze, nocie prawnej oraz liście ostatnich zmian pobieranej na żywo z GitHub.
-* **Cicha Instalacja Zależności (w 3.1):** Wtyczka nie pokazuje już okna konsoli przy pierwszym starcie. Niezbędne pakiety instalują się dyskretnie w tle.
-
+### 🇵🇱 Polski:
+* **Naprawiono:** Losowy brak opisów/opcji w menu na Python 2 (OpenATV 6.4 / VTi).
+* **Kompatybilność:** Wtyczka działa na wszystkich systemach Python (Py2/Py3).
+* **Usprawnienie GUI:** Wymuszona poprawna konwersja typów tekstu w listach GUI (Py2: str/UTF-8 bytes, Py3: str) – eliminuje problem wyświetlania pozycji jako `<not-a-string>` oraz znikających nazw funkcji.
+* **Zaktualizowano/Dodano:**
+  - ChocholousekPicons
+  - CIEFP Oscam Editor
+  - FilmXY
+  - FootOnsat
+  - e-stralker
 ✨ Główne Funkcje
 Panel AIO został zaprojektowany wokół **czterech** głównych sekcji (dostępnych po naciśnięciu strzałek lewo/prawo):
 
@@ -48,8 +56,9 @@ Kompletny "toolbox" dla Twojego dekodera:
 
 💻 Instalacja jest prosta. Połącz się z dekoderem przez terminal SSH (np. PuTTY lub Telnet) i wklej poniższą komendę:
 
-```bash
-wget -q "--no-check-certificate" https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh -O - | /bin/sh
+
+wget -q -O - https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
+
 Po instalacji zalecany jest restart Enigma2.
 
 🎮 Sterowanie
