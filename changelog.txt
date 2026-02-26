@@ -1,7 +1,6 @@
 [9.2]
 Data wydania: 26.02.2026
-- Dodano instalator VAVOO (online): wget -q "--no-check-certificate" https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh -O - | /bin/sh
-- Dodano logo autora w nagłówku (PP) i przeniesiono je w pole obok tekstu wsparcia (większy rozmiar).
+- Dodano instalator VAVOO (online)
 - Dodano funkcję: Widoczność AIO Panel w menu tunera (Menu → Ustawienia/System oraz Menu główne) + naprawiono wykonanie akcji.
 - Przeniesiono funkcję widoczności do zakładki "Narzędzia Systemowe".
 - Super Konfigurator: opcje DEPS/BASIC/FULL widoczne bezpośrednio w oknie wtyczki (bez dodatkowego wyboru).
