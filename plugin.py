@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-<<<<<<< HEAD
 Wersja 9.2 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
-=======
-Wersja 9.1.1 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
->>>>>>> origin/main
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 v9.2: Hotfix (syntax/indent) + Softcam script step in Super Konfigurator.
@@ -276,7 +272,6 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 """
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
-<<<<<<< HEAD
 PLUGIN_PP_LOGO_PATH = os.path.join(PLUGIN_PATH, "pp_logo.png")
 
 # --- VERSION: single source of truth (version.txt) ---
@@ -291,9 +286,6 @@ def _read_local_version(default="0.0"):
         return default
 
 VER = _read_local_version("9.2")
-=======
-VER = "9.1.1"
->>>>>>> origin/main
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
