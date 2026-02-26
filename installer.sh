@@ -1,6 +1,6 @@
 #!/bin/sh
 # PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
-# v9.1.1: __init__.py zawsze dostarczany + sprzątanie starej ścieżki Extensions/PanelAIO
+# v9.2: hotfix (syntax/indent) + stabilizacja Super Konfiguratora (Softcam script -> Oscam feed)
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -11,7 +11,7 @@ BASE="/usr/lib/enigma2/python/Plugins"
 DST="$BASE/SystemPlugins/PanelAIO"
 OLD="$BASE/Extensions/PanelAIO"
 
-FILES="__init__.py plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png sel_menu.png sel_sidebar.png install_archive_script.sh update_satellites_xml.sh"
+FILES="__init__.py plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png pp_logo.png sel_menu.png sel_sidebar.png install_archive_script.sh update_satellites_xml.sh"
 
 download() {
     url="$1"; out="$2"

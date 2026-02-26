@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | msisystem@t.pl
+<<<<<<< HEAD
+Wersja 9.2 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+=======
 Wersja 9.1.1 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+>>>>>>> origin/main
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
-v9.1: Fix UI lists on Python 2 (MenuList expects native str/bytes) + new online installers.
+v9.2: Hotfix (syntax/indent) + Softcam script step in Super Konfigurator.
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -176,11 +180,12 @@ from Screens.InputBox import InputBox
 from Components.ActionMap import ActionMap
 from Components.Label import Label
 try:
-    from Components.config import config, ConfigSubsection, ConfigSelection, configfile
+    from Components.config import config, ConfigSubsection, ConfigSelection, ConfigYesNo, configfile
 except Exception:
     config = None
     ConfigSubsection = None
     ConfigSelection = None
+    ConfigYesNo = None
     configfile = None
 
 # --- Persistent settings (v6.0) ---
@@ -193,6 +198,9 @@ if config is not None:
                 default="off",
                 choices=[("off", "off"), ("10", "10"), ("30", "30"), ("60", "60")]
             )
+        # Show/Hide AIO Panel entry in receiver main/system menu
+        if ConfigYesNo is not None and not hasattr(config.plugins.panelaio, "show_in_menu"):
+            config.plugins.panelaio.show_in_menu = ConfigYesNo(default=True)
     except Exception as e:
         print("[AIO Panel] Config init error:", e)
 
@@ -268,7 +276,24 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 """
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
+<<<<<<< HEAD
+PLUGIN_PP_LOGO_PATH = os.path.join(PLUGIN_PATH, "pp_logo.png")
+
+# --- VERSION: single source of truth (version.txt) ---
+# Fixes endless update prompt after GitHub update when version.txt and VER diverge.
+def _read_local_version(default="0.0"):
+    try:
+        p = os.path.join(PLUGIN_PATH, "version.txt")
+        with open(p, "r") as f:
+            v = f.read().strip()
+        return v if v else default
+    except Exception:
+        return default
+
+VER = _read_local_version("9.2")
+=======
 VER = "9.1.1"
+>>>>>>> origin/main
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -301,8 +326,8 @@ Czy chcesz ją teraz zainstalować?\n\nPo instalacji KONIECZNY jest restart GUI!
         "sk_option_full_picons": "3) [FULL] Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "[X] Anuluj",
         "sk_confirm_deps": "Czy na pewno chcesz zainstalować only podstawowe zależności systemowe?",
-        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n\nCzy chcesz kontynuować?",
-        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam Feed + Oscam\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
+        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n\nCzy chcesz kontynuować?",
+        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
         "net_diag_wait": "Trwa diagnostyka sieci, proszę czekać...",
         "net_diag_error": "Wystąpił błąd podczas testu prędkości.",
@@ -336,8 +361,8 @@ Do you want to install it now?\n\nGUI restart is REQUIRED after installation!"""
         "sk_option_full_picons": "3) [FULL] Full Configuration (with Picons)",
         "sk_option_cancel": "[X] Cancel",
         "sk_confirm_deps": "Are you sure you want to install only the basic system dependencies?",
-        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n\nDo you want to continue?",
-        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam Feed + Oscam\n- Install Picons (large file)\n\nDo you want to continue?",
+        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install Oscam from feed\n\nDo you want to continue?",
+        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- Install Picons (large file)\n\nDo you want to continue?",
         "net_diag_title": "Network Diagnostics",
         "net_diag_wait": "Running network diagnostics, please wait...",
         "net_diag_error": "An error occurred during the speed test.",
@@ -514,7 +539,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("⚙️ oscam.dvbapi - kasowanie zawartości", "CMD:MANAGE_DVBAPI"),
     ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
-    ("📥 Softcam Feed - Instalator", "CMD:INSTALL_SOFTCAM_FEED"),
+    ("📥 Softcam - Instalator", "CMD:INSTALL_SOFTCAM_SCRIPT"),
     ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam (Feed - najnowszy)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
@@ -535,6 +560,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🖼️ ChocholousekPicons - Instalator", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
     ("🔑 CIEFP Oscam Editor - Instalator", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
     ("📺 e-stralker - Instalator (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'Nie znaleziono EStalker w feedach (opkg).'; exit 1)))"),
+        ("▶️ VAVOO - Instalator", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh -O - | /bin/sh"),
     ("▶️ FilmXY - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/filmxy/main/installer.sh -O - | /bin/sh"),
     ("⚽ FootOnsat - Instalator", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
 ]
@@ -547,7 +573,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("⚙️ oscam.dvbapi - clear file", "CMD:MANAGE_DVBAPI"),
     ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
-    ("📥 Softcam Feed - Installer", "CMD:INSTALL_SOFTCAM_FEED"),
+    ("📥 Softcam - Installer", "CMD:INSTALL_SOFTCAM_SCRIPT"),
     ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 NCam (Feed - latest)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
@@ -568,6 +594,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🖼️ ChocholousekPicons - Installer", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
     ("🔑 CIEFP Oscam Editor - Installer", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
     ("📺 e-stralker - Installer (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'EStalker not found in feeds (opkg).'; exit 1)))"),
+        ("▶️ VAVOO - Installer", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh -O - | /bin/sh"),
     ("▶️ FilmXY - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/filmxy/main/installer.sh -O - | /bin/sh"),
     ("⚽ FootOnsat - Installer", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
 ]
@@ -576,8 +603,11 @@ SOFTCAM_AND_PLUGINS_EN = [
 # === NOWE PODZIELONE LISTY MENU (PL) ===
 SYSTEM_TOOLS_PL = [
     (r"\c00FFD200--- Konfigurator ---\c00ffffff", "SEPARATOR"),
-    ("✨ Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
+    ("✨ Super Konfigurator - DEPS (Zależności)", "CMD:SUPER_DEPS"),
+    ("✨ Super Konfigurator - BASIC (Lista + Softcam + Oscam)", "CMD:SUPER_BASIC"),
+    ("✨ Super Konfigurator - FULL (Lista + Softcam + Oscam + Picony + Reboot)", "CMD:SUPER_FULL"),
     (r"\c00FFD200--- Narzędzia Systemowe ---\c00ffffff", "SEPARATOR"),
+    ("👁️ Widoczność w menu tunera (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -596,8 +626,11 @@ SYSTEM_TOOLS_PL = [
 
 SYSTEM_TOOLS_EN = [
     (r"\c00FFD200--- Configurator ---\c00ffffff", "SEPARATOR"),
-    ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
+    ("✨ Super Setup - DEPS (Dependencies)", "CMD:SUPER_DEPS"),
+    ("✨ Super Setup - BASIC (List + Softcam + Oscam)", "CMD:SUPER_BASIC"),
+    ("✨ Super Setup - FULL (List + Softcam + Oscam + Picons + Reboot)", "CMD:SUPER_FULL"),
     (r"\c00FFD200--- System Tools ---\c00ffffff", "SEPARATOR"),
+    ("👁️ Show in receiver menu (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -790,6 +823,7 @@ class WizardProgressScreen(Screen):
     def __init__(self, session, steps, **kwargs):
         Screen.__init__(self, session)
         self.session = session
+        self.reboot_mode = kwargs.get("reboot_mode", "full")  # "full" or "gui"
         self.wizard_queue = list(steps)
         self.wizard_total_steps = len(steps)
         self.wizard_current_step = 0
@@ -813,7 +847,8 @@ class WizardProgressScreen(Screen):
         step_functions = {
             "deps": self._wizard_step_deps, 
             "channel_list": self._wizard_step_channel_list,
-            "install_oscam": self._wizard_step_install_oscam, 
+                "install_softcam": self._wizard_step_install_softcam,
+                "install_oscam": self._wizard_step_install_oscam, 
             "picons": self._wizard_step_picons,
             "reload_settings": self._wizard_step_reload_settings
         }
@@ -858,27 +893,52 @@ class WizardProgressScreen(Screen):
         
         install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
 
+    def _wizard_step_install_softcam(self):
+        title = self._get_wizard_title("Instalacja Softcam")
+        self["message"].setText(
+            "Krok [{}/{}]:\nInstalacja Softcam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
+        )
+
+        # IMPORTANT:
+        # Softcam is NOT available on many public feeds. We use the known installer script.
+        cmd = r"""
+            echo "=== Softcam installation (AIO Wizard) ==="
+            opkg update || true
+            opkg install wget ca-certificates || true
+            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash || true
+            sync
+            sleep 1
+        """
+        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
+
     def _wizard_step_install_oscam(self):
-        title = self._get_wizard_title("Instalacja Softcam Feed + Oscam")
-        self["message"].setText("Krok [{}/{}]:\nInstalacja Softcam Feed + Oscam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
-        
-        cmd = """
-            echo "Instalowanie/Aktualizowanie Softcam Feed..."
-            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
-            echo "Aktualizuję listę pakietów..."
-            opkg update
-            echo "Wyszukuję najlepszą wersję Oscam w feedach..."
-            PKG_NAME=$(opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable' | cut -d ' ' -f 1)
-            if [ -n "$PKG_NAME" ]; then
-                echo "Znaleziono pakiet: $PKG_NAME. Rozpoczynam instalację..."
-                opkg install $PKG_NAME
-            else
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                echo "Nie znaleziono odpowiedniego pakietu Oscam w feedach."
-                echo "Pomięto instalację Oscam. Możesz ją wykonać ręcznie z menu."
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        title = self._get_wizard_title("Instalacja Oscam")
+        self["message"].setText(
+            "Krok [{}/{}]:\nInstalacja Oscam z feed...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
+        )
+
+        cmd = r"""
+            echo "=== Oscam installation (AIO Wizard) ==="
+            opkg update || true
+            echo "Find newest available Oscam package from feed..."
+            CAND=""
+            for p in enigma2-plugin-softcams-oscam oscam oscam-emu oscam-smod; do
+                if opkg list | awk '{print \$1}' | grep -qx "\$p"; then CAND="\$p"; break; fi
+            done
+            if [ -z "\$CAND" ]; then
+                CAND=\$(opkg list | awk "BEGIN{IGNORECASE=1} \$1 ~ /oscam/ {print \$0}" | grep -E "master|emu|stable" | head -n 1 | awk '{print \$1}')
             fi
-            echo "Instalacja Oscam zakończona."
+            if [ -z "\$CAND" ]; then
+                CAND=\$(opkg list | awk "BEGIN{IGNORECASE=1} \$1 ~ /oscam/ {print \$1; exit}")
+            fi
+
+            if [ -n "\$CAND" ]; then
+                echo "Installing: \$CAND"
+                opkg install "\$CAND" || opkg install "\$CAND" --force-reinstall || true
+            else
+                echo "!!! Oscam package not found in feeds. Skipping."
+            fi
+            sync
             sleep 1
         """
         run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
@@ -918,13 +978,13 @@ class WizardProgressScreen(Screen):
     def do_restart_and_close(self):
         try:
             # Próba "ładnego" restartu
-            self.session.open(TryQuitMainloop, 2)
+            self.session.open(TryQuitMainloop, 2 if self.reboot_mode == "full" else 3)
             
             # [FIX] Zabezpieczenie na wypadek zawieszenia się GUI po instalacji FULL (np. picony)
             # Jeśli TryQuitMainloop nie zadziała w ciągu 3 sekund, wymuś reboot z poziomu systemu.
             def force_reboot_if_hung():
                 print("[AIO Panel] Wymuszanie restartu (fallback)...")
-                os.system("reboot || killall -9 enigma2")
+                os.system("reboot || killall -9 enigma2") if self.reboot_mode == "full" else os.system("killall -9 enigma2")
             
             reactor.callLater(3, force_reboot_if_hung)
             
@@ -1958,7 +2018,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔄 Restart Oscam": "Restartuje usługę Oscam (jeśli działa w systemie).\nPrzydatne po zmianie konfiguracji lub po zawieszeniu emulatora.",
         "🧹 Kasuj hasło Oscam": "Czyści hasło dostępu do WWW Oscam (jeśli jest ustawione).\nUłatwia odzyskanie dostępu do panelu bez reinstalacji.",
         "⚙️ oscam.dvbapi - kasowanie zawartości": "Czyści (kasuje zawartość) pliku oscam.dvbapi w konfiguracji Oscam.\nPrzydatne, gdy plik zawiera błędne wpisy lub chcesz zacząć od zera.",
-        "📥 Softcam Feed - Instalator": "Instaluje Softcam Feed w obrazie (repozytorium pakietów).\nPo instalacji możesz pobierać softcamy z: Pobierz wtyczki → Pakiety softcam.",
+        "📥 Softcam - Instalator": "Instaluje Softcam za pomocą skryptu (wget | bash).\nPo instalacji możesz doinstalować/wybrać emulator oraz przejść do instalacji Oscam z feed.",
         "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu (gdy dostępny).\nPo instalacji zalecany restart GUI.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
         "📥 NCam (Feed - najnowszy)": "Instaluje najnowszy NCam z feedu Twojego systemu (opkg).\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
@@ -1972,11 +2032,19 @@ FUNCTION_DESCRIPTIONS = {
         "📦 J00zeks Feed (Repo Installer)": "Dodaje repozytorium J00zeks (feed) do systemu.\nPo instalacji możesz pobierać jego wtyczki z poziomu Menedżera wtyczek.",
         "📺 E2Kodi v2 - Instalator (j00zek)": "Instaluje E2Kodi v2 (wersja z feedu j00zek).\nUmożliwia uruchomienie środowiska Kodi na Enigma2 (zależności zależą od obrazu).",
         "🖼️ Picon Updater - Instalator (Picony)": "Instaluje narzędzie do aktualizacji piconów.\nUłatwia pobieranie i odświeżanie ikon kanałów w systemie.",
+        "🎨 Algare FHD - Instalator": "Instaluje skórkę Algare FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
+        "🎨 Fury FHD - Instalator": "Instaluje skórkę Fury FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
+        "🎨 Luka FHD - Instalator": "Instaluje skórkę Luka FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
+        "🎨 Maxy FHD - Instalator": "Instaluje skórkę Maxy FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
+        "🎨 XDreamy - Instalator": "Instaluje skórkę XDreamy (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
 
         # Narzędzia Systemowe
         "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
-        "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
-        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Paweł Pawełek)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
+        
+        "✨ Super Konfigurator - DEPS (Zależności)": "Instaluje podstawowe zależności systemowe (wget, tar, unzip, certyfikaty).\nNie zmienia list kanałów ani softcamu.",
+        "✨ Super Konfigurator - BASIC (Lista + Softcam + Oscam)": "Konfiguracja standardowa wykonywana automatycznie:\n1) Lista kanałów Bzyk83 Hotbird 13E\n2) Softcam (instalacja skryptem)\n3) Oscam z feed (najnowszy dostępny)\n4) Restart GUI",
+        "✨ Super Konfigurator - FULL (Lista + Softcam + Oscam + Picony + Reboot)": "Pełna konfiguracja wykonywana automatycznie:\n1) Lista kanałów Bzyk83 Hotbird 13E\n2) Softcam (instalacja skryptem)\n3) Oscam z feed (najnowszy dostępny)\n4) Picony (Transparent)\n5) Pełny restart tunera",
+        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Bzyk83 13E Hotbird)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
         "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) i zapisuje w docelowym katalogu.\nMoże nadpisać istniejące pliki; po zakończeniu zalecany restart GUI.",
@@ -2017,7 +2085,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔄 Restart Oscam": "Restarts the Oscam service (if available on your image).\nUseful after config changes or when the emulator becomes unresponsive.",
         "🧹 Clear Oscam Password": "Clears the Oscam WebIF password (if configured).\nHelps regain panel access without reinstalling.",
         "⚙️ oscam.dvbapi - clear file": "Clears/truncates the oscam.dvbapi file in Oscam config directories.\nUseful if the file contains wrong entries or you want a clean start.",
-        "📥 Softcam Feed - Installer": "Installs Softcam Feed repository on your image.\nAfter install: Download plugins → Softcam packages to pick your emulator.",
+        "📥 Softcam - Installer": "Installs Softcam using the installer script (wget | bash).\nAfter install you can proceed with installing Oscam from your feed.",
         "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed (when available).\nGUI restart is recommended after installation.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
         "📥 NCam (Feed - latest)": "Installs the latest NCam from your system feed (opkg).\nGUI restart recommended; then select the emulator in Softcam settings.",
@@ -2031,10 +2099,17 @@ FUNCTION_DESCRIPTIONS = {
         "📦 J00zeks Feed (Repo Installer)": "Adds the J00zek feed repository to your system.\nAfterwards, install his plugins via the Plugin Manager.",
         "📺 E2Kodi v2 - Installer (j00zek)": "Installs E2Kodi v2 (j00zek build).\nLets you run Kodi on Enigma2; dependencies vary by image.",
         "🖼️ Picon Updater - Installer (Picons)": "Installs a picon update utility.\nHelps download and refresh channel icons on the receiver.",
+        "🎨 Algare FHD - Installer": "Installs the Algare FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
+        "🎨 Fury FHD - Installer": "Installs the Fury FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
+        "🎨 Luka FHD - Installer": "Installs the Luka FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
+        "🎨 Maxy FHD - Installer": "Installs the Maxy FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
+        "🎨 XDreamy - Installer": "Installs the XDreamy FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
 
         # System Tools
         "⚙️ System Tools": "Advanced system administration tools",
-        "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
+        "✨ Super Setup - DEPS (Dependencies)": "Installs basic system dependencies (wget, tar, unzip, certificates).\nDoes not change channel lists or softcam.",
+        "✨ Super Setup - BASIC (List + Softcam + Oscam)": "Automatic standard setup:\n1) Channel list Bzyk83 Hotbird 13E\n2) Softcam (script install)\n3) Oscam from feed (newest available)\n4) GUI restart",
+        "✨ Super Setup - FULL (List + Softcam + Oscam + Picons + Reboot)": "Automatic full setup:\n1) Channel list Bzyk83 Hotbird 13E\n2) Softcam (script install)\n3) Oscam from feed (newest available)\n4) Picons (Transparent)\n5) Full receiver reboot",
         ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Paweł Pawełek)\n- install softcam\n- install the newest Oscam from feed (auto-detect tuner/CPU)\n- download picons (Transparent)\nFinally triggers a full system reboot.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
@@ -2130,9 +2205,11 @@ class Panel(Screen):
         <eLabel position='0,0' size='1100,90' backgroundColor='#00121824' zPosition='-1' />
         <!-- Small QR in header (use pre-scaled image to avoid crop on some images) -->
         <widget name='qr_code_small' position='18,23' size='44,44' pixmap="{qr}" alphatest='blend' scale='1' />
+        <!-- Author logo (opposite side of QR) -->
+        <widget name='pp_logo' position='395,10' size='70,70' pixmap="{pp_logo}" alphatest='blend' scale='1' />
         <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='title_label' position='470,12' size='615,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='health' position='470,52' size='615,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
+        <widget name='title_label' position='470,12' size='560,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='health' position='470,52' size='560,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
         <eLabel position='0,90' size='1100,2' backgroundColor='#0000C2FF' />
 
         <!-- BODY -->
@@ -2148,7 +2225,7 @@ class Panel(Screen):
         <eLabel position='0,640' size='1100,50' backgroundColor='#00121824' zPosition='-1' />
         <widget name='legend' position='10,646'  size='1080,22'  font='Regular;20' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
         <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
-    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH)
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
@@ -2185,6 +2262,7 @@ class Panel(Screen):
         self.tabs = []  # list of (title, items)
 
         self["qr_code_small"] = Pixmap()
+        self["pp_logo"] = Pixmap()
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
         self["tabs_display"] = Label("") 
@@ -2333,6 +2411,44 @@ class Panel(Screen):
                 except:
                     pass
 
+            if not description:
+                action = item[1] if len(item) > 1 else ""
+                # Generic fallback descriptions to avoid empty tooltip
+                if self.lang == 'PL':
+                    if isinstance(action, str) and action.startswith("CMD:"):
+                        description = "Uruchamia funkcję PanelAIO."
+                    elif isinstance(action, str) and action.startswith("bash_raw:"):
+                        description = "Uruchamia instalator/komendę w konsoli (bash)."
+                    elif isinstance(action, str) and action.startswith("archive:"):
+                        description = "Pobiera i instaluje paczkę/archiwum z internetu."
+                    elif isinstance(action, str) and action.startswith("m3u:"):
+                        description = "Dodaje bukiet IPTV (M3U) do Enigma2."
+                    elif isinstance(action, str) and action.startswith("bouquet:"):
+                        description = "Dodaje bukiet (REF) do Enigma2."
+                    elif "Skórk" in func_name or "Skin" in func_name or "🎨" in func_name:
+                        description = "Instaluje wybraną skórkę (skin). Po instalacji wybierz ją w ustawieniach i zrestartuj GUI."
+                    elif "Instalator" in func_name:
+                        description = "Uruchamia instalator wybranej wtyczki."
+                    else:
+                        description = "Brak opisu tej funkcji."
+                else:
+                    if isinstance(action, str) and action.startswith("CMD:"):
+                        description = "Runs a PanelAIO function."
+                    elif isinstance(action, str) and action.startswith("bash_raw:"):
+                        description = "Runs an installer/command in console (bash)."
+                    elif isinstance(action, str) and action.startswith("archive:"):
+                        description = "Downloads and installs a package/archive from the internet."
+                    elif isinstance(action, str) and action.startswith("m3u:"):
+                        description = "Adds an IPTV bouquet (M3U) to Enigma2."
+                    elif isinstance(action, str) and action.startswith("bouquet:"):
+                        description = "Adds a reference bouquet (REF) to Enigma2."
+                    elif "Skin" in func_name or "🎨" in func_name:
+                        description = "Installs the selected skin. After installation select it in settings and restart GUI."
+                    elif "Installer" in func_name:
+                        description = "Runs the installer for the selected plugin."
+                    else:
+                        description = "No description available."
+
             self["function_description"].setText(description)
 
         except Exception as e:
@@ -2400,7 +2516,7 @@ class Panel(Screen):
 
             # Filtrowanie dla Hyperion/VTi
             if self.image_type in ["hyperion", "vti"]:
-                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_BEST_OSCAM"]
+                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_BEST_OSCAM"]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
                     if action not in emu_actions_to_block: softcam_menu_filtered.append((name, action))
@@ -2717,7 +2833,7 @@ class Panel(Screen):
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
-            "CMD:INSTALL_SOFTCAM_FEED", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
+            "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -2883,16 +2999,20 @@ class Panel(Screen):
         elif action.startswith("CMD:"):
             key = action.split(':', 1)[1]
             if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
+            elif key == "SUPER_DEPS": self.run_super_setup_direct("deps")
+            elif key == "SUPER_BASIC": self.run_super_setup_direct("basic")
+            elif key == "SUPER_FULL": self.run_super_setup_direct("full")
             elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
             elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
             elif key == "IPTV_DEPS": self.install_iptv_deps()
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
-            elif key == "INSTALL_SOFTCAM_FEED": self.install_softcam_feed_only()
+            elif key == "INSTALL_SOFTCAM_SCRIPT": self.install_softcam_script()
             elif key == "INSTALL_NCAM_FEED": self.install_ncam_feed()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
+            elif key == "TOGGLE_MENU_VISIBILITY": self.toggle_menu_visibility()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
             elif key == "CLEAR_FTP_PASS": run_command_in_background(self.sess, title, ["passwd -d root"])
             elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -2924,6 +3044,55 @@ class Panel(Screen):
     # --- FUNKCJE INSTALACYJNE I POMOCNICZE ---
     
     # NAPRAWIONY SUPER KONFIGURATOR Z OPISEM
+    def run_super_setup_direct(self, mode):
+        """Run Super Konfigurator without extra choice dialog (options are visible in the main list)."""
+        try:
+            steps = []
+            reboot_mode = "gui"
+            if mode == "deps":
+                steps = ["deps"]
+                reboot_mode = "gui"
+            elif mode == "basic":
+                steps = ["channel_list", "install_softcam", "install_oscam", "reload_settings"]
+                reboot_mode = "gui"
+            elif mode == "full":
+                steps = ["channel_list", "install_softcam", "install_oscam", "picons", "reload_settings"]
+                reboot_mode = "full"
+            else:
+                return
+
+            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Bzyk83_Hotbird_13E_15.02.2026.zip'
+            list_name = 'Bzyk83 Hotbird 13E (15.02.2026)'
+
+            try:
+                repo_lists = self.fetched_data_cache.get("repo_lists", [])
+                for item in repo_lists:
+                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
+                        t = str(item[0]).lower()
+                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
+                            channel_list_url = str(item[1]).split(':', 1)[1]
+                            list_name = str(item[0]).replace("📡 ", "")
+                            break
+            except Exception:
+                pass
+
+            self.sess.open(
+                WizardProgressScreen,
+                steps=steps,
+                channel_list_url=channel_list_url,
+                channel_list_name=list_name,
+                picon_url=picon_url,
+                reboot_mode=reboot_mode
+            )
+        except Exception as e:
+            print("[AIO Panel] run_super_setup_direct error:", e)
+            try:
+                show_message_compat(self.sess, "Błąd uruchomienia Super Konfiguratora.", MessageBox.TYPE_ERROR)
+            except Exception:
+                pass
+
+
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
@@ -2932,19 +3101,19 @@ class Panel(Screen):
             (TRANSLATIONS[lang]["sk_option_full_picons"], "install_with_picons"),
             (TRANSLATIONS[lang]["sk_option_cancel"], "cancel")
         ]
-        
+
         # Mapa opisów dla opcji
         desc_map = {
             "deps_only": "Tylko podstawowe pakiety systemowe (wget, tar, unzip).\nNie zmienia konfiguracji kanałów ani softcamu.",
-            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Oscam (Softcam Feed)\n- Restart GUI\nSzybka instalacja.",
-            "install_with_picons": "Konfiguracja pełna:\n- To co wyżej + PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
+            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- Restart GUI\nSzybka instalacja.",
+            "install_with_picons": "Konfiguracja pełna:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
             "cancel": "Powrót do menu."
         }
         if lang != "PL":
             desc_map = {
                 "deps_only": "Install only basic system packages (wget, tar, unzip).\nDoes not change channel lists or softcam.",
-                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Oscam (Softcam Feed)\n- GUI Restart\nFast installation.",
-                "install_with_picons": "Full configuration:\n- Same as above + PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
+                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- GUI Restart\nFast installation.",
+                "install_with_picons": "Full configuration:\n- Channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
                 "cancel": "Back to menu."
             }
 
@@ -2963,32 +3132,63 @@ class Panel(Screen):
 
         key, lang = choice[1], self.lang
         steps = []
-        
+
         if key == "deps_only":
             steps = ["deps"]
         elif key == "install_basic_no_picons":
-            steps = ["channel_list", "install_oscam", "reload_settings"]
+            steps = ["channel_list", "install_softcam", "install_oscam", "reload_settings"]
         elif key == "install_with_picons":
-            steps = ["channel_list", "install_oscam", "picons", "reload_settings"]
+            steps = ["channel_list", "install_softcam", "install_oscam", "picons", "reload_settings"]
 
         if steps:
-            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip' 
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Pawel_Pawelek_HB_13E_04.01.2026.zip'
-            list_name = 'Paweł Pawełek HB 13E (04.01.2026)'
+            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Bzyk83_Hotbird_13E_15.02.2026.zip'
+            list_name = 'Bzyk83 Hotbird 13E (15.02.2026)'
 
             try:
                 repo_lists = self.fetched_data_cache.get("repo_lists", [])
                 for item in repo_lists:
                     if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
                         t = str(item[0]).lower()
-                        if "pawel" in t and "13e" in t and "dual" not in t:
+                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
                             channel_list_url = str(item[1]).split(':', 1)[1]
                             list_name = str(item[0]).replace("📡 ", "")
                             break
             except Exception:
                 pass
-            
-            self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_list_url, channel_list_name=list_name, picon_url=picon_url)
+
+            self.sess.open(
+                WizardProgressScreen,
+                steps=steps,
+                channel_list_url=channel_list_url,
+                channel_list_name=list_name,
+                picon_url=picon_url,
+                reboot_mode=("full" if key == "install_with_picons" else "gui")
+            )
+
+    def toggle_menu_visibility(self):
+        # Toggle visibility of AIO Panel entry in receiver main/system menu (WHERE_MENU)
+        try:
+            if config is None or not hasattr(config.plugins, 'panelaio') or not hasattr(config.plugins.panelaio, 'show_in_menu'):
+                show_message_compat(self.sess, 'Brak obsługi ustawień na tym obrazie.', MessageBox.TYPE_ERROR)
+                return
+            config.plugins.panelaio.show_in_menu.value = not config.plugins.panelaio.show_in_menu.value
+            try:
+                config.plugins.panelaio.show_in_menu.save()
+                if configfile is not None:
+                    configfile.save()
+            except Exception:
+                pass
+            state = 'WŁĄCZONE' if config.plugins.panelaio.show_in_menu.value else 'WYŁĄCZONE'
+            show_message_compat(
+                self.sess,
+                'Widoczność w menu tunera: %s\n\nZmiana zadziała po restarcie GUI.' % state,
+                MessageBox.TYPE_INFO,
+                timeout=8
+            )
+        except Exception as e:
+            print('[AIO Panel] toggle_menu_visibility error:', e)
+            show_message_compat(self.sess, 'Błąd zapisu ustawień.', MessageBox.TYPE_ERROR)
 
     def install_j00zek_repo(self):
         cmd = """echo "src/gz opkg-j00zka https://j00zek.github.io/eeRepo" > /etc/opkg/opkg-j00zka.conf && opkg update"""
@@ -3323,8 +3523,38 @@ class Panel(Screen):
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
         self.sess.open(UninstallManagerScreen, self.lang)
-    def install_best_oscam(self): run_command_in_background(self.sess, "Instalacja Oscam", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash && opkg update && opkg install enigma2-plugin-softcams-oscam-emu"])
-    def install_softcam_feed_only(self): run_command_in_background(self.sess, "Feed", ["wget -O - -q http://updates.mynonpublic.com/oea/feed | bash"])
+    def install_best_oscam(self):
+        title = "Oscam - Instalator (Auto)" if self.lang == 'PL' else "Oscam - Installer (Auto)"
+        cmd = r"""
+            echo "=== Oscam installer (feed) ==="
+            opkg update || true
+            echo "Searching for best Oscam package in feeds..."
+            CAND=""
+            for p in enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod; do
+                if opkg list | awk '{print $1}' | grep -qx "$p"; then CAND="$p"; break; fi
+            done
+            if [ -z "$CAND" ]; then
+                CAND=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /oscam/ {print $0}' | grep -E 'master|emu|stable' | head -n 1 | awk '{print $1}')
+            fi
+            if [ -z "$CAND" ]; then
+                CAND=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /oscam/ {print $1; exit}')
+            fi
+            if [ -n "$CAND" ]; then
+                echo "Installing: $CAND"
+                opkg install "$CAND" || opkg install "$CAND" --force-reinstall || true
+            else
+                echo "!!! Oscam not found in feeds."
+                exit 1
+            fi
+            sync
+            sleep 1
+        """
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def install_softcam_script(self):
+        title = "Softcam - Instalator" if self.lang == 'PL' else "Softcam - Installer"
+        cmd = "opkg update || true; opkg install wget ca-certificates || true; wget -O - -q http://updates.mynonpublic.com/oea/feed | bash || true"
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def install_ncam_feed(self):
         title = "NCam (Feed - najnowszy)" if self.lang == 'PL' else "NCam (Feed - latest)"
@@ -3636,6 +3866,13 @@ def menu(menuid, **kwargs):
     # - Main Menu (MENU button): menuid == "mainmenu"
     # - Setup -> System: menuid == "system"
     if menuid in ("system", "mainmenu"):
+        # Optional: hide AIO Panel from receiver menu
+        try:
+            if config is not None and hasattr(config.plugins, "panelaio") and hasattr(config.plugins.panelaio, "show_in_menu"):
+                if not config.plugins.panelaio.show_in_menu.value:
+                    return []
+        except Exception:
+            pass
         # Use different entry ids to avoid any potential collisions in some images.
         if menuid == "mainmenu":
             return [("AIO Panel", main, "aio_panel_main", 45)]
