@@ -1179,7 +1179,7 @@ class AIOInfoScreen(Screen):
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
         legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
-                          "Prawa autorskie (C) 2024, Paweł Pawełek (msisystem@t.pl)\n" \
+                          "Prawa autorskie (C) 2024, Paweł Pawełek (aio-iptv@wp.pl)\n" \
                           "Wszelkie prawa autorskie osobiste zastrzeżone.\n\n" \
                           "Ta wtyczka (AIO Panel) jest wolnym oprogramowaniem: możesz ją\n" \
                           "redystrybuować i/lub modyfikować na warunkach Powszechnej\n" \
