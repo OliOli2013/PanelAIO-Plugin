@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
-by Paweł Pawełek | msisystem@t.pl
+by Paweł Pawełek | aio-iptv@wp.pl
 Wersja 9.2 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
@@ -288,7 +288,7 @@ def _read_local_version(default="0.0"):
 VER = _read_local_version("9.2")
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
-FOOT = "AIO {} | {} | by Paweł Pawełek | msisystem@t.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
+FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
@@ -1174,7 +1174,7 @@ class AIOInfoScreen(Screen):
         self.setTitle("Informacje o AIO Panel")
 
         self["title"] = Label("AIO Panel v{}".format(VER))
-        self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
+        self["author"] = Label("Twórca: Paweł Pawełek | aio-iptv@wp.pl")
         self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
