@@ -1,6 +1,6 @@
 #!/bin/sh
 # PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
-# v9.2: hotfix (syntax/indent) + stabilizacja Super Konfiguratora (Softcam script -> Oscam feed)
+# v9.3: adaptive HD UI + wybór ścieżki piconów + MyUpdater v5.1 + porządki
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -16,7 +16,6 @@ FILES="__init__.py plugin.py version.txt changelog.txt LICENSE logo.png selectio
 download() {
     url="$1"; out="$2"
     if command -v wget >/dev/null 2>&1; then
-        # OpenPLi 9.x: UA + IPv4 (bezpieczne nawet jeśli niepotrzebne)
         wget -4 -U "Enigma2" -O "$out" "$url"
         return
     fi
@@ -31,7 +30,6 @@ download() {
 echo "[PanelAIO] Instalacja/aktualizacja z: $RAW"
 mkdir -p "$DST"
 
-# PY2 FIX: __init__.py jest wymagany (fallback, gdyby pobranie pliku nie powiodło się)
 if [ ! -f "$DST/__init__.py" ]; then echo '# -*- coding: utf-8 -*-' > "$DST/__init__.py"; fi
 
 for f in $FILES; do
@@ -39,12 +37,10 @@ for f in $FILES; do
     download "$RAW/$f" "$DST/$f"
 done
 
-# uprawnienia
 chmod 644 "$DST/"*.py "$DST/"*.txt "$DST/"*.png 2>/dev/null || true
 chmod 755 "$DST/"*.sh 2>/dev/null || true
 chmod 644 "$DST/__init__.py" 2>/dev/null || true
 
-# usuń stary katalog (żeby Enigma nie próbowała ładować Extensions/PanelAIO i nie pokazywała błędu)
 if [ -d "$OLD" ]; then
     rm -rf "$OLD"
 fi

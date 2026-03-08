@@ -1,29 +1,32 @@
+[9.3]
+Data wydania: 08.03.2026
+- Dodano wybór katalogu docelowego dla opcji "Pobierz Picony (Transparent)".
+- Dodano instalator MyUpdater v5.1.
+- Zachowano dotychczasowe, domyślne zachowanie Super Konfiguratora dla instalacji piconów.
+- Przeniesiono bukiety Azman na sam dół list kanałów.
+- Zmniejszono i uelastyczniono główne okna UI dla obrazów HD (m.in. mymetrix i podobne skiny).
+- Zaktualizowano fallback domyślnej listy Bzyk83 Hotbird 13E.
+- Uporządkowano changelog oraz zaktualizowano wpisy wersji do 9.3.
+
 [9.2]
 Data wydania: 26.02.2026
-- Dodano instalator VAVOO (online)
-- Dodano funkcję: Widoczność AIO Panel w menu tunera (Menu → Ustawienia/System oraz Menu główne) + naprawiono wykonanie akcji.
-- Przeniesiono funkcję widoczności do zakładki "Narzędzia Systemowe".
-- Super Konfigurator: opcje DEPS/BASIC/FULL widoczne bezpośrednio w oknie wtyczki (bez dodatkowego wyboru).
-- ZMIANA: Softcam instalowany skryptem (wget | bash) – działa także na obrazach bez Softcam w feed.
-- Super Konfigurator FULL: poprawiona kolejność i stabilność (Lista Bzyk83 Hotbird 13E → Softcam (skrypt) → Oscam z feed (auto) → Picony Transparent → przeładowanie list → pełny restart).
-- Uzupełniono/brakujące opisy funkcji (tooltip) + dodano opis zapasowy, aby opis nie był pusty.
+- Dodano instalator VAVOO (online).
+- Dodano logo autora w nagłówku.
+- Dodano opcję ukrycia pozycji AIO Panel w menu tunera.
+- Poprawiono instalację Softcam w Super Konfiguratorze.
+- Poprawiono kolejność i stabilność trybu FULL/BASIC.
 
 [9.1.1]
 Data wydania: 22.02.2026
-- POPRAWKA: Instalator e-stralker/EStalker (feed) – poprawiona nazwa pakietu (enigma2-plugin-extensions-estalker) + auto-detekcja w feedach.
-- POPRAWKA: Aktualizacja wpisów i skryptów instalacyjnych (installer.sh, install_archive_script.sh).
+- Poprawiono instalator e-stralker/EStalker (feed).
+- Zaktualizowano wpisy i skrypty instalacyjne.
 
 [9.1]
 Data wydania: 22.02.2026
-- POPRAWKA: Py2 (OpenATV 6.4 / VTi) – wymuszenie typu str (UTF-8) w listach GUI, eliminacja "<not-a-string>" i brakujących opisów.
+- Poprawiono kompatybilność Py2 (OpenATV 6.4 / VTi) dla list GUI.
 
 [9.0]
 Data wydania: 18.02.2026
-- NOWOŚĆ: Całkowicie nowy interfejs Dashboard (Sidebar + Content) – przebudowa pod “XXII wiek”.
-- NOWOŚĆ: Podkategorie jako osobne zakładki po lewej (Softcamy, Wtyczki Online, Konfigurator, Narzędzia, Backup, Info, Diagnostyka, Czyszczenie, Skins).
-- NOWOŚĆ: Zakładka “Skins / Skórki” + instalatory skinów.
-- NOWOŚĆ: QR wsparcia w nagłówku (mały) + INFO = ekran wsparcia z powiększeniem/zoom.
-- ZMIANA: NCam instalowany z feedu systemu (opkg) – zawsze najnowsza wersja dostępna na danym obrazie.
-- UI: Ujednolicone zakładki (wszystkie w formie sekcji) + nowa kolorystyka (cyber-blue).
-- POPRAWKA: Fokus i zaznaczenie – tylko jedna aktywna kolumna (koniec podwójnego zaznaczenia).
-- POPRAWKA: Lepsza kompatybilność Py2/Py3 i stabilniejsze wykonywanie poleceń.
+- Wprowadzono nowy interfejs Dashboard (Sidebar + Content).
+- Dodano podkategorie jako osobne zakładki.
+- Dodano zakładkę "Skins / Skórki" oraz poprawki fokusu i zgodności Py2/Py3.

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
-by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 9.2 (PURE UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+by Paweł Pawełek | msisystem@t.pl
+Wersja 9.3 (Adaptive UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
-v9.2: Hotfix (syntax/indent) + Softcam script step in Super Konfigurator.
+v9.3: wybór ścieżki piconów, MyUpdater v5.1, Azman na końcu list, lżejszy UI HD + porządki.
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -166,7 +166,11 @@ else:
     shutil_disk_usage = shutil.disk_usage
 
 # === IMPORTY ENIGMA2 ===
-from enigma import eDVBDB, eTimer
+try:
+    from enigma import eDVBDB, eTimer, getDesktop
+except Exception:
+    from enigma import eDVBDB, eTimer
+    getDesktop = None
 from Screens.Screen import Screen
 from Screens.Console import Console
 from Screens.MessageBox import MessageBox
@@ -285,7 +289,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("9.2")
+VER = _read_local_version("9.3")
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -294,6 +298,133 @@ FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if 
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
 LEGEND_EN_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Update  CH±: Categories  INFO: QR"
 LEGEND_INFO = " " 
+
+# === ADAPTIVE UI HELPERS ===
+def _desktop_size():
+    try:
+        if getDesktop is not None:
+            sz = getDesktop(0).size()
+            return int(sz.width()), int(sz.height())
+    except Exception:
+        pass
+    return 1280, 720
+
+def _is_hd_ui():
+    w, h = _desktop_size()
+    return w <= 1280 or h <= 720
+
+def _super_wizard_choice_skin():
+    if _is_hd_ui():
+        return """
+    <screen position="center,center" size="760,460" title="Super Konfigurator">
+        <widget name="list" position="20,20" size="720,270" scrollbarMode="showOnDemand" />
+        <widget name="description" position="20,305" size="720,95" font="Regular;20" halign="center" valign="center" foregroundColor="#0000C2FF" />
+        <widget name="actions" position="20,420" size="720,24" font="Regular;18" halign="right" />
+    </screen>"""
+    return """
+    <screen position="center,center" size="800,500" title="Super Konfigurator">
+        <widget name="list" position="20,20" size="760,300" scrollbarMode="showOnDemand" />
+        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="#0000C2FF" />
+        <widget name="actions" position="20,460" size="760,30" font="Regular;20" halign="right" />
+    </screen>"""
+
+def _wizard_progress_skin():
+    if _is_hd_ui():
+        return """
+    <screen position="center,center" size="720,340" title="Super Konfigurator">
+        <widget name="message" position="30,30" size="660,280" font="Regular;24" halign="center" valign="center" />
+    </screen>"""
+    return """
+    <screen position="center,center" size="800,400" title="Super Konfigurator">
+        <widget name="message" position="40,40" size="720,320" font="Regular;28" halign="center" valign="center" />
+    </screen>"""
+
+def _support_screen_skin():
+    if _is_hd_ui():
+        return """
+    <screen position="center,center" size="760,560" title="Wsparcie / Support" backgroundColor="#000B0F14">
+        <eLabel position="0,0" size="760,560" backgroundColor="#000B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="760,70" backgroundColor="#00121824" zPosition="-1" />
+        <widget name="title" position="20,15" size="720,34" font="Regular;26" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+        <widget name="qr_big" position="170,88" size="420,420" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="qr_huge" position="30,82" size="700,450" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="txt" position="20,525" size="720,24" font="Regular;18" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+    </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
+    return """
+    <screen position="center,center" size="900,650" title="Wsparcie / Support" backgroundColor="#000B0F14">
+        <eLabel position="0,0" size="900,650" backgroundColor="#000B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="900,80" backgroundColor="#00121824" zPosition="-1" />
+        <widget name="title" position="20,18" size="860,40" font="Regular;30" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+        <widget name="qr_big" position="200,100" size="500,500" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="qr_huge" position="50,90" size="800,540" pixmap="{qr}" alphatest="blend" scale="1" />
+        <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+    </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
+
+def _info_screen_skin():
+    if _is_hd_ui():
+        return """
+    <screen position="center,center" size="760,470" title="Informacje o AIO Panel">
+        <widget name="title" position="20,18" size="720,30" font="Regular;24" halign="center" valign="center" />
+        <widget name="author" position="20,54" size="720,22" font="Regular;18" halign="center" valign="center" />
+        <widget name="facebook" position="20,78" size="720,22" font="Regular;18" halign="center" valign="center" />
+        <widget name="legal_title" position="20,112" size="720,26" font="Regular;22" halign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="20,145" size="720,185" font="Regular;17" halign="center" valign="top" />
+        <widget name="changelog_title" position="20,338" size="720,26" font="Regular;22" halign="center" foregroundColor="cyan" />
+        <widget name="changelog_text" position="25,372" size="710,85" font="Regular;18" halign="left" valign="top" />
+    </screen>"""
+    return """
+    <screen position="center,center" size="900,540" title="Informacje o AIO Panel">
+        <widget name="title" position="20,20" size="860,35" font="Regular;28" halign="center" valign="center" />
+        <widget name="author" position="20,60" size="860,25" font="Regular;22" halign="center" valign="center" />
+        <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
+        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="20,165" size="860,200" font="Regular;20" halign="center" valign="top" />
+        <widget name="changelog_title" position="20,375" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
+        <widget name="changelog_text" position="30,415" size="840,105" font="Regular;22" halign="left" valign="top" />
+    </screen>"""
+
+def _panel_main_skin():
+    if _is_hd_ui():
+        return """
+    <screen name='PanelAIO' position='center,center' size='980,620' title='AIO Panel' backgroundColor='#000B0F14'>
+        <eLabel position='0,0' size='980,82' backgroundColor='#00121824' zPosition='-1' />
+        <widget name='qr_code_small' position='16,20' size='40,40' pixmap="{qr}" alphatest='blend' scale='1' />
+        <widget name='pp_logo' position='924,20' size='40,40' pixmap="{pp_logo}" alphatest='blend' scale='1' />
+        <widget name='support_label' position='66,9' size='350,60' font='Regular;20' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='title_label' position='420,10' size='490,30' font='Regular;28' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='health' position='420,44' size='490,22' font='Regular;18' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
+        <eLabel position='0,82' size='980,2' backgroundColor='#0000C2FF' />
+
+        <widget name='sidebar' position='0,84' size='240,490' itemHeight='52' font='Regular;21' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
+        <eLabel position='240,84' size='2,490' backgroundColor='#00203346' />
+        <widget name='menu' position='255,84' size='710,420' itemHeight='40' font='Regular;20' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
+        <widget name='function_description' position='255,508' size='710,56' font='Regular;18' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
+        <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
+
+        <eLabel position='0,574' size='980,46' backgroundColor='#00121824' zPosition='-1' />
+        <widget name='legend' position='10,580'  size='960,20'  font='Regular;18' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,600' size='960,16' font='Regular;15' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
+    return """
+    <screen name='PanelAIO' position='center,center' size='1100,690' title='AIO Panel' backgroundColor='#000B0F14'>
+        <eLabel position='0,0' size='1100,90' backgroundColor='#00121824' zPosition='-1' />
+        <widget name='qr_code_small' position='18,23' size='44,44' pixmap="{qr}" alphatest='blend' scale='1' />
+        <widget name='pp_logo' position='1036,23' size='44,44' pixmap="{pp_logo}" alphatest='blend' scale='1' />
+        <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='title_label' position='470,12' size='560,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
+        <widget name='health' position='470,52' size='560,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
+        <eLabel position='0,90' size='1100,2' backgroundColor='#0000C2FF' />
+
+        <widget name='sidebar' position='0,92' size='270,548' itemHeight='58' font='Regular;24' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
+        <eLabel position='270,92' size='2,548' backgroundColor='#00203346' />
+        <widget name='menu' position='285,92' size='800,468' itemHeight='44' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
+        <widget name='function_description' position='285,565' size='800,70' font='Regular;20' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
+        <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
+
+        <eLabel position='0,640' size='1100,50' backgroundColor='#00121824' zPosition='-1' />
+        <widget name='legend' position='10,646'  size='1080,22'  font='Regular;20' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -428,7 +559,7 @@ def prepare_tmp_dir():
             print("[AIO Panel] Error creating tmp dir:", e)
 
 # === FUNKCJA install_archive (GLOBALNA) ===
-def install_archive(session, title, url, callback_on_finish=None):
+def install_archive(session, title, url, callback_on_finish=None, picon_path=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
         show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
         if callback_on_finish: callback_on_finish()
@@ -440,7 +571,9 @@ def install_archive(session, title, url, callback_on_finish=None):
     download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
     
     if "picon" in title.lower():
-        picon_path = "/usr/share/enigma2/picon"
+        picon_path = (picon_path or "/usr/share/enigma2/picon").strip()
+        if not picon_path:
+            picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
         full_command = (
             "{download_cmd} && "
@@ -448,7 +581,7 @@ def install_archive(session, title, url, callback_on_finish=None):
             "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
             "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
             "rm -f \"{archive_path}\" && "
-            "echo 'Picony zostały pomyślnie zainstalowane.' && sleep 1"
+            "echo 'Picony zostały pomyślnie zainstalowane do: {picon_path}' && sleep 1"
         ).format(
             download_cmd=download_cmd,
             archive_path=tmp_archive_path,
@@ -544,6 +677,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("🔄 MyUpdater v5.1 - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("▶️ YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
@@ -578,6 +712,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
+    ("🔄 MyUpdater v5.1 - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
     ("▶️ YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
@@ -595,11 +730,9 @@ SOFTCAM_AND_PLUGINS_EN = [
 # === NOWE PODZIELONE LISTY MENU (PL) ===
 SYSTEM_TOOLS_PL = [
     (r"\c00FFD200--- Konfigurator ---\c00ffffff", "SEPARATOR"),
-    ("✨ Super Konfigurator - DEPS (Zależności)", "CMD:SUPER_DEPS"),
-    ("✨ Super Konfigurator - BASIC (Lista + Softcam + Oscam)", "CMD:SUPER_BASIC"),
-    ("✨ Super Konfigurator - FULL (Lista + Softcam + Oscam + Picony + Reboot)", "CMD:SUPER_FULL"),
-    (r"\c00FFD200--- Narzędzia Systemowe ---\c00ffffff", "SEPARATOR"),
+    ("✨ Super Konfigurator (Pierwsza Instalacja)", "CMD:SUPER_SETUP_WIZARD"),
     ("👁️ Widoczność w menu tunera (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
+    (r"\c00FFD200--- Narzędzia Systemowe ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -618,11 +751,9 @@ SYSTEM_TOOLS_PL = [
 
 SYSTEM_TOOLS_EN = [
     (r"\c00FFD200--- Configurator ---\c00ffffff", "SEPARATOR"),
-    ("✨ Super Setup - DEPS (Dependencies)", "CMD:SUPER_DEPS"),
-    ("✨ Super Setup - BASIC (List + Softcam + Oscam)", "CMD:SUPER_BASIC"),
-    ("✨ Super Setup - FULL (List + Softcam + Oscam + Picons + Reboot)", "CMD:SUPER_FULL"),
-    (r"\c00FFD200--- System Tools ---\c00ffffff", "SEPARATOR"),
+    ("✨ Super Setup Wizard (First Installation)", "CMD:SUPER_SETUP_WIZARD"),
     ("👁️ Show in receiver menu (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
+    (r"\c00FFD200--- System Tools ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
@@ -807,10 +938,7 @@ def _get_best_oscam_version_info_sync():
 
 # === KLASA WizardProgressScreen (GLOBALNA) ===
 class WizardProgressScreen(Screen):
-    skin = """
-    <screen position="center,center" size="800,400" title="Super Konfigurator">
-        <widget name="message" position="40,40" size="720,320" font="Regular;28" halign="center" valign="center" />
-    </screen>"""
+    skin = _wizard_progress_skin()
 
     def __init__(self, session, steps, **kwargs):
         Screen.__init__(self, session)
@@ -1111,15 +1239,7 @@ class AIOLoadingScreen(Screen):
 
 # --- Support / QR (INFO) ---
 class AIOSupportScreen(Screen):
-    skin = """
-    <screen position="center,center" size="900,650" title="Wsparcie / Support" backgroundColor="#000B0F14">
-        <eLabel position="0,0" size="900,650" backgroundColor="#000B0F14" zPosition="-1" />
-        <eLabel position="0,0" size="900,80" backgroundColor="#00121824" zPosition="-1" />
-        <widget name="title" position="20,18" size="860,40" font="Regular;30" halign="center" foregroundColor="#0000C2FF" transparent="1" />
-        <widget name="qr_big" position="200,100" size="500,500" pixmap="{qr}" alphatest="blend" scale="1" />
-        <widget name="qr_huge" position="50,90" size="800,540" pixmap="{qr}" alphatest="blend" scale="1" />
-        <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
-    </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
+    skin = _support_screen_skin()
 
     def __init__(self, session):
         Screen.__init__(self, session)
@@ -1154,19 +1274,7 @@ class AIOSupportScreen(Screen):
 
 # *** NOWA KLASA EKRANU INFO (z notą prawną) ***
 class AIOInfoScreen(Screen):
-    skin = """
-    <screen position="center,center" size="900,540" title="Informacje o AIO Panel">
-        <widget name="title" position="20,20" size="860,35" font="Regular;28" halign="center" valign="center" />
-        <widget name="author" position="20,60" size="860,25" font="Regular;22" halign="center" valign="center" />
-        <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
-        
-        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
-        
-        <widget name="legal_text" position="20,165" size="860,200" font="Regular;20" halign="center" valign="top" />
-        
-        <widget name="changelog_title" position="20,375" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
-        <widget name="changelog_text" position="30,415" size="840,105" font="Regular;22" halign="left" valign="top" />
-    </screen>"""
+    skin = _info_screen_skin()
 
     def __init__(self, session):
         Screen.__init__(self, session)
@@ -1174,12 +1282,12 @@ class AIOInfoScreen(Screen):
         self.setTitle("Informacje o AIO Panel")
 
         self["title"] = Label("AIO Panel v{}".format(VER))
-        self["author"] = Label("Twórca: Paweł Pawełek | aio-iptv@wp.pl")
+        self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
         self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
         legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
-                          "Prawa autorskie (C) 2024, Paweł Pawełek (aio-iptv@wp.pl)\n" \
+                          "Prawa autorskie (C) 2024, Paweł Pawełek (msisystem@t.pl)\n" \
                           "Wszelkie prawa autorskie osobiste zastrzeżone.\n\n" \
                           "Ta wtyczka (AIO Panel) jest wolnym oprogramowaniem: możesz ją\n" \
                           "redystrybuować i/lub modyfikować na warunkach Powszechnej\n" \
@@ -2019,27 +2127,20 @@ FUNCTION_DESCRIPTIONS = {
         "▶️ E2iPlayer Master - Instalacja/Aktualizacja": "Instaluje lub aktualizuje E2iPlayer (Master).\nDostarcza dostęp do wielu serwisów VOD/stream i narzędzi multimedialnych.",
         "📅 EPG Import - Instalator": "Instaluje EPGImport – automatyczny import programu TV.\nPo instalacji skonfiguruj źródła EPG i harmonogram aktualizacji.",
         "🔄 S4aUpdater - Instalator": "Instaluje S4aUpdater do aktualizacji wybranych dodatków.\nUłatwia utrzymanie wtyczek w aktualnej wersji bez ręcznej instalacji.",
+        "🔄 MyUpdater v5.1 - Instalator": "Instaluje MyUpdater v5.1 z oficjalnego skryptu instalacyjnego.\nSłuży do aktualizacji i utrzymania dodatków bez ręcznego pobierania paczek.",
         "📺 JediMakerXtream - Instalator": "Instaluje JediMakerXtream do budowy bukietów IPTV z kont Xtream.\nPo instalacji dodaj dane logowania i wygeneruj listę/bukiety.",
         "▶️ YouTube - Instalator": "Instaluje wtyczkę YouTube dla Enigma2.\nMoże wymagać dodatkowych bibliotek zależnych od obrazu.",
         "📦 J00zeks Feed (Repo Installer)": "Dodaje repozytorium J00zeks (feed) do systemu.\nPo instalacji możesz pobierać jego wtyczki z poziomu Menedżera wtyczek.",
         "📺 E2Kodi v2 - Instalator (j00zek)": "Instaluje E2Kodi v2 (wersja z feedu j00zek).\nUmożliwia uruchomienie środowiska Kodi na Enigma2 (zależności zależą od obrazu).",
         "🖼️ Picon Updater - Instalator (Picony)": "Instaluje narzędzie do aktualizacji piconów.\nUłatwia pobieranie i odświeżanie ikon kanałów w systemie.",
-        "🎨 Algare FHD - Instalator": "Instaluje skórkę Algare FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
-        "🎨 Fury FHD - Instalator": "Instaluje skórkę Fury FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
-        "🎨 Luka FHD - Instalator": "Instaluje skórkę Luka FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
-        "🎨 Maxy FHD - Instalator": "Instaluje skórkę Maxy FHD (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
-        "🎨 XDreamy - Instalator": "Instaluje skórkę XDreamy (FHD).\nPo instalacji wybierz ją w Ustawienia → System → Skórka i zrestartuj GUI.",
 
         # Narzędzia Systemowe
         "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
-        
-        "✨ Super Konfigurator - DEPS (Zależności)": "Instaluje podstawowe zależności systemowe (wget, tar, unzip, certyfikaty).\nNie zmienia list kanałów ani softcamu.",
-        "✨ Super Konfigurator - BASIC (Lista + Softcam + Oscam)": "Konfiguracja standardowa wykonywana automatycznie:\n1) Lista kanałów Bzyk83 Hotbird 13E\n2) Softcam (instalacja skryptem)\n3) Oscam z feed (najnowszy dostępny)\n4) Restart GUI",
-        "✨ Super Konfigurator - FULL (Lista + Softcam + Oscam + Picony + Reboot)": "Pełna konfiguracja wykonywana automatycznie:\n1) Lista kanałów Bzyk83 Hotbird 13E\n2) Softcam (instalacja skryptem)\n3) Oscam z feed (najnowszy dostępny)\n4) Picony (Transparent)\n5) Pełny restart tunera",
+        "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
         ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Bzyk83 13E Hotbird)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
-        "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) i zapisuje w docelowym katalogu.\nMoże nadpisać istniejące pliki; po zakończeniu zalecany restart GUI.",
+        "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) i przed instalacją pyta o katalog docelowy.\nMożesz wybrać lokalizację domyślną albo urządzenie zewnętrzne; po zakończeniu zalecany restart GUI.",
         "📊 Monitor Systemowy": "Podgląd wykorzystania CPU, RAM, temperatury",
         "📄 Przeglądarka Logów": "Przeglądanie logów systemowych i Enigmy2",
         "⏰ Menedżer Cron": "Zarządzanie zadaniami harmonogramu",
@@ -2086,26 +2187,20 @@ FUNCTION_DESCRIPTIONS = {
         "▶️ E2iPlayer Master - Install/Update": "Installs or updates E2iPlayer (Master).\nProvides access to multiple streaming/VOD sources and media tools.",
         "📅 EPG Import - Installer": "Installs EPGImport for automatic EPG data import.\nAfter install, set sources and schedule periodic updates.",
         "🔄 S4aUpdater - Installer": "Installs S4aUpdater to keep selected add-ons up to date.\nReduces manual package installs/updates.",
+        "🔄 MyUpdater v5.1 - Installer": "Installs MyUpdater v5.1 using the official installer script.\nHelps keep selected add-ons updated without manual package downloads.",
         "📺 JediMakerXtream - Installer": "Installs JediMakerXtream to build IPTV bouquets from Xtream accounts.\nAdd your credentials and generate bouquets after installation.",
         "▶️ YouTube - Installer": "Installs the YouTube plugin for Enigma2.\nRequired dependencies vary by image.",
         "📦 J00zeks Feed (Repo Installer)": "Adds the J00zek feed repository to your system.\nAfterwards, install his plugins via the Plugin Manager.",
         "📺 E2Kodi v2 - Installer (j00zek)": "Installs E2Kodi v2 (j00zek build).\nLets you run Kodi on Enigma2; dependencies vary by image.",
         "🖼️ Picon Updater - Installer (Picons)": "Installs a picon update utility.\nHelps download and refresh channel icons on the receiver.",
-        "🎨 Algare FHD - Installer": "Installs the Algare FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
-        "🎨 Fury FHD - Installer": "Installs the Fury FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
-        "🎨 Luka FHD - Installer": "Installs the Luka FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
-        "🎨 Maxy FHD - Installer": "Installs the Maxy FHD FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
-        "🎨 XDreamy - Installer": "Installs the XDreamy FHD skin.\nAfter installation, select it in Settings → System → Skin and restart GUI.",
 
         # System Tools
         "⚙️ System Tools": "Advanced system administration tools",
-        "✨ Super Setup - DEPS (Dependencies)": "Installs basic system dependencies (wget, tar, unzip, certificates).\nDoes not change channel lists or softcam.",
-        "✨ Super Setup - BASIC (List + Softcam + Oscam)": "Automatic standard setup:\n1) Channel list Bzyk83 Hotbird 13E\n2) Softcam (script install)\n3) Oscam from feed (newest available)\n4) GUI restart",
-        "✨ Super Setup - FULL (List + Softcam + Oscam + Picons + Reboot)": "Automatic full setup:\n1) Channel list Bzyk83 Hotbird 13E\n2) Softcam (script install)\n3) Oscam from feed (newest available)\n4) Picons (Transparent)\n5) Full receiver reboot",
+        "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
         ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Paweł Pawełek)\n- install softcam\n- install the newest Oscam from feed (auto-detect tuner/CPU)\n- download picons (Transparent)\nFinally triggers a full system reboot.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
-        "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set and writes it to the target folder.\nMay overwrite existing files; GUI restart recommended.",
+        "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set and asks for the target folder before installation.\nYou can keep the default path or choose an external device; GUI restart recommended.",
         "📊 System Monitor": "View CPU, RAM, temperature usage",
         "📄 Log Viewer": "Browse system and Enigma2 logs",
         "⏰ Cron Manager": "Manage scheduled tasks",
@@ -2135,12 +2230,7 @@ FUNCTION_DESCRIPTIONS = {
 
 # === NOWA KLASA WYBORU Z OPISEM (DLA WIZARDA) ===
 class SuperWizardChoiceScreen(Screen):
-    skin = """
-    <screen position="center,center" size="800,500" title="Super Konfigurator">
-        <widget name="list" position="20,20" size="760,300" scrollbarMode="showOnDemand" />
-        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="#0000C2FF" />
-        <widget name="actions" position="20,460" size="760,30" font="Regular;20" halign="right" />
-    </screen>"""
+    skin = _super_wizard_choice_skin()
 
     def __init__(self, session, options, title="Wybierz opcję", description_map=None):
         Screen.__init__(self, session)
@@ -2190,34 +2280,8 @@ class SuperWizardChoiceScreen(Screen):
 
 
 class Panel(Screen):
-    # Modern Dashboard UI v9.0 (Sidebar + Content) + QR + HealthBar
-    skin = """
-    <screen name='PanelAIO' position='center,center' size='1100,690' title='AIO Panel' backgroundColor='#000B0F14'>
-        <!-- HEADER -->
-        <eLabel position='0,0' size='1100,90' backgroundColor='#00121824' zPosition='-1' />
-        <!-- Small QR in header (use pre-scaled image to avoid crop on some images) -->
-        <widget name='qr_code_small' position='18,23' size='44,44' pixmap="{qr}" alphatest='blend' scale='1' />
-        <!-- Author logo (opposite side of QR) -->
-        <widget name='pp_logo' position='395,10' size='70,70' pixmap="{pp_logo}" alphatest='blend' scale='1' />
-        <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='title_label' position='470,12' size='560,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='health' position='470,52' size='560,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
-        <eLabel position='0,90' size='1100,2' backgroundColor='#0000C2FF' />
-
-        <!-- BODY -->
-        <widget name='sidebar' position='0,92' size='270,548' itemHeight='58' font='Regular;24' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
-        <eLabel position='270,92' size='2,548' backgroundColor='#00203346' />
-        <widget name='menu' position='285,92' size='800,468' itemHeight='44' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
-        <widget name='function_description' position='285,565' size='800,70' font='Regular;20' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
-
-        <!-- hidden (compat with old code) -->
-        <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
-
-        <!-- FOOTER -->
-        <eLabel position='0,640' size='1100,50' backgroundColor='#00121824' zPosition='-1' />
-        <widget name='legend' position='10,646'  size='1080,22'  font='Regular;20' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
-        <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
-    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
+    # Modern Dashboard UI v9.3 (adaptive HD/FHD layout)
+    skin = _panel_main_skin()
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
@@ -2403,44 +2467,6 @@ class Panel(Screen):
                 except:
                     pass
 
-            if not description:
-                action = item[1] if len(item) > 1 else ""
-                # Generic fallback descriptions to avoid empty tooltip
-                if self.lang == 'PL':
-                    if isinstance(action, str) and action.startswith("CMD:"):
-                        description = "Uruchamia funkcję PanelAIO."
-                    elif isinstance(action, str) and action.startswith("bash_raw:"):
-                        description = "Uruchamia instalator/komendę w konsoli (bash)."
-                    elif isinstance(action, str) and action.startswith("archive:"):
-                        description = "Pobiera i instaluje paczkę/archiwum z internetu."
-                    elif isinstance(action, str) and action.startswith("m3u:"):
-                        description = "Dodaje bukiet IPTV (M3U) do Enigma2."
-                    elif isinstance(action, str) and action.startswith("bouquet:"):
-                        description = "Dodaje bukiet (REF) do Enigma2."
-                    elif "Skórk" in func_name or "Skin" in func_name or "🎨" in func_name:
-                        description = "Instaluje wybraną skórkę (skin). Po instalacji wybierz ją w ustawieniach i zrestartuj GUI."
-                    elif "Instalator" in func_name:
-                        description = "Uruchamia instalator wybranej wtyczki."
-                    else:
-                        description = "Brak opisu tej funkcji."
-                else:
-                    if isinstance(action, str) and action.startswith("CMD:"):
-                        description = "Runs a PanelAIO function."
-                    elif isinstance(action, str) and action.startswith("bash_raw:"):
-                        description = "Runs an installer/command in console (bash)."
-                    elif isinstance(action, str) and action.startswith("archive:"):
-                        description = "Downloads and installs a package/archive from the internet."
-                    elif isinstance(action, str) and action.startswith("m3u:"):
-                        description = "Adds an IPTV bouquet (M3U) to Enigma2."
-                    elif isinstance(action, str) and action.startswith("bouquet:"):
-                        description = "Adds a reference bouquet (REF) to Enigma2."
-                    elif "Skin" in func_name or "🎨" in func_name:
-                        description = "Installs the selected skin. After installation select it in settings and restart GUI."
-                    elif "Installer" in func_name:
-                        description = "Runs the installer for the selected plugin."
-                    else:
-                        description = "No description available."
-
             self["function_description"].setText(description)
 
         except Exception as e:
@@ -2490,6 +2516,9 @@ class Panel(Screen):
             keywords_to_remove = ['bzyk', 'jakitaki']
             s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
             final_channel_lists = repo_lists + s4a_lists_filtered
+            azman_items = [item for item in final_channel_lists if 'azman' in ensure_unicode(item[0]).lower()]
+            non_azman_items = [item for item in final_channel_lists if 'azman' not in ensure_unicode(item[0]).lower()]
+            final_channel_lists = non_azman_items + azman_items
             
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
             tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
@@ -2975,11 +3004,87 @@ class Panel(Screen):
         console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 3)), close_on_finish=True)
 
 
+    def _get_picon_target_candidates(self):
+        mounts = []
+        seen = set()
+        candidates = ["/media", "/mnt", "/autofs"]
+        try:
+            if os.path.exists('/proc/mounts'):
+                with open('/proc/mounts', 'r') as f:
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) < 2:
+                            continue
+                        mnt = parts[1]
+                        if mnt.startswith('/media/') or mnt.startswith('/mnt/') or mnt.startswith('/autofs/'):
+                            if os.path.isdir(mnt) and mnt not in seen:
+                                seen.add(mnt)
+                                mounts.append(mnt)
+        except Exception:
+            pass
+
+        for base in candidates:
+            try:
+                if not os.path.isdir(base):
+                    continue
+                for entry in sorted(os.listdir(base)):
+                    mnt = os.path.join(base, entry)
+                    if os.path.isdir(mnt) and mnt not in seen:
+                        seen.add(mnt)
+                        mounts.append(mnt)
+            except Exception:
+                pass
+
+        return mounts
+
+    def _prompt_custom_picon_path(self, title, url):
+        default_path = '/media/hdd/picon'
+        prompt = 'Podaj katalog docelowy dla piconów' if self.lang == 'PL' else 'Enter target folder for picons'
+        self.sess.openWithCallback(lambda value: self._on_custom_picon_path(title, url, value), InputBox, title=prompt, text=default_path)
+
+    def _on_custom_picon_path(self, title, url, value):
+        if not value:
+            return
+        picon_path = value.strip()
+        if not picon_path:
+            return
+        install_archive(self.sess, title, url, callback_on_finish=self.reload_settings_python, picon_path=picon_path)
+
+    def _prompt_picon_target(self, title, url):
+        default_path = '/usr/share/enigma2/picon'
+        choices = []
+        if self.lang == 'PL':
+            choices.append(('Domyślnie: {}'.format(default_path), default_path))
+        else:
+            choices.append(('Default: {}'.format(default_path), default_path))
+
+        for mount in self._get_picon_target_candidates():
+            target = os.path.join(mount, 'picon')
+            label = 'Urządzenie zewnętrzne: {}'.format(target) if self.lang == 'PL' else 'External device: {}'.format(target)
+            choices.append((label, target))
+
+        choices.append(('Wskaż własną ścieżkę...', '__custom__') if self.lang == 'PL' else ('Choose custom path...', '__custom__'))
+        title_txt = 'Wybierz miejsce instalacji piconów' if self.lang == 'PL' else 'Choose picon installation location'
+        self.sess.openWithCallback(lambda choice: self._on_picon_target_selected(title, url, choice), ChoiceBox, title=title_txt, list=choices)
+
+    def _on_picon_target_selected(self, title, url, choice):
+        if not choice:
+            return
+        target = choice[1]
+        if target == '__custom__':
+            self._prompt_custom_picon_path(title, url)
+            return
+        install_archive(self.sess, title, url, callback_on_finish=self.reload_settings_python, picon_path=target)
+
     # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
         title = name
         if action.startswith("archive:"):
-            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python)
+            archive_url = action.split(':', 1)[1]
+            if archive_url == "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip" or "picon" in title.lower():
+                self._prompt_picon_target(title, archive_url)
+            else:
+                install_archive(self.sess, title, archive_url, callback_on_finish=self.reload_settings_python)
         elif action.startswith("m3u:"):
             parts = action.split(':', 3)
             self.install_m3u_as_bouquet(title, parts[1] + ":" + parts[2], parts[3].split(':', 1)[0], parts[3].split(':', 1)[1] if len(parts[3].split(':', 1)) > 1 else parts[3].split(':', 1)[0])
@@ -2991,9 +3096,6 @@ class Panel(Screen):
         elif action.startswith("CMD:"):
             key = action.split(':', 1)[1]
             if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
-            elif key == "SUPER_DEPS": self.run_super_setup_direct("deps")
-            elif key == "SUPER_BASIC": self.run_super_setup_direct("basic")
-            elif key == "SUPER_FULL": self.run_super_setup_direct("full")
             elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
             elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
@@ -3004,7 +3106,6 @@ class Panel(Screen):
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            elif key == "TOGGLE_MENU_VISIBILITY": self.toggle_menu_visibility()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
             elif key == "CLEAR_FTP_PASS": run_command_in_background(self.sess, title, ["passwd -d root"])
             elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -3036,55 +3137,6 @@ class Panel(Screen):
     # --- FUNKCJE INSTALACYJNE I POMOCNICZE ---
     
     # NAPRAWIONY SUPER KONFIGURATOR Z OPISEM
-    def run_super_setup_direct(self, mode):
-        """Run Super Konfigurator without extra choice dialog (options are visible in the main list)."""
-        try:
-            steps = []
-            reboot_mode = "gui"
-            if mode == "deps":
-                steps = ["deps"]
-                reboot_mode = "gui"
-            elif mode == "basic":
-                steps = ["channel_list", "install_softcam", "install_oscam", "reload_settings"]
-                reboot_mode = "gui"
-            elif mode == "full":
-                steps = ["channel_list", "install_softcam", "install_oscam", "picons", "reload_settings"]
-                reboot_mode = "full"
-            else:
-                return
-
-            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Bzyk83_Hotbird_13E_15.02.2026.zip'
-            list_name = 'Bzyk83 Hotbird 13E (15.02.2026)'
-
-            try:
-                repo_lists = self.fetched_data_cache.get("repo_lists", [])
-                for item in repo_lists:
-                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
-                        t = str(item[0]).lower()
-                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
-                            channel_list_url = str(item[1]).split(':', 1)[1]
-                            list_name = str(item[0]).replace("📡 ", "")
-                            break
-            except Exception:
-                pass
-
-            self.sess.open(
-                WizardProgressScreen,
-                steps=steps,
-                channel_list_url=channel_list_url,
-                channel_list_name=list_name,
-                picon_url=picon_url,
-                reboot_mode=reboot_mode
-            )
-        except Exception as e:
-            print("[AIO Panel] run_super_setup_direct error:", e)
-            try:
-                show_message_compat(self.sess, "Błąd uruchomienia Super Konfiguratora.", MessageBox.TYPE_ERROR)
-            except Exception:
-                pass
-
-
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
@@ -3134,8 +3186,8 @@ class Panel(Screen):
 
         if steps:
             picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Bzyk83_Hotbird_13E_15.02.2026.zip'
-            list_name = 'Bzyk83 Hotbird 13E (15.02.2026)'
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/bzyk83_hb_13E_2026_02_24.zip'
+            list_name = 'Bzyk83 Hotbird 13E (2026-02-24)'
 
             try:
                 repo_lists = self.fetched_data_cache.get("repo_lists", [])
