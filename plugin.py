@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | msisystem@t.pl
-Wersja 9.3 (Adaptive UI) - System Tools Suite (Monitor/Logs/Cron/Services/Info)
+Wersja 9.5 (Feeds & Repair) - Repo Manager + Post-Install Repair
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
-v9.3: wybór ścieżki piconów, MyUpdater v5.1, Azman na końcu list, lżejszy UI HD + porządki.
+v9.6: odświeżone skrypty instalacyjne, dodany instalator Simple IPTV EPG oraz poprawki pakietowania.
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -289,7 +289,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("9.3")
+VER = _read_local_version("9.5")
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -676,6 +676,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🛠 AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("📺 Simple IPTV EPG - Instalator", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
     ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -711,6 +712,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🛠 AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
     ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
+    ("📺 Simple IPTV EPG - Installer", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
     ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -741,7 +743,10 @@ SYSTEM_TOOLS_PL = [
     ("⏰ Menedżer Cron", "CMD:CRON_MANAGER"),
     ("🔌 Menedżer Usług", "CMD:SERVICE_MANAGER"),
     ("ℹ️ Informacje o Systemie", "CMD:SYSTEM_INFO"),
-    (r"\c00FFD200--- Backup & Restore ---\c00ffffff", "SEPARATOR"),
+    (r"\c00FFD200--- Feedy / Repozytoria ---\c00ffffff", "SEPARATOR"),
+    ("🌐 Menedżer Feedów / Repozytoriów", "CMD:FEED_MANAGER"),
+    (r"\c00FFD200--- Naprawa i Backup ---\c00ffffff", "SEPARATOR"),
+    ("🛠 Tryb Naprawy po Instalacji", "CMD:POSTINSTALL_REPAIR"),
     ("💾 Backup Listy Kanałów", "CMD:BACKUP_LIST"),
     ("💾 Backup Konfiguracji Oscam", "CMD:BACKUP_OSCAM"),
     ("♻️ Restore Listy Kanałów", "CMD:RESTORE_LIST"),
@@ -762,7 +767,10 @@ SYSTEM_TOOLS_EN = [
     ("⏰ Cron Manager", "CMD:CRON_MANAGER"),
     ("🔌 Service Manager", "CMD:SERVICE_MANAGER"),
     ("ℹ️ System Information", "CMD:SYSTEM_INFO"),
-    (r"\c00FFD200--- Backup & Restore ---\c00ffffff", "SEPARATOR"),
+    (r"\c00FFD200--- Feeds / Repositories ---\c00ffffff", "SEPARATOR"),
+    ("🌐 Feed / Repository Manager", "CMD:FEED_MANAGER"),
+    (r"\c00FFD200--- Repair & Backup ---\c00ffffff", "SEPARATOR"),
+    ("🛠 Post-Install Repair Mode", "CMD:POSTINSTALL_REPAIR"),
     ("💾 Backup Channel List", "CMD:BACKUP_LIST"),
     ("💾 Backup Oscam Config", "CMD:BACKUP_OSCAM"),
     ("♻️ Restore Channel List", "CMD:RESTORE_LIST"),
@@ -780,6 +788,7 @@ DIAGNOSTICS_PL = [
     (r"\c00FFD200--- Czyszczenie i Bezpieczeństwo ---\c00ffffff", "SEPARATOR"),
     ("⏱️ Auto RAM Cleaner (Konfiguruj)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
+    ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
@@ -796,6 +805,7 @@ DIAGNOSTICS_EN = [
     (r"\c00FFD200--- Cleaning & Security ---\c00ffffff", "SEPARATOR"),
     ("⏱️ Auto RAM Cleaner (Setup)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
+    ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
@@ -2148,6 +2158,8 @@ FUNCTION_DESCRIPTIONS = {
         "ℹ️ Informacje o Systemie": "Szczegółowe informacje o sprzęcie i oprogramowaniu",
         "🔄 Aktualizuj oscam.srvid/srvid2": "Aktualizacja listy identyfikatorów kanałów",
         "🔑 Aktualizuj SoftCam.Key (Online)": "Pobiera i aktualizuje plik SoftCam.Key (Online) w typowych lokalizacjach kluczy.\nPo zakończeniu wykonuje restart emulatora (jeśli uruchomiony).",
+        "🌐 Menedżer Feedów / Repozytoriów": "Menedżer repozytoriów opkg. Pozwala podejrzeć aktywne feedy, wykonać test połączenia z feedami, wyczyścić cache list pakietów i odświeżyć repozytoria.",
+        "🛠 Tryb Naprawy po Instalacji": "Uruchamia zestaw naprawczy po instalacji dodatków lub po nieudanym update. Dostępne moduły: uprawnienia, Softcam, EPG, picony, ServiceApp i Streamlink oraz tryb pełny.",
         "💾 Backup Listy Kanałów": "Kopia zapasowa list kanałów",
         "💾 Backup Konfiguracji Oscam": "Kopia zapasowa konfiguracji Oscam",
         "♻️ Restore Listy Kanałów": "Przywracanie list kanałów z backupu",
@@ -2161,6 +2173,7 @@ FUNCTION_DESCRIPTIONS = {
         "💾 Wolne miejsce (dysk/flash)": "Informacja o wykorzystaniu pamięci",
         "⏱️ Auto RAM Cleaner (Konfiguruj)": "Automatyczne czyszczenie pamięci RAM",
         "🧹 Wyczyść Pamięć Tymczasową": "Usunięcie plików tymczasowych z /tmp",
+        "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Bezpieczne czyszczenie zbędnych archiwów, crashlogów i logów tymczasowych oraz odświeżenie cache RAM.\nPomaga odzyskać miejsce bez naruszania ustawień użytkownika.",
         "🧹 Wyczyść Pamięć RAM": "Ręczne czyszczenie pamięci RAM",
         "🔑 Kasuj hasło FTP": "Usuwa hasło użytkownika root (FTP/SSH).\nPo wykonaniu logowanie odbywa się bez hasła (jeśli obraz na to pozwala).",
         "🔑 Ustaw Hasło FTP": "Ustawia nowe hasło dla użytkownika root (FTP/SSH).\nZwiększa bezpieczeństwo dostępu do tunera z sieci.",
@@ -2208,6 +2221,8 @@ FUNCTION_DESCRIPTIONS = {
         "ℹ️ System Information": "Detailed hardware and software info",
         "🔄 Update oscam.srvid/srvid2": "Update channel identifier list",
         "🔑 Update SoftCam.Key (Online)": "Downloads and updates SoftCam.Key (Online) to common key/config locations.\nRestarts the emulator (if running).",
+        "🌐 Feed / Repository Manager": "Opkg repository manager. Lets you inspect active feeds, test feed connectivity, clear package-list cache and refresh repositories.",
+        "🛠 Post-Install Repair Mode": "Runs a post-install repair toolkit after a failed install/update. Available modules: permissions, Softcam, EPG, picons, ServiceApp and Streamlink, plus a full repair mode.",
         "💾 Backup Channel List": "Backup channel lists",
         "💾 Backup Oscam Config": "Backup Oscam configuration",
         "♻️ Restore Channel List": "Restore channel lists from backup",
@@ -2221,6 +2236,7 @@ FUNCTION_DESCRIPTIONS = {
         "💾 Free Space (disk/flash)": "Memory usage information",
         "⏱️ Auto RAM Cleaner (Setup)": "Automatic RAM cleaning",
         "🧹 Clear Temporary Cache": "Remove temporary files from /tmp",
+        "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Safely removes leftover archives, crashlogs and temporary logs, then refreshes RAM cache.\nHelps recover space without touching user settings.",
         "🧹 Clear RAM Cache": "Manual RAM cache clearing",
         "🔑 Clear FTP Password": "Removes the root password (FTP/SSH).\nAfterwards, login may be passwordless (depends on image security settings).",
         "🔑 Set FTP Password": "Sets a new password for the root user (FTP/SSH).\nImproves security for network access to the receiver.",
@@ -2280,7 +2296,7 @@ class SuperWizardChoiceScreen(Screen):
 
 
 class Panel(Screen):
-    # Modern Dashboard UI v9.3 (adaptive HD/FHD layout)
+    # Modern Dashboard UI v9.5 (adaptive HD/FHD layout)
     skin = _panel_main_skin()
 
     def __init__(self, session, fetched_data):
@@ -2854,7 +2870,8 @@ class Panel(Screen):
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
-            "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM"
+            "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM",
+            "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -3118,6 +3135,8 @@ class Panel(Screen):
             elif key == "SHOW_AIO_INFO": self.show_info_screen()
             elif key == "BACKUP_LIST": self.backup_lists()
             elif key == "BACKUP_OSCAM": self.backup_oscam()
+            elif key == "FEED_MANAGER": self.open_feed_manager()
+            elif key == "POSTINSTALL_REPAIR": self.open_postinstall_repair()
             elif key == "RESTORE_LIST": self.restore_lists()
             elif key == "RESTORE_OSCAM": self.restore_oscam()
             elif key == "SYSTEM_MONITOR": self.open_system_monitor()
@@ -3129,6 +3148,7 @@ class Panel(Screen):
             # REMOVED: AUTO_BACKUP
             elif key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
             elif key == "FREE_SPACE_DISPLAY": console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
+            elif key == "SMART_CLEANUP": self.smart_cleanup()
             
             # --- ZMIANY TUTAJ: Obsługa nowych funkcji ---
             elif key == "UPDATE_SRVID": self.update_oscam_srvid_files() # Poprawiona
@@ -3489,6 +3509,469 @@ class Panel(Screen):
             fi
             sleep 3
         '''.format(url=url, url_alt=url_alt)
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+
+
+    def open_feed_manager(self):
+        if self.lang == 'PL':
+            choices = [
+                ("🧪 Test działania feedów", "test"),
+                ("📄 Pokaż aktywne repozytoria", "list"),
+                ("♻️ Wyczyść cache opkg i odśwież feedy", "refresh"),
+                ("💾 Backup plików repozytoriów", "backup"),
+                ("📦 Dodaj / przeinstaluj J00zeks Feed", "j00zek")
+            ]
+            title_txt = "Menedżer Feedów / Repozytoriów"
+        else:
+            choices = [
+                ("🧪 Test feed connectivity", "test"),
+                ("📄 Show active repositories", "list"),
+                ("♻️ Clear opkg cache and refresh feeds", "refresh"),
+                ("💾 Backup repository files", "backup"),
+                ("📦 Add / reinstall J00zek Feed", "j00zek")
+            ]
+            title_txt = "Feed / Repository Manager"
+        self.sess.openWithCallback(self._feed_manager_selected, ChoiceBox, title=title_txt, list=choices)
+
+    def _feed_manager_selected(self, choice):
+        if not choice:
+            return
+        action = choice[1]
+        title = choice[0]
+        if action == "j00zek":
+            self.install_j00zek_repo()
+            return
+        if action == "list":
+            cmd = r'''
+                echo "=== AIO Feed Manager: active repositories ==="
+                FOUND=0
+                for F in /etc/opkg/*.conf /etc/opkg/*.feed /etc/opkg/*.list /etc/opkg/*/*.conf; do
+                    [ -f "$F" ] || continue
+                    FOUND=1
+                    echo ""
+                    echo "--- $F ---"
+                    cat "$F" 2>/dev/null || true
+                done
+                [ "$FOUND" -eq 0 ] && echo "No repository files found in /etc/opkg."
+            '''
+            console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+            return
+        if action == "refresh":
+            cmd = r'''
+                echo "=== AIO Feed Manager: refresh feeds ==="
+                echo "[1/3] Cleaning package-list cache..."
+                rm -rf /var/cache/opkg/* /var/lib/opkg/lists/* 2>/dev/null || true
+                echo "[2/3] Repository files:"
+                ls -1 /etc/opkg 2>/dev/null || true
+                echo "[3/3] Running opkg update..."
+                opkg update
+                sync
+            '''
+            console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+            return
+        if action == "backup":
+            out_dir = self._get_backup_path() or "/tmp/"
+            out_file = os.path.join(out_dir, "aio_repo_backup_{}.tar.gz".format(self._make_timestamp()))
+            cmd = r'''
+                OUT="__OUT__"
+                mkdir -p "$(dirname "$OUT")"
+                echo "=== AIO Feed Manager: backup repositories ==="
+                tar -czf "$OUT" /etc/opkg 2>/dev/null || tar -czf "$OUT" /etc/opkg/*.conf 2>/dev/null
+                echo "Backup saved to: $OUT"
+            '''.replace("__OUT__", out_file)
+            console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+            return
+        if action == "test":
+            out_file = os.path.join("/tmp", "aio_feed_test_{}.txt".format(self._make_timestamp()))
+            cmd = r'''
+                OUT="__OUT__"
+                : > "$OUT"
+                log(){ echo "$1"; echo "$1" >> "$OUT"; }
+                test_url(){
+                    URL="$1"
+                    wget -qO /dev/null --no-check-certificate -T 10 "$URL" >/dev/null 2>&1 && return 0
+                    wget -qO /dev/null -T 10 "$URL" >/dev/null 2>&1 && return 0
+                    curl -k -L -m 10 -o /dev/null -s "$URL" >/dev/null 2>&1 && return 0
+                    return 1
+                }
+                log "=== AIO Feed Test ==="
+                log "Date: $(date)"
+                log ""
+                log "[1/3] Repository files:"
+                FOUND=0
+                for F in /etc/opkg/*.conf /etc/opkg/*.feed /etc/opkg/*.list /etc/opkg/*/*.conf; do
+                    [ -f "$F" ] || continue
+                    FOUND=1
+                    log "--- $F ---"
+                    cat "$F" >> "$OUT" 2>/dev/null || true
+                    echo "" >> "$OUT"
+                    echo ""
+                done
+                [ "$FOUND" -eq 0 ] && log "No repository files found in /etc/opkg."
+                log ""
+                log "[2/3] Feed URL test:"
+                URLS=$(grep -h -v '^[[:space:]]*#' /etc/opkg/*.conf /etc/opkg/*/*.conf 2>/dev/null | awk '$1 ~ /^src/ {print $3}' | sort -u)
+                if [ -z "$URLS" ]; then
+                    log "No active feed URLs detected."
+                else
+                    for URL in $URLS; do
+                        log "Feed: $URL"
+                        OK=1
+                        for CAND in "$URL/Packages.gz" "$URL/packages.gz" "$URL/Packages" "$URL/packages" "$URL"; do
+                            if test_url "$CAND"; then
+                                log "  [OK] $CAND"
+                                OK=0
+                                break
+                            fi
+                        done
+                        [ "$OK" -ne 0 ] && log "  [FAIL] no response from standard feed endpoints"
+                    done
+                fi
+                log ""
+                log "[3/3] opkg update test:"
+                OPKGLOG="/tmp/aio_opkg_update_test.log"
+                opkg update > "$OPKGLOG" 2>&1
+                RC=$?
+                cat "$OPKGLOG" | tee -a "$OUT"
+                log ""
+                if [ "$RC" -eq 0 ]; then
+                    log "[OK] opkg update completed successfully."
+                else
+                    log "[FAIL] opkg update returned code: $RC"
+                fi
+                log "Report saved to: $OUT"
+            '''.replace("__OUT__", out_file)
+            console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def open_postinstall_repair(self):
+        if self.lang == 'PL':
+            choices = [
+                ("🛠 Pełna naprawa po instalacji", "full"),
+                ("🔐 Napraw uprawnienia plików", "permissions"),
+                ("🔑 Napraw Softcam", "softcam"),
+                ("📅 Napraw EPG", "epg"),
+                ("🖼️ Napraw picony", "picons"),
+                ("⚙️ Napraw ServiceApp", "serviceapp"),
+                ("🌍 Napraw Streamlink", "streamlink")
+            ]
+            title_txt = "Tryb Naprawy po Instalacji"
+        else:
+            choices = [
+                ("🛠 Full post-install repair", "full"),
+                ("🔐 Repair file permissions", "permissions"),
+                ("🔑 Repair Softcam", "softcam"),
+                ("📅 Repair EPG", "epg"),
+                ("🖼️ Repair picons", "picons"),
+                ("⚙️ Repair ServiceApp", "serviceapp"),
+                ("🌍 Repair Streamlink", "streamlink")
+            ]
+            title_txt = "Post-Install Repair Mode"
+        self.sess.openWithCallback(self._postinstall_repair_selected, ChoiceBox, title=title_txt, list=choices)
+
+    def _postinstall_repair_selected(self, choice):
+        if not choice:
+            return
+        mode = choice[1]
+        title = choice[0]
+        cmd = self._build_postinstall_repair_script(mode)
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def _build_postinstall_repair_script(self, mode):
+        cmd = r'''
+            MODE="__MODE__"
+            echo "=== AIO Post-Install Repair ==="
+            echo "Mode: $MODE"
+            echo "Date: $(date)"
+            echo ""
+
+            pkg_exists(){
+                PKG="$1"
+                opkg list 2>/dev/null | awk '{print $1}' | grep -qx "$PKG"
+            }
+
+            install_if_available(){
+                for PKG in "$@"; do
+                    if pkg_exists "$PKG"; then
+                        echo "Installing/reinstalling: $PKG"
+                        opkg install --force-reinstall "$PKG" 2>/dev/null || opkg install "$PKG" 2>/dev/null || true
+                    fi
+                done
+            }
+
+            reinstall_detected_or_first(){
+                for PKG in "$@"; do
+                    if opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$PKG"; then
+                        echo "Reinstalling installed package: $PKG"
+                        opkg install --force-reinstall "$PKG" 2>/dev/null || opkg install "$PKG" 2>/dev/null || true
+                        return 0
+                    fi
+                done
+                for PKG in "$@"; do
+                    if pkg_exists "$PKG"; then
+                        echo "Installing fallback package: $PKG"
+                        opkg install "$PKG" 2>/dev/null || opkg install --force-reinstall "$PKG" 2>/dev/null || true
+                        return 0
+                    fi
+                done
+                echo "No matching package found in feeds: $*"
+                return 1
+            }
+
+            fix_tree(){
+                D="$1"
+                [ -e "$D" ] || return 0
+                chown -R root:root "$D" 2>/dev/null || true
+                find "$D" -type d -exec chmod 755 {} \; 2>/dev/null || true
+                find "$D" -type f -exec chmod 644 {} \; 2>/dev/null || true
+            }
+
+            repair_permissions(){
+                echo "[1] Repairing permissions..."
+                fix_tree /etc/enigma2
+                fix_tree /etc/tuxbox
+                fix_tree /etc/tuxbox/config
+                fix_tree /usr/keys
+                fix_tree /etc/epgimport
+                for F in /etc/init.d/softcam /usr/bin/oscam /usr/bin/ncam; do
+                    [ -f "$F" ] && chmod 755 "$F" 2>/dev/null || true
+                done
+                for D in /usr/share/enigma2/picon /media/hdd/picon /media/usb/picon; do
+                    [ -d "$D" ] && fix_tree "$D"
+                done
+                sync
+            }
+
+            repair_softcam(){
+                echo "[2] Repairing Softcam..."
+                opkg update || true
+                chmod 755 /etc/init.d/softcam 2>/dev/null || true
+                reinstall_detected_or_first enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod ncam softcam-ncam enigma2-plugin-softcams-ncam enigma2-plugin-softcams-ncam-emu || true
+                /etc/init.d/softcam stop 2>/dev/null || true
+                killall -9 oscam ncam softcam 2>/dev/null || true
+                sleep 2
+                /etc/init.d/softcam start 2>/dev/null || /etc/init.d/softcam restart 2>/dev/null || systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
+                ps | grep -E 'oscam|ncam|softcam' | grep -v grep || true
+            }
+
+            repair_epg(){
+                echo "[3] Repairing EPG..."
+                mkdir -p /etc/epgimport /etc/enigma2 2>/dev/null || true
+                fix_tree /etc/epgimport
+                [ -f /tmp/epg.dat ] && rm -f /tmp/epg.dat 2>/dev/null || true
+                for F in /media/hdd/epg.dat /media/usb/epg.dat /etc/enigma2/epg.dat; do
+                    [ -f "$F" ] && chmod 644 "$F" 2>/dev/null || true
+                done
+                install_if_available enigma2-plugin-extensions-epgimport epgimport
+                sync
+            }
+
+            repair_picons(){
+                echo "[4] Repairing picons..."
+                ACTIVE=""
+                for D in /media/hdd/picon /media/usb/picon /usr/share/enigma2/picon; do
+                    if [ -d "$D" ]; then
+                        fix_tree "$D"
+                        [ -z "$ACTIVE" ] && ACTIVE="$D"
+                    fi
+                done
+                if [ -n "$ACTIVE" ]; then
+                    if [ -L /picon ]; then
+                        ln -sfn "$ACTIVE" /picon 2>/dev/null || true
+                    elif [ ! -e /picon ]; then
+                        ln -s "$ACTIVE" /picon 2>/dev/null || true
+                    fi
+                fi
+                ls -ld /picon /usr/share/enigma2/picon /media/hdd/picon /media/usb/picon 2>/dev/null || true
+            }
+
+            repair_serviceapp(){
+                echo "[5] Repairing ServiceApp..."
+                opkg update || true
+                reinstall_detected_or_first enigma2-plugin-systemplugins-serviceapp serviceapp || true
+                install_if_available exteplayer3 gstplayer ffmpeg uchardet
+            }
+
+            repair_streamlink(){
+                echo "[6] Repairing Streamlink..."
+                opkg update || true
+                install_if_available enigma2-plugin-extensions-streamlinkwrapper enigma2-plugin-extensions-streamlinkproxy streamlinksrv python3-streamlink python-streamlink streamlink python3-yt-dlp python-youtube-dl
+                ps | grep -Ei 'streamlink|streamlinksrv' | grep -v grep || true
+            }
+
+            case "$MODE" in
+                full)
+                    repair_permissions
+                    repair_softcam
+                    repair_epg
+                    repair_picons
+                    repair_serviceapp
+                    repair_streamlink
+                    ;;
+                permissions) repair_permissions ;;
+                softcam) repair_softcam ;;
+                epg) repair_epg ;;
+                picons) repair_picons ;;
+                serviceapp) repair_serviceapp ;;
+                streamlink) repair_streamlink ;;
+                *) echo "Unknown repair mode: $MODE"; exit 1 ;;
+            esac
+
+            echo ""
+            echo "Done."
+            sync
+        '''
+        return cmd.replace("__MODE__", mode)
+
+    def _get_report_output_path(self):
+        path = self._get_backup_path()
+        if path:
+            return path
+        return "/tmp/"
+
+    def _make_timestamp(self):
+        try:
+            return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        except Exception:
+            return time.strftime("%Y%m%d_%H%M%S")
+
+    def backup_full_enigma2(self):
+        path = self._get_backup_path()
+        if not path:
+            msg = "Brak nośnika HDD/USB." if self.lang == 'PL' else "No HDD/USB device found."
+            show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR)
+            return
+        ts = self._make_timestamp()
+        out_file = os.path.join(path, "aio_full_enigma2_backup_{}.tar.gz".format(ts))
+        cmd = r'''
+            set -e
+            OUT="{out_file}"
+            WORK="/tmp/aio_full_backup_{ts}"
+            mkdir -p "{path}"
+            rm -rf "$WORK"
+            mkdir -p "$WORK"
+            mkdir -p "$WORK/meta"
+
+            [ -d /etc/enigma2 ] && cp -a /etc/enigma2 "$WORK/"
+            if [ -d /etc/tuxbox/config ]; then
+                mkdir -p "$WORK/etc_tuxbox"
+                cp -a /etc/tuxbox/config "$WORK/etc_tuxbox/"
+            fi
+            [ -d /usr/keys ] && cp -a /usr/keys "$WORK/"
+            [ -d /etc/opkg ] && cp -a /etc/opkg "$WORK/"
+            [ -f /etc/issue ] && cp -a /etc/issue "$WORK/meta/issue.txt" || true
+            [ -f /etc/image-version ] && cp -a /etc/image-version "$WORK/meta/image-version.txt" || true
+            [ -f /etc/vtiversion.info ] && cp -a /etc/vtiversion.info "$WORK/meta/vtiversion.info" || true
+            uname -a > "$WORK/meta/uname.txt" 2>/dev/null || true
+            opkg list-installed > "$WORK/meta/opkg_list-installed.txt" 2>/dev/null || true
+            date > "$WORK/meta/created_at.txt" 2>/dev/null || true
+
+            tar -czf "$OUT" -C "$WORK" .
+            rm -rf "$WORK"
+            echo "Backup zapisany do: $OUT"
+        '''.format(out_file=out_file, path=path, ts=ts)
+        title = "Backup Pełny Enigma2" if self.lang == 'PL' else "Full Enigma2 Backup"
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def export_system_report(self):
+        out_dir = self._get_report_output_path()
+        ts = self._make_timestamp()
+        out_file = os.path.join(out_dir, "aio_system_report_{}.txt".format(ts))
+        title = "Eksport Raportu Systemowego" if self.lang == 'PL' else "Export System Report"
+        cmd = r'''
+            OUT="{out_file}"
+            mkdir -p "{out_dir}"
+            echo "AIO Panel - System Report" > "$OUT"
+            echo "Generated: $(date)" >> "$OUT"
+            echo "Plugin version: {ver}" >> "$OUT"
+            echo "Python branch: {py_branch}" >> "$OUT"
+            echo "" >> "$OUT"
+
+            echo "=== IMAGE / SYSTEM ===" >> "$OUT"
+            uname -a >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+            [ -f /etc/issue ] && {{ echo "--- /etc/issue ---"; cat /etc/issue; echo ""; }} >> "$OUT" 2>/dev/null || true
+            [ -f /etc/image-version ] && {{ echo "--- /etc/image-version ---"; cat /etc/image-version; echo ""; }} >> "$OUT" 2>/dev/null || true
+            [ -f /etc/vtiversion.info ] && {{ echo "--- /etc/vtiversion.info ---"; cat /etc/vtiversion.info; echo ""; }} >> "$OUT" 2>/dev/null || true
+            echo "=== UPTIME ===" >> "$OUT"
+            uptime >> "$OUT" 2>/dev/null || cat /proc/uptime >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== CPU ===" >> "$OUT"
+            grep -E '^(system type|machine|model name|Hardware|processor|cpu model|BogoMIPS)' /proc/cpuinfo >> "$OUT" 2>/dev/null || cat /proc/cpuinfo >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== MEMORY ===" >> "$OUT"
+            grep -E '^(MemTotal|MemFree|MemAvailable|Buffers|Cached|SwapTotal|SwapFree)' /proc/meminfo >> "$OUT" 2>/dev/null || cat /proc/meminfo >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== DISKS ===" >> "$OUT"
+            df -h >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== MOUNTS ===" >> "$OUT"
+            mount >> "$OUT" 2>/dev/null || cat /proc/mounts >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== NETWORK ===" >> "$OUT"
+            ip -4 addr >> "$OUT" 2>/dev/null || ifconfig >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+            ip route >> "$OUT" 2>/dev/null || route -n >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+            [ -f /etc/resolv.conf ] && cat /etc/resolv.conf >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+            ping -c 1 -W 2 1.1.1.1 >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== CAM / SERVICES ===" >> "$OUT"
+            ps | grep -E 'oscam|ncam|softcam' | grep -v grep >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== PACKAGES (selected) ===" >> "$OUT"
+            opkg list-installed | grep -Ei 'oscam|ncam|softcam|streamlink|serviceapp|exteplayer3|xstreamity|e2iplayer|youtube|jedi|epg|kodi|vavoo|filmxy|footonsat' >> "$OUT" 2>/dev/null || opkg list-installed >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+
+            echo "=== ENIGMA2 CONFIG ===" >> "$OUT"
+            ls -la /etc/enigma2 >> "$OUT" 2>/dev/null || true
+            echo "" >> "$OUT"
+            echo "Report saved to: $OUT"
+        '''.format(out_file=out_file, out_dir=out_dir, ver=VER, py_branch=('Py3' if IS_PY3 else 'Py2'))
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
+    def smart_cleanup(self):
+        title = "Smart Cleanup"
+        cmd = r'''
+            BEFORE=$(df -k / 2>/dev/null | awk 'NR==2 {print $4}')
+            echo "=== AIO Smart Cleanup ==="
+            echo "Start: $(date)"
+            echo ""
+
+            echo "[1/4] Czyszczenie archiwów i plików tymczasowych z /tmp..."
+            rm -f /tmp/*.ipk /tmp/*.zip /tmp/*.tar.gz /tmp/*.tgz /tmp/*.tbz2 /tmp/*.tmp /tmp/epg.dat 2>/dev/null || true
+            rm -f /tmp/enigma2_crash*.log /tmp/*crash*.log /tmp/*debug*.log 2>/dev/null || true
+
+            echo "[2/4] Czyszczenie crashlogów i logów użytkownika..."
+            rm -f /home/root/enigma2_crash*.log /home/root/*crash*.log 2>/dev/null || true
+            if [ -d /home/root/logs ]; then
+                find /home/root/logs -type f \( -name '*.log' -o -name '*.txt' \) -print -delete 2>/dev/null || true
+            fi
+
+            echo "[3/4] Czyszczenie cache menedżera pakietów..."
+            rm -rf /var/cache/opkg/* /var/lib/opkg/lists/* 2>/dev/null || true
+
+            echo "[4/4] Sync + odświeżenie RAM cache..."
+            sync
+            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+            sync
+
+            AFTER=$(df -k / 2>/dev/null | awk 'NR==2 {print $4}')
+            if [ -n "$BEFORE" ] && [ -n "$AFTER" ]; then
+                GAIN=$((AFTER - BEFORE))
+                echo ""
+                echo "Odzyskane miejsce w głównym systemie: ${GAIN} KB"
+            fi
+            echo "Koniec: $(date)"
+        '''
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def _get_backup_path(self):
