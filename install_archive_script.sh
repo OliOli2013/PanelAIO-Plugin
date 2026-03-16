@@ -1,12 +1,12 @@
 #!/bin/sh
-# Skrypt install_archive_script.sh (v9.3) - Zgodny z AIO Panel v5.0
+# Skrypt install_archive_script.sh (v9.6) - Zgodny z AIO Panel
 # Logika: Rozpakuj -> Znajdź lamedb -> Kopiuj -> (Restart robi plugin.py)
 
 # LOG_FILE dla debugowania
 LOG_FILE="/tmp/aio_install.log"
 
 # Start logging
-echo "--- START install_archive_script.sh (v9.3) ---" > "$LOG_FILE"
+echo "--- START install_archive_script.sh (v9.6) ---" > "$LOG_FILE"
 echo "Argumenty: \$1='$1' \$2='$2'" >> "$LOG_FILE"
 date >> "$LOG_FILE"
 
@@ -99,7 +99,7 @@ echo "--> Pliki tymczasowe usunięte." >> "$LOG_FILE"
 # --- Koniec Czyszczenia ---
 
 # --- Komunikat końcowy ---
-echo "--- KONIEC install_archive_script.sh (v9.3) ---" >> "$LOG_FILE"
+echo "--- KONIEC install_archive_script.sh (v9.6) ---" >> "$LOG_FILE"
 if [ $COPY_ERRORS -ne 0 ]; then
     echo ">>> Instalacja ZAKOŃCZONA Z OSTRZEŻENIAMI." | tee -a "$LOG_FILE"
     echo ">>> Sprawdź listę kanałów. W razie problemów może być konieczny restart GUI." | tee -a "$LOG_FILE"

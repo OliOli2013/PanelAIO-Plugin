@@ -1,3 +1,26 @@
+[9.6]
+Data wydania: 16.03.2026
+- Zaktualizowano installer.sh i install_archive_script.sh do wersji 9.6.
+- installer.sh zapisuje także własną kopię w katalogu wtyczki podczas instalacji/aktualizacji.
+- Dodano instalator „Simple IPTV EPG” oparty o polecenie wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh.
+- Zaktualizowano wpisy wersji pakietu do 9.6.
+
+[9.5]
+Data wydania: 16.03.2026
+- Usunięto eksport raportu systemowego z menu głównego.
+- Usunięto pełny backup Enigma2 z menu głównego.
+- Dodano Menedżer Feedów / Repozytoriów z: testem działania feedów, podglądem aktywnych repozytoriów, odświeżaniem cache opkg i backupem plików repozytoriów.
+- Dodano Tryb Naprawy po Instalacji: uprawnienia, Softcam, EPG, picony, ServiceApp, Streamlink oraz tryb pełny.
+- Zaktualizowano opisy funkcji PL/EN i podniesiono wersję do 9.5.
+
+[9.4]
+Data wydania: 15.03.2026
+- Dodano pełny backup Enigma2 (ustawienia /etc/enigma2, Oscam, /usr/keys, opkg, lista pakietów).
+- Dodano eksport raportu systemowego do pliku TXT dla wsparcia technicznego.
+- Dodano Smart Cleanup: czyszczenie archiwów tymczasowych, crashlogów, logów i odświeżenie cache RAM.
+- Dodano opisy nowych funkcji w tooltipach PL/EN.
+- Podniesiono wersję wtyczki do 9.4.
+
 [9.3]
 Data wydania: 08.03.2026
 - Dodano wybór katalogu docelowego dla opcji "Pobierz Picony (Transparent)".
