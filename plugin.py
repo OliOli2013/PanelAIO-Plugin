@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
-by Paweł Pawełek | msisystem@t.pl
+by Paweł Pawełek | aio-iptv@wp.pl
 Wersja 9.5 (Feeds & Repair) - Repo Manager + Post-Install Repair
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
@@ -2390,11 +2390,85 @@ class Panel(Screen):
             "4": lambda: self.switch_tab(3)
         }, -1)
         
+        self._is_closing = False
         self.onShown.append(self.post_initial_setup)
         self.onExecBegin.append(self._on_exec_begin)
+        try:
+            self.onClose.append(self._cleanup_before_close)
+        except Exception:
+            pass
         self.set_language(self.lang) 
 
     # --- FUNKCJE ZAKŁADEK ---
+    def close(self, *args, **kwargs):
+        """Safely close the main panel on images prone to GUI segfaults on exit."""
+        if getattr(self, "_is_closing", False):
+            return
+        self._is_closing = True
+        try:
+            self._cleanup_before_close()
+        except Exception:
+            pass
+        try:
+            return Screen.close(self, *args, **kwargs)
+        except Exception:
+            try:
+                return Screen.close(self)
+            except Exception:
+                return None
+
+    def _cleanup_before_close(self):
+        """Stop timers and detach callbacks before the screen is destroyed."""
+        if getattr(self, "_cleanup_done", False):
+            return
+        self._cleanup_done = True
+
+        try:
+            if hasattr(self, "_health_timer") and self._health_timer is not None:
+                try:
+                    self._health_timer.stop()
+                except Exception:
+                    pass
+                try:
+                    conn = getattr(self, "_health_timer_conn", None)
+                    if conn and hasattr(conn, "disconnect"):
+                        conn.disconnect()
+                except Exception:
+                    pass
+                try:
+                    cbs = getattr(self._health_timer, "callback", None)
+                    if cbs and self._update_health in cbs:
+                        while self._update_health in cbs:
+                            cbs.remove(self._update_health)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Detach widget callbacks that may fire during teardown on some images.
+        for widget_name, cb in (("sidebar", self._on_sidebar_changed), ("menu", self.update_function_description)):
+            try:
+                changed = getattr(self[widget_name], "onSelectionChanged", None)
+                if changed and cb in changed:
+                    while cb in changed:
+                        changed.remove(cb)
+            except Exception:
+                pass
+
+        # Remove screen lifecycle hooks to avoid re-entry after close request.
+        for hook_name, cb in (("onShown", self._start_health_timer),
+                              ("onShown", self.post_initial_setup),
+                              ("onLayoutFinish", self._apply_focus),
+                              ("onExecBegin", self._on_exec_begin),
+                              ("onClose", self._cleanup_before_close)):
+            try:
+                hook = getattr(self, hook_name, None)
+                if hook and cb in hook:
+                    while cb in hook:
+                        hook.remove(cb)
+            except Exception:
+                pass
+
     def next_tab(self):
         if not self.tabs:
             return
@@ -2784,7 +2858,11 @@ class Panel(Screen):
 
 
     def _start_health_timer(self):
+        if getattr(self, "_is_closing", False):
+            return
         self._update_health()
+        if getattr(self, "_is_closing", False):
+            return
         try:
             self._health_timer.start(2000, True)
         except Exception:
@@ -2841,6 +2919,8 @@ class Panel(Screen):
             return None
 
     def _update_health(self):
+        if getattr(self, "_is_closing", False):
+            return
         try:
             cpu = self._read_cpu_percent()
             mem = self._read_mem_pct()
@@ -2851,6 +2931,8 @@ class Panel(Screen):
             self["health"].setText("CPU: %s | RAM: %s | NET: %s" % (cpu_s, mem_s, net))
         except Exception:
             pass
+        if getattr(self, "_is_closing", False):
+            return
         try:
             self._health_timer.start(2000, True)
         except Exception:
