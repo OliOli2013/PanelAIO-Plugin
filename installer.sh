@@ -1,6 +1,6 @@
 #!/bin/sh
 # PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
-# v9.6: feed manager + repair mode + Simple IPTV EPG + refreshed packaging
+# v9.7: AIO Extras + compatibility check + local changelog + unified contact
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"

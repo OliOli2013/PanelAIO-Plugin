@@ -1,3 +1,12 @@
+[9.7]
+Data wydania: 28.03.2026
+- Dodano sekcję „AIO Extra” z nowymi pozycjami: AIO Szybki Start / Polecane, Test zgodności systemu, Tip dnia AIO oraz Lokalny changelog.
+- Dodano AIO Quick Start: ekran szybkiego wyboru najciekawszych funkcji wtyczki (aktualizacje, monitor systemu, feedy, naprawa, tipy, changelog).
+- Dodano lokalny raport zgodności systemu dla Enigma2 / Python 2 / Python 3 (narzędzia, certyfikaty CA, flash, podstawowe zależności).
+- Dodano lokalny podgląd changeloga działający także offline jako fallback, gdy GitHub jest chwilowo niedostępny.
+- Ujednolicono dane kontaktowe autora na adres aio-iptv@wp.pl w ekranach informacyjnych i metadanych pakietu.
+- Zaktualizowano wpisy wersji pakietu oraz skrypty instalacyjne do 9.7.
+
 [9.6]
 Data wydania: 16.03.2026
 - Zaktualizowano installer.sh i install_archive_script.sh do wersji 9.6.

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 9.5 (Feeds & Repair) - Repo Manager + Post-Install Repair
+Wersja 9.7 (AIO Extras) - Quick Start + Compatibility + Tips
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
-v9.6: odświeżone skrypty instalacyjne, dodany instalator Simple IPTV EPG oraz poprawki pakietowania.
+v9.7: dodano AIO Quick Start, test zgodności systemu, lokalny changelog i tip dnia oraz ujednolicono adres kontaktowy.
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -558,6 +558,116 @@ def prepare_tmp_dir():
         except OSError as e:
             print("[AIO Panel] Error creating tmp dir:", e)
 
+
+def _read_text_file(path, default=""):
+    try:
+        with io.open(path, 'r', encoding='utf-8', errors='ignore') as f:
+            return f.read()
+    except Exception:
+        return default
+
+def _command_exists(cmd):
+    try:
+        return shutil_which(cmd) is not None
+    except Exception:
+        return False
+
+def _pick_tip_index(total):
+    try:
+        return datetime.date.today().toordinal() % max(total, 1)
+    except Exception:
+        return 0
+
+def _get_aio_tips(lang="PL"):
+    tips_pl = [
+        "Użyj AIO Quick Start, gdy chcesz pokazać najciekawsze funkcje bez przekopywania całego menu.",
+        "Po większej instalacji uruchom Tryb Naprawy po Instalacji – często wystarczy do przywrócenia uprawnień i usług.",
+        "Gdy flash zaczyna się zapełniać, najpierw uruchom Smart Cleanup zamiast ręcznie kasować pliki systemowe.",
+        "Auto RAM Cleaner ustaw tylko na boxach z małą ilością RAM – na mocniejszych tunerach zwykle wystarcza tryb ręczny.",
+        "Jeżeli feedy przestaną działać, sprawdź najpierw Menedżer Feedów / Repozytoriów i test połączenia, zanim zrobisz reinstall obrazu.",
+        "Przed podmianą list kanałów zrób szybki backup – przywrócenie trwa chwilę i oszczędza nerwów.",
+        "Zakładka Informacje o Systemie to dobry pierwszy krok przy diagnozie: od razu widać uptime, RAM i aktywne IP.",
+        "Lokalny changelog działa także bez internetu – przydatne, gdy GitHub chwilowo nie odpowiada na starszych obrazach."
+    ]
+    tips_en = [
+        "Use AIO Quick Start when you want to showcase the most useful features without browsing the full menu.",
+        "After a bigger install, run Post-Install Repair first – permissions and service fixes often solve the issue immediately.",
+        "When flash space gets tight, start with Smart Cleanup before deleting system files manually.",
+        "Use Auto RAM Cleaner mainly on low-memory boxes – manual mode is often enough on stronger receivers.",
+        "If feeds stop working, check Feed / Repository Manager and connectivity first before reinstalling the image.",
+        "Create a quick backup before replacing channel lists – restore takes only a moment and avoids frustration.",
+        "System Information is a good first stop for troubleshooting: uptime, RAM and active IPs are visible immediately.",
+        "The local changelog works even without internet access, which helps on older images when GitHub is unreachable."
+    ]
+    return tips_pl if lang == "PL" else tips_en
+
+def _build_compat_report(lang, image_type="unknown"):
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines = []
+    title = "Raport zgodności AIO Panel" if lang == "PL" else "AIO Panel compatibility report"
+    lines.append("{} v{}".format(title, VER))
+    lines.append("Data: {}".format(now) if lang == "PL" else "Date: {}".format(now))
+    lines.append("")
+    lines.append(("Środowisko:" if lang == "PL" else "Environment:"))
+    lines.append("- Python: {}".format(get_python_version() or "N/A"))
+    lines.append("- Tryb: {}".format("Py3" if IS_PY3 else "Py2"))
+    lines.append("- Obraz/typ: {}".format(image_type or "unknown") if lang == "PL" else "- Image/type: {}".format(image_type or "unknown"))
+    lines.append("- Enigma2 plugin path: {}".format(PLUGIN_PATH))
+    lines.append("")
+
+    checks = [
+        ("opkg", _command_exists("opkg")),
+        ("wget", _command_exists("wget")),
+        ("tar", _command_exists("tar")),
+        ("unzip", _command_exists("unzip")),
+        ("bash", _command_exists("bash")),
+        ("crontab", _command_exists("crontab")),
+        ("systemctl", _command_exists("systemctl")),
+    ]
+    lines.append(("Kluczowe narzędzia:" if lang == "PL" else "Core tools:"))
+    for name, ok in checks:
+        lines.append("- [{}] {}".format("OK" if ok else "WARN", name))
+
+    ca_paths = [
+        "/etc/ssl/certs/ca-certificates.crt",
+        "/etc/ssl/certs/ca-bundle.crt",
+        "/etc/ssl/cert.pem"
+    ]
+    has_ca = any(os.path.exists(p) for p in ca_paths)
+    lines.append("- [{}] {}".format("OK" if has_ca else "WARN", "CA certificates"))
+
+    temp_paths = [
+        "/proc/stb/sensors/temp0/value",
+        "/proc/stb/fp/temp_sensor",
+        "/sys/class/thermal/thermal_zone0/temp"
+    ]
+    has_temp = any(os.path.exists(p) for p in temp_paths)
+    lines.append("- [{}] {}".format("OK" if has_temp else "WARN", "czujnik temperatury" if lang == "PL" else "temperature sensor"))
+
+    lines.append("")
+    lines.append(("Pamięć i system plików:" if lang == "PL" else "Storage and filesystem:"))
+    try:
+        root_du = shutil_disk_usage("/")
+        lines.append("- / free: {:.1f} MB".format(root_du.free / (1024.0 * 1024.0)))
+    except Exception:
+        lines.append("- / free: N/A")
+    lines.append("- /tmp writable: {}".format("YES" if os.access("/tmp", os.W_OK) else "NO"))
+    lines.append("- /etc/enigma2 present: {}".format("YES" if os.path.isdir("/etc/enigma2") else "NO"))
+
+    lines.append("")
+    lines.append(("Sugestie:" if lang == "PL" else "Suggestions:"))
+    suggestions = []
+    if not _command_exists("wget"):
+        suggestions.append("- Zainstaluj wget – część instalatorów online nie zadziała." if lang == "PL" else "- Install wget – several online installers depend on it.")
+    if not _command_exists("unzip"):
+        suggestions.append("- Doinstaluj unzip dla archiwów ZIP z listami/piconami." if lang == "PL" else "- Install unzip for ZIP-based lists and picons.")
+    if not has_ca:
+        suggestions.append("- Brak certyfikatów CA może utrudniać połączenia HTTPS z GitHub." if lang == "PL" else "- Missing CA certificates may break HTTPS access to GitHub.")
+    if not suggestions:
+        suggestions.append("- System wygląda poprawnie i jest gotowy do pracy z AIO Panel." if lang == "PL" else "- The system looks healthy and ready for AIO Panel tasks.")
+    lines.extend(suggestions)
+    return "\n".join(lines)
+
 # === FUNKCJA install_archive (GLOBALNA) ===
 def install_archive(session, title, url, callback_on_finish=None, picon_path=None):
     if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
@@ -782,6 +892,11 @@ DIAGNOSTICS_PL = [
     (r"\c00FFD200--- Informacje i Aktualizacje ---\c00ffffff", "SEPARATOR"),
     ("ℹ️ Informacje o AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("🔄 Aktualizacja Wtyczki", "CMD:CHECK_FOR_UPDATES"),
+    (r"\c00FFD200--- AIO Extra ---\c00ffffff", "SEPARATOR"),
+    ("⭐ AIO Szybki Start / Polecane", "CMD:AIO_QUICKSTART"),
+    ("🧪 Test zgodności systemu", "CMD:COMPATIBILITY_CHECK"),
+    ("💡 Tip dnia AIO", "CMD:SHOW_AIO_TIP"),
+    ("📜 Lokalny changelog", "CMD:LOCAL_CHANGELOG"),
     (r"\c00FFD200--- Diagnostyka ---\c00ffffff", "SEPARATOR"),
     ("🌐 Diagnostyka Sieci", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Wolne miejsce (dysk/flash)", "CMD:FREE_SPACE_DISPLAY"),
@@ -799,6 +914,11 @@ DIAGNOSTICS_EN = [
     (r"\c00FFD200--- Info & Updates ---\c00ffffff", "SEPARATOR"),
     ("ℹ️ About AIO Panel", "CMD:SHOW_AIO_INFO"),
     ("🔄 Update Plugin", "CMD:CHECK_FOR_UPDATES"),
+    (r"\c00FFD200--- AIO Extras ---\c00ffffff", "SEPARATOR"),
+    ("⭐ AIO Quick Start / Recommended", "CMD:AIO_QUICKSTART"),
+    ("🧪 System compatibility check", "CMD:COMPATIBILITY_CHECK"),
+    ("💡 AIO tip of the day", "CMD:SHOW_AIO_TIP"),
+    ("📜 Local changelog", "CMD:LOCAL_CHANGELOG"),
     (r"\c00FFD200--- Diagnostics ---\c00ffffff", "SEPARATOR"),
     ("🌐 Network Diagnostics", "CMD:NETWORK_DIAGNOSTICS"),
     ("💾 Free Space (disk/flash)", "CMD:FREE_SPACE_DISPLAY"),
@@ -1292,12 +1412,12 @@ class AIOInfoScreen(Screen):
         self.setTitle("Informacje o AIO Panel")
 
         self["title"] = Label("AIO Panel v{}".format(VER))
-        self["author"] = Label("Twórca: Paweł Pawełek | msisystem@t.pl")
+        self["author"] = Label("Twórca: Paweł Pawełek | aio-iptv@wp.pl")
         self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
         legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
-                          "Prawa autorskie (C) 2024, Paweł Pawełek (msisystem@t.pl)\n" \
+                          "Prawa autorskie (C) 2024-2026, Paweł Pawełek (aio-iptv@wp.pl)\n" \
                           "Wszelkie prawa autorskie osobiste zastrzeżone.\n\n" \
                           "Ta wtyczka (AIO Panel) jest wolnym oprogramowaniem: możesz ją\n" \
                           "redystrybuować i/lub modyfikować na warunkach Powszechnej\n" \
@@ -1313,7 +1433,7 @@ class AIOInfoScreen(Screen):
                           "---\n" \
                           "Wsparcie dla autora\n" \
                           "Jeśli doceniasz moją pracę, możesz postawić mi wirtualną kawę.\n" \
-                          "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!"
+                          "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!\n\nKontakt / wsparcie: aio-iptv@wp.pl"
         
         self["legal_text"] = Label(legal_note_text)
         self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
@@ -1365,19 +1485,68 @@ class AIOInfoScreen(Screen):
                     changelog_text = "\n".join(changes)
                 else:
                     changelog_text = "Nie znaleziono żadnych wpisów w changelogu."
+            else:
+                local_text = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "")
+                if local_text:
+                    changelog_text = "Tryb lokalny (offline):\n" + "\n".join(local_text.splitlines()[:12])
+                    found_version_tag = "LOCAL"
         except Exception as e:
             print("[AIO Panel] Info screen changelog fetch error:", e)
-            changelog_text = "Błąd podczas pobierania listy zmian."
+            local_text = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "")
+            changelog_text = ("Tryb lokalny (offline):\n" + "\n".join(local_text.splitlines()[:12])) if local_text else "Błąd podczas pobierania listy zmian."
+            found_version_tag = "LOCAL" if local_text else found_version_tag
         
         reactor.callFromThread(self.update_changelog_label, changelog_text, found_version_tag)
 
     def update_changelog_label(self, text, version_tag):
         self["changelog_text"].setText(text)
-        if version_tag:
+        if version_tag == "LOCAL":
+            self["changelog_title"].setText("Zmiany lokalne (offline)")
+        elif version_tag:
             self["changelog_title"].setText("Zmiany dla {}".format(version_tag))
         else:
             self["changelog_title"].setText("Ostatnie zmiany (z GitHub)")
 # *** KONIEC KLASY EKRANU INFO ***
+
+
+class AIOTextViewerScreen(Screen):
+    skin = """
+    <screen position="center,center" size="900,560" title="AIO Viewer">
+        <widget name="title" position="20,10" size="860,36" font="Regular;28" />
+        <widget name="text" position="20,55" size="860,455" font="Regular;24" />
+        <widget name="help" position="20,520" size="860,28" font="Regular;22" />
+    </screen>
+    """
+
+    def __init__(self, session, title, content, help_text=None):
+        Screen.__init__(self, session)
+        self.setTitle(title)
+        self["title"] = Label(title)
+        if ScrollLabel:
+            self["text"] = ScrollLabel(content)
+        else:
+            self["text"] = Label(content)
+        self["help"] = Label(help_text or "▲/▼ Scroll  EXIT=Back")
+        self["actions"] = ActionMap(["OkCancelActions", "DirectionActions"], {
+            "cancel": self.close,
+            "ok": self.close,
+            "up": self.page_up,
+            "down": self.page_down,
+        }, -1)
+
+    def page_up(self):
+        try:
+            if ScrollLabel:
+                self["text"].pageUp()
+        except Exception:
+            pass
+
+    def page_down(self):
+        try:
+            if ScrollLabel:
+                self["text"].pageDown()
+        except Exception:
+            pass
 
 
 # === KLASA Panel (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
@@ -2169,6 +2338,10 @@ FUNCTION_DESCRIPTIONS = {
         "ℹ️ Info i Diagnostyka": "Informacje o wtyczce i narzędzia diagnostyczne",
         "ℹ️ Informacje o AIO Panel": "Informacje o wersji, licencji i autorze",
         "🔄 Aktualizacja Wtyczki": "Sprawdzenie i instalacja aktualizacji AIO Panel",
+        "⭐ AIO Szybki Start / Polecane": "Nowa, atrakcyjna sekcja startowa z polecanymi akcjami i skrótami do najważniejszych funkcji AIO Panel.",
+        "🧪 Test zgodności systemu": "Generuje lokalny raport zgodności: Python, narzędzia systemowe, certyfikaty CA, pamięć flash i podstawowe zależności AIO.",
+        "💡 Tip dnia AIO": "Wyświetla praktyczną wskazówkę dnia dotyczącą obsługi AIO Panel i konserwacji systemu.",
+        "📜 Lokalny changelog": "Otwiera lokalny changelog z paczki wtyczki – działa także wtedy, gdy GitHub jest chwilowo niedostępny.",
         "🌐 Diagnostyka Sieci": "Test prędkości i parametrów połączenia internetowego",
         "💾 Wolne miejsce (dysk/flash)": "Informacja o wykorzystaniu pamięci",
         "⏱️ Auto RAM Cleaner (Konfiguruj)": "Automatyczne czyszczenie pamięci RAM",
@@ -2232,6 +2405,10 @@ FUNCTION_DESCRIPTIONS = {
         "ℹ️ Info & Diagnostics": "Plugin info and diagnostic tools",
         "ℹ️ About AIO Panel": "Version, license and author info",
         "🔄 Update Plugin": "Check and install AIO Panel updates",
+        "⭐ AIO Quick Start / Recommended": "New welcome section with recommended actions and shortcuts to the most useful AIO Panel functions.",
+        "🧪 System compatibility check": "Builds a local compatibility report: Python, system tools, CA certificates, flash space and core AIO dependencies.",
+        "💡 AIO tip of the day": "Shows a practical daily tip for using AIO Panel and keeping the receiver in good shape.",
+        "📜 Local changelog": "Opens the bundled local changelog – useful when GitHub is temporarily unreachable.",
         "🌐 Network Diagnostics": "Internet speed and connection test",
         "💾 Free Space (disk/flash)": "Memory usage information",
         "⏱️ Auto RAM Cleaner (Setup)": "Automatic RAM cleaning",
@@ -2390,85 +2567,11 @@ class Panel(Screen):
             "4": lambda: self.switch_tab(3)
         }, -1)
         
-        self._is_closing = False
         self.onShown.append(self.post_initial_setup)
         self.onExecBegin.append(self._on_exec_begin)
-        try:
-            self.onClose.append(self._cleanup_before_close)
-        except Exception:
-            pass
         self.set_language(self.lang) 
 
     # --- FUNKCJE ZAKŁADEK ---
-    def close(self, *args, **kwargs):
-        """Safely close the main panel on images prone to GUI segfaults on exit."""
-        if getattr(self, "_is_closing", False):
-            return
-        self._is_closing = True
-        try:
-            self._cleanup_before_close()
-        except Exception:
-            pass
-        try:
-            return Screen.close(self, *args, **kwargs)
-        except Exception:
-            try:
-                return Screen.close(self)
-            except Exception:
-                return None
-
-    def _cleanup_before_close(self):
-        """Stop timers and detach callbacks before the screen is destroyed."""
-        if getattr(self, "_cleanup_done", False):
-            return
-        self._cleanup_done = True
-
-        try:
-            if hasattr(self, "_health_timer") and self._health_timer is not None:
-                try:
-                    self._health_timer.stop()
-                except Exception:
-                    pass
-                try:
-                    conn = getattr(self, "_health_timer_conn", None)
-                    if conn and hasattr(conn, "disconnect"):
-                        conn.disconnect()
-                except Exception:
-                    pass
-                try:
-                    cbs = getattr(self._health_timer, "callback", None)
-                    if cbs and self._update_health in cbs:
-                        while self._update_health in cbs:
-                            cbs.remove(self._update_health)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        # Detach widget callbacks that may fire during teardown on some images.
-        for widget_name, cb in (("sidebar", self._on_sidebar_changed), ("menu", self.update_function_description)):
-            try:
-                changed = getattr(self[widget_name], "onSelectionChanged", None)
-                if changed and cb in changed:
-                    while cb in changed:
-                        changed.remove(cb)
-            except Exception:
-                pass
-
-        # Remove screen lifecycle hooks to avoid re-entry after close request.
-        for hook_name, cb in (("onShown", self._start_health_timer),
-                              ("onShown", self.post_initial_setup),
-                              ("onLayoutFinish", self._apply_focus),
-                              ("onExecBegin", self._on_exec_begin),
-                              ("onClose", self._cleanup_before_close)):
-            try:
-                hook = getattr(self, hook_name, None)
-                if hook and cb in hook:
-                    while cb in hook:
-                        hook.remove(cb)
-            except Exception:
-                pass
-
     def next_tab(self):
         if not self.tabs:
             return
@@ -2696,6 +2799,70 @@ class Panel(Screen):
         except Exception:
             pass
 
+    def open_aio_quickstart(self):
+        lang = self.lang
+        options = [
+            (("🪄 1) Sprawdź aktualizacje i changelog" if lang == "PL" else "🪄 1) Check updates and changelog"), "updates"),
+            (("📊 2) Monitor systemowy" if lang == "PL" else "📊 2) System monitor"), "sysmon"),
+            (("🌐 3) Diagnostyka sieci" if lang == "PL" else "🌐 3) Network diagnostics"), "netdiag"),
+            (("🌐 4) Menedżer feedów" if lang == "PL" else "🌐 4) Feed manager"), "feeds"),
+            (("🛠 5) Tryb naprawy" if lang == "PL" else "🛠 5) Post-install repair"), "repair"),
+            (("💡 6) Tip dnia AIO" if lang == "PL" else "💡 6) AIO tip of the day"), "tip"),
+            (("📜 7) Lokalny changelog" if lang == "PL" else "📜 7) Local changelog"), "changelog"),
+            (("[X] Powrót" if lang == "PL" else "[X] Back"), "cancel")
+        ]
+        desc_map = {
+            "updates": ("Szybkie wejście do informacji o wersji i aktualizacji wtyczki." if lang == "PL" else "Quick access to plugin version info and update workflow."),
+            "sysmon": ("Podgląd CPU, RAM, temperatury i dysków." if lang == "PL" else "CPU, RAM, temperature and disk overview."),
+            "netdiag": ("Test połączenia, DNS, ping oraz transfer." if lang == "PL" else "Connectivity, DNS, ping and transfer test."),
+            "feeds": ("Zarządzanie repozytoriami opkg i test feedów." if lang == "PL" else "Manage opkg repositories and feed connectivity."),
+            "repair": ("Naprawa typowych problemów po instalacji dodatków." if lang == "PL" else "Repair common issues after plugin/package installs."),
+            "tip": ("Krótka praktyczna wskazówka dla użytkownika AIO Panel." if lang == "PL" else "A short practical tip for AIO Panel users."),
+            "changelog": ("Lokalna lista zmian dostępna nawet offline." if lang == "PL" else "Bundled changelog available even offline."),
+            "cancel": ("Powrót do panelu głównego." if lang == "PL" else "Return to the main panel.")
+        }
+        title = ("⭐ AIO Szybki Start" if lang == "PL" else "⭐ AIO Quick Start")
+        py_mode = "Py3" if IS_PY3 else "Py2"
+        title = "{} | {} | {}".format(title, self.image_type, py_mode)
+        self.sess.openWithCallback(self._aio_quickstart_selected, SuperWizardChoiceScreen, options=options, title=title, description_map=desc_map)
+
+    def _aio_quickstart_selected(self, choice):
+        if not choice:
+            return
+        key = choice[1]
+        if key == "cancel":
+            return
+        elif key == "updates":
+            self.show_info_screen()
+        elif key == "sysmon":
+            self.open_system_monitor()
+        elif key == "netdiag":
+            self.run_network_diagnostics()
+        elif key == "feeds":
+            self.open_feed_manager()
+        elif key == "repair":
+            self.open_postinstall_repair()
+        elif key == "tip":
+            self.show_aio_tip()
+        elif key == "changelog":
+            self.show_local_changelog()
+
+    def show_aio_tip(self):
+        tips = _get_aio_tips(self.lang)
+        idx = _pick_tip_index(len(tips))
+        prefix = ("Wskazówka #{0}/{1}" if self.lang == "PL" else "Tip #{0}/{1}").format(idx + 1, len(tips))
+        show_message_compat(self.sess, "{}\n\n{}".format(prefix, tips[idx]), timeout=14)
+
+    def show_local_changelog(self):
+        content = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "Brak pliku changelog.txt")
+        title = "Lokalny changelog AIO Panel" if self.lang == "PL" else "Local AIO Panel changelog"
+        self.sess.open(AIOTextViewerScreen, title, content, "▲/▼ Scroll  OK/EXIT=Back")
+
+    def open_compatibility_check(self):
+        title = "Test zgodności systemu" if self.lang == "PL" else "System compatibility check"
+        report = _build_compat_report(self.lang, self.image_type)
+        self.sess.open(AIOTextViewerScreen, title, report, "▲/▼ Scroll  OK/EXIT=Back")
+
     def _on_exec_begin(self):
         """Restore focus/highlight when returning from child screens."""
         try:
@@ -2858,11 +3025,7 @@ class Panel(Screen):
 
 
     def _start_health_timer(self):
-        if getattr(self, "_is_closing", False):
-            return
         self._update_health()
-        if getattr(self, "_is_closing", False):
-            return
         try:
             self._health_timer.start(2000, True)
         except Exception:
@@ -2919,8 +3082,6 @@ class Panel(Screen):
             return None
 
     def _update_health(self):
-        if getattr(self, "_is_closing", False):
-            return
         try:
             cpu = self._read_cpu_percent()
             mem = self._read_mem_pct()
@@ -2931,8 +3092,6 @@ class Panel(Screen):
             self["health"].setText("CPU: %s | RAM: %s | NET: %s" % (cpu_s, mem_s, net))
         except Exception:
             pass
-        if getattr(self, "_is_closing", False):
-            return
         try:
             self._health_timer.start(2000, True)
         except Exception:
@@ -3231,6 +3390,10 @@ class Panel(Screen):
             elif key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
             elif key == "FREE_SPACE_DISPLAY": console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
             elif key == "SMART_CLEANUP": self.smart_cleanup()
+            elif key == "AIO_QUICKSTART": self.open_aio_quickstart()
+            elif key == "COMPATIBILITY_CHECK": self.open_compatibility_check()
+            elif key == "SHOW_AIO_TIP": self.show_aio_tip()
+            elif key == "LOCAL_CHANGELOG": self.show_local_changelog()
             
             # --- ZMIANY TUTAJ: Obsługa nowych funkcji ---
             elif key == "UPDATE_SRVID": self.update_oscam_srvid_files() # Poprawiona
