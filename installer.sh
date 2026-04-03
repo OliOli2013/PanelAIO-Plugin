@@ -1,6 +1,6 @@
 #!/bin/sh
 # PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
-# v9.7: AIO Extras + compatibility check + local changelog + unified contact
+# v10.0: stability + full reboot + TV Garden + Simple ZOOM Panel
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -47,11 +47,13 @@ fi
 
 sync || true
 
-echo "[PanelAIO] Restart GUI..."
-if command -v init >/dev/null 2>&1; then
-    init 4 || true
-    sleep 2
-    init 3 || true
+echo "[PanelAIO] Full receiver reboot..."
+sync || true
+sleep 2
+if command -v reboot >/dev/null 2>&1; then
+    reboot || init 6 || killall -9 enigma2 2>/dev/null || true
+elif command -v init >/dev/null 2>&1; then
+    init 6 || killall -9 enigma2 2>/dev/null || true
 else
     killall -9 enigma2 2>/dev/null || true
 fi

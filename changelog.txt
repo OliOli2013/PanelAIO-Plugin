@@ -1,3 +1,17 @@
+[10.0]
+Data wydania: 03.04.2026
+- Podniesiono wersję AIO Panel do 10.0.
+- Usunięto instalator FilmXY z menu Softcam i Wtyczki.
+- Dodano instalator TV Garden oparty o skrypt Belfagor2005 (wget | /bin/sh).
+- Dodano instalator Simple ZOOM Panel oparty o skrypt Belfagor2005 (wget | /bin/sh).
+- Rozszerzono i doprecyzowano zgodność Python 2 / Python 3, zachowując dotychczasową logikę działania wtyczki.
+- Dodano watchdog ekranu ładowania, który ogranicza ryzyko pozostania na ekranie startowym po instalacji/aktualizacji.
+- Zmieniono logikę aktualizacji AIO Panel oraz wybranych instalatorów tak, aby po zakończeniu proponowały lub wykonywały pełny restart tunera zamiast samego restartu GUI.
+- Poprawiono Super Konfigurator: tryby BASIC/FULL znowu instalują zależności, instalacja Oscam została rozszerzona o weryfikację pakietu po instalacji, próbę odświeżenia Softcam i pełny restart po zakończeniu.
+- Poprawiono opisy narzędzi i nowości w tooltipach PL/EN, w tym opis piconów Transparent: 13E, 19.2E, IPTV.
+- Dodano dodatkowe, mniejsze układy okien dla skinów z mniejszą powierzchnią roboczą i lepsze dopasowanie do okna TV/UI.
+- Zaktualizowano pliki repozytorium i instalacyjne do wydania 10.0 (plugin.py, version.txt, changelog.txt, installer.sh, install_archive_script.sh, control).
+
 [9.7]
 Data wydania: 28.03.2026
 - Dodano sekcję „AIO Extra” z nowymi pozycjami: AIO Szybki Start / Polecane, Test zgodności systemu, Tip dnia AIO oraz Lokalny changelog.
