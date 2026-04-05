@@ -1,6 +1,6 @@
 #!/bin/sh
 # PanelAIO - instalacja/aktualizacja z plików w repo (Py2/Py3)
-# v10.0: stability + full reboot + TV Garden + Simple ZOOM Panel
+# v10.0.2: external editable tip file + stability + full reboot + TV Garden + Simple ZOOM Panel
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -11,7 +11,7 @@ BASE="/usr/lib/enigma2/python/Plugins"
 DST="$BASE/SystemPlugins/PanelAIO"
 OLD="$BASE/Extensions/PanelAIO"
 
-FILES="__init__.py plugin.py version.txt changelog.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png pp_logo.png sel_menu.png sel_sidebar.png installer.sh install_archive_script.sh update_satellites_xml.sh"
+FILES="__init__.py plugin.py version.txt changelog.txt aio_tips.txt LICENSE logo.png selection.png Kod_QR_buycoffee.png qr_support.png qr_header.png pp_logo.png sel_menu.png sel_sidebar.png installer.sh install_archive_script.sh update_satellites_xml.sh"
 
 download() {
     url="$1"; out="$2"

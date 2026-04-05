@@ -1,0 +1,19 @@
+[PL]
+Po większej aktualizacji AIO Panel wykonaj pełny restart tunera, aby ograniczyć ryzyko zawieszenia na ekranie startowym.
+Jeśli po instalacji dodatku nie widać go od razu w systemie, sprawdź go ponownie po restarcie GUI lub pełnym restarcie odbiornika.
+Przed zmianą list kanałów lub piconów zrób szybki backup – przywrócenie trwa chwilę, a oszczędza dużo czasu.
+Gdy feed lub GitHub działa niestabilnie, najpierw sprawdź sieć, certyfikaty CA i wolne miejsce we flashu.
+Na boxach z mniejszą ilością RAM używaj funkcji czyszczenia pamięci rozsądnie i po większych operacjach instalacyjnych.
+Jeżeli używasz skinu z mniejszym oknem TV, po aktualizacji sprawdź czy wszystkie okna AIO mieszczą się poprawnie na ekranie.
+W Super Konfiguratorze po instalacji Oscam warto sprawdzić, czy softcam jest obecny po restarcie i widoczny w menedżerze camów.
+
+
+[EN]
+After a larger AIO Panel update, perform a full receiver reboot to reduce the chance of getting stuck on the startup screen.
+If an addon does not appear immediately after installation, check again after a GUI restart or full reboot.
+Create a quick backup before changing channel lists or picons – restore is fast and saves time.
+When a feed or GitHub behaves inconsistently, first verify network access, CA certificates and free flash space.
+On low-memory boxes, use RAM cleanup tools mainly after larger installation tasks.
+If you use a skin with a smaller TV window, verify after an update that all AIO windows still fit correctly on screen.
+After installing Oscam from Super Configurator, verify after reboot that the softcam is present and visible in the cam manager.
+

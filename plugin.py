@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 10.0 (Stability + Full Reboot + UI Fit)
+Wersja 10.0.3 (Tip Popup UI Fix)
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
+v10.0.3: Tip dnia otwiera się teraz w dedykowanym, mniejszym oknie AIO zamiast w systemowym MessageBox, co poprawia wygląd na różnych skinach i eliminuje licznik timeout w tytule.
+v10.0.2: dodano zewnętrzny plik aio_tips.txt z sekcjami [PL]/[EN], dzięki czemu można edytować Tip dnia bez ingerencji w plugin.py.
+v10.0.1: hotfix dla instalatorów uruchamianych w Console (TV Garden, XStreamity i inne) – bezpieczne opóźnienie okna restartu po zamknięciu Console, aby uniknąć błędu modalnego na części obrazów/skinów.
 v10.0: dodano TV Garden i Simple ZOOM Panel, usunięto FilmXY, poprawiono Super Konfigurator (deps + Oscam + pełny restart), dodano watchdog ekranu startowego oraz bardziej elastyczne skiny pod różne rozdzielczości.
 """
 from __future__ import print_function
@@ -277,6 +280,7 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
 PLUGIN_PP_LOGO_PATH = os.path.join(PLUGIN_PATH, "pp_logo.png")
+AIO_TIPS_FILE = os.path.join(PLUGIN_PATH, "aio_tips.txt")
 
 # --- VERSION: single source of truth (version.txt) ---
 # Fixes endless update prompt after GitHub update when version.txt and VER diverge.
@@ -289,7 +293,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("10.0")
+VER = _read_local_version("10.0.3")
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -385,6 +389,31 @@ def _support_screen_skin():
         <widget name="qr_huge" position="50,90" size="800,540" pixmap="{qr}" alphatest="blend" scale="1" />
         <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
     </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
+
+def _aio_tip_screen_skin():
+    if _is_small_ui():
+        return """
+    <screen position="center,center" size="720,320" title="AIO Tip dnia">
+        <widget name="title" position="18,14" size="684,30" font="Regular;22" halign="center" valign="center" />
+        <widget name="counter" position="18,48" size="684,22" font="Regular;18" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="text" position="24,84" size="672,170" font="Regular;22" halign="center" valign="center" />
+        <widget name="help" position="18,284" size="684,20" font="Regular;16" halign="center" valign="center" foregroundColor="#008A94A6" />
+    </screen>"""
+    if _is_hd_ui():
+        return """
+    <screen position="center,center" size="820,360" title="AIO Tip dnia">
+        <widget name="title" position="20,16" size="780,34" font="Regular;26" halign="center" valign="center" />
+        <widget name="counter" position="20,56" size="780,24" font="Regular;20" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="text" position="28,96" size="764,190" font="Regular;25" halign="center" valign="center" />
+        <widget name="help" position="20,324" size="780,22" font="Regular;18" halign="center" valign="center" foregroundColor="#008A94A6" />
+    </screen>"""
+    return """
+    <screen position="center,center" size="980,420" title="AIO Tip dnia">
+        <widget name="title" position="24,18" size="932,38" font="Regular;30" halign="center" valign="center" />
+        <widget name="counter" position="24,62" size="932,26" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="text" position="34,110" size="912,220" font="Regular;30" halign="center" valign="center" />
+        <widget name="help" position="24,382" size="932,24" font="Regular;20" halign="center" valign="center" foregroundColor="#008A94A6" />
+    </screen>"""
 
 def _info_screen_skin():
     if _is_small_ui():
@@ -600,14 +629,29 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
 # Funkcja konsoli (teraz używana do diagnostyki i instalatorów zewnętrznych)
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
     cmds_list = cmds_with_args if isinstance(cmds_with_args, list) else [cmds_with_args]
-    if reactor.running:
-        if callback:
-            reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish).onClose.append(callback))
-        else:
-            reactor.callLater(0.1, lambda: session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish))
-    else:
+
+    def _delayed_console_callback(*args):
+        if not callback:
+            return
+        try:
+            # Na części obrazów/skinów bezpośrednie otwieranie MessageBox z onClose Console
+            # potrafi wywołać błąd modalny. Krótkie opóźnienie pozwala domknąć Console.
+            if reactor.running:
+                reactor.callLater(0.4, callback)
+            else:
+                callback()
+        except Exception as e:
+            print("[AIO Panel] Console close callback error:", e)
+
+    def _open_console():
         c_dialog = session.open(Console, title=title, cmdlist=cmds_list, closeOnSuccess=close_on_finish)
-        if callback: c_dialog.onClose.append(callback)
+        if callback:
+            c_dialog.onClose.append(_delayed_console_callback)
+
+    if reactor.running:
+        reactor.callLater(0.1, _open_console)
+    else:
+        _open_console()
 
 def prepare_tmp_dir():
     if not os.path.exists(PLUGIN_TMP_PATH):
@@ -646,7 +690,42 @@ def _pick_tip_index(total):
     except Exception:
         return 0
 
+def _load_external_aio_tips(lang="PL"):
+    data = _read_text_file(AIO_TIPS_FILE, "")
+    if not data.strip():
+        return []
+    sections = {"PL": [], "EN": []}
+    plain = []
+    current = None
+    for raw_line in data.splitlines():
+        line = ensure_unicode(raw_line).strip()
+        if not line:
+            continue
+        if line.startswith("#") or line.startswith(";"):
+            continue
+        upper = line.upper()
+        if upper in ("[PL]", "[EN]"):
+            current = upper[1:-1]
+            continue
+        if current in sections:
+            sections[current].append(line)
+        else:
+            plain.append(line)
+    if plain:
+        return plain
+    lang_key = "PL" if lang == "PL" else "EN"
+    if sections.get(lang_key):
+        return sections.get(lang_key)
+    if sections.get("PL"):
+        return sections.get("PL")
+    if sections.get("EN"):
+        return sections.get("EN")
+    return []
+
 def _get_aio_tips(lang="PL"):
+    external_tips = _load_external_aio_tips(lang)
+    if external_tips:
+        return external_tips
     tips_pl = [
         "Użyj AIO Quick Start, gdy chcesz pokazać najciekawsze funkcje bez przekopywania całego menu.",
         "Po większej instalacji uruchom Tryb Naprawy po Instalacji – często wystarczy do przywrócenia uprawnień i usług.",
@@ -657,7 +736,7 @@ def _get_aio_tips(lang="PL"):
         "Zakładka Informacje o Systemie to dobry pierwszy krok przy diagnozie: od razu widać uptime, RAM i aktywne IP.",
         "Lokalny changelog działa także bez internetu – przydatne, gdy GitHub chwilowo nie odpowiada na starszych obrazach.",
         "Po większej aktualizacji AIO Panel zaakceptuj pełny restart tunera – zmniejsza to ryzyko zawieszenia na ekranie startowym.",
-        "Jeśli używasz skinu z mniejszym oknem TV/UI, w wersji 10.0 okna AIO zostały dodatkowo zmniejszone i lepiej dopasowane do ekranu."
+        "W wersji 10.0.3 możesz edytować Tip dnia w pliku aio_tips.txt bez ingerencji w plugin.py – wystarczy dopisać nowe linie w sekcji [PL]."
     ]
     tips_en = [
         "Use AIO Quick Start when you want to showcase the most useful features without browsing the full menu.",
@@ -669,7 +748,7 @@ def _get_aio_tips(lang="PL"):
         "System Information is a good first stop for troubleshooting: uptime, RAM and active IPs are visible immediately.",
         "The local changelog works even without internet access, which helps on older images when GitHub is unreachable.",
         "After a larger AIO Panel update, accept the full receiver reboot – it reduces the risk of getting stuck on the startup screen.",
-        "If you use a skin with a smaller TV/UI window, version 10.0 further reduces AIO window sizes for a safer fit."
+        "In version 10.0.3 you can edit the daily tip in aio_tips.txt without touching plugin.py – just add new lines under [EN]."
     ]
     return tips_pl if lang == "PL" else tips_en
 
@@ -1666,6 +1745,75 @@ class AIOTextViewerScreen(Screen):
             "up": self.page_up,
             "down": self.page_down,
         }, -1)
+
+    def page_up(self):
+        try:
+            if ScrollLabel:
+                self["text"].pageUp()
+        except Exception:
+            pass
+
+    def page_down(self):
+        try:
+            if ScrollLabel:
+                self["text"].pageDown()
+        except Exception:
+            pass
+
+
+class AIOTipPopupScreen(Screen):
+    skin = _aio_tip_screen_skin()
+
+    def __init__(self, session, lang, tips, start_index=0):
+        Screen.__init__(self, session)
+        self.session = session
+        self.lang = lang or "PL"
+        self.tips = tips or ["Brak wskazówek."]
+        self.idx = max(0, min(int(start_index or 0), len(self.tips) - 1))
+        self.setTitle("💡 Tip dnia AIO" if self.lang == "PL" else "💡 AIO tip of the day")
+        self["title"] = Label("💡 Tip dnia AIO" if self.lang == "PL" else "💡 AIO tip of the day")
+        self["counter"] = Label("")
+        if ScrollLabel:
+            self["text"] = ScrollLabel("")
+        else:
+            self["text"] = Label("")
+        self["help"] = Label("◀/▶ Poprzednia/Następna  ▲/▼ Scroll  OK/EXIT Zamknij" if self.lang == "PL" else "◀/▶ Previous/Next  ▲/▼ Scroll  OK/EXIT Close")
+        self["actions"] = ActionMap(["OkCancelActions", "DirectionActions"], {
+            "cancel": self.close,
+            "ok": self.close,
+            "left": self.prev_tip,
+            "right": self.next_tip,
+            "up": self.page_up,
+            "down": self.page_down,
+        }, -1)
+        self._refresh_tip()
+
+    def _refresh_tip(self):
+        total = len(self.tips)
+        if total <= 0:
+            total = 1
+        counter = ("Wskazówka {0}/{1}" if self.lang == "PL" else "Tip {0}/{1}").format(self.idx + 1, total)
+        self["counter"].setText(counter)
+        text = ensure_str(ensure_unicode(self.tips[self.idx]))
+        try:
+            self["text"].setText(text)
+        except Exception:
+            try:
+                self["text"] = Label(text)
+            except Exception:
+                pass
+
+    def prev_tip(self):
+        if not self.tips:
+            return
+        self.idx = (self.idx - 1) % len(self.tips)
+        self._refresh_tip()
+
+    def next_tip(self):
+        if not self.tips:
+            return
+        self.idx = (self.idx + 1) % len(self.tips)
+        self._refresh_tip()
 
     def page_up(self):
         try:
@@ -2987,8 +3135,7 @@ class Panel(Screen):
     def show_aio_tip(self):
         tips = _get_aio_tips(self.lang)
         idx = _pick_tip_index(len(tips))
-        prefix = ("Wskazówka #{0}/{1}" if self.lang == "PL" else "Tip #{0}/{1}").format(idx + 1, len(tips))
-        show_message_compat(self.sess, "{}\n\n{}".format(prefix, tips[idx]), timeout=14)
+        self.sess.open(AIOTipPopupScreen, self.lang, tips, idx)
 
     def show_local_changelog(self):
         content = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "Brak pliku changelog.txt")
@@ -4393,7 +4540,23 @@ class Panel(Screen):
             if self.lang == 'PL' else
             "The install/update has finished.\n\nFor a clean plugin and service startup, a full receiver reboot is recommended now.\nReboot now?"
         )
-        self.sess.openWithCallback(lambda ret: self.sess.open(TryQuitMainloop, 2) if ret else None, MessageBox, msg, MessageBox.TYPE_YESNO, default=True)
+
+        def _open_reboot_prompt():
+            try:
+                self.sess.openWithCallback(
+                    lambda ret: self.sess.open(TryQuitMainloop, 2) if ret else None,
+                    MessageBox,
+                    msg,
+                    MessageBox.TYPE_YESNO,
+                    default=True
+                )
+            except Exception as e:
+                print("[AIO Panel] Reboot prompt open error:", e)
+
+        if reactor.running:
+            reactor.callLater(0.2, _open_reboot_prompt)
+        else:
+            _open_reboot_prompt()
 
     def _open_console_install_action(self, title, cmdlist):
         console_screen_open(self.sess, title, cmdlist, callback=self._ask_reboot_after_install, close_on_finish=False)

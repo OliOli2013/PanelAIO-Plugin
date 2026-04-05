@@ -1,20 +1,26 @@
-# AIO Panel 10.0
+# AIO Panel 10.0.3
 
-## Nowości
-- TV Garden
-- Simple ZOOM Panel
-- usunięty FilmXY
-- poprawiony Super Konfigurator (zależności + Oscam + pełny restart)
-- watchdog ekranu startowego
-- lepsze dopasowanie okien do mniejszych skinów i obszaru TV/UI
-- doprecyzowane opisy i zgodność Python 2 / Python 3
+Nowość: `aio_tips.txt`
 
-## Propozycje dla użytkowników
-- po większej instalacji lub aktualizacji wybieraj pełny restart tunera
-- po nieudanej instalacji uruchom Tryb Naprawy po Instalacji
-- przed podmianą list kanałów wykonaj szybki backup
-- przy ograniczonym miejscu użyj Smart Cleanup przed ręcznym kasowaniem plików
+Plik `aio_tips.txt` pozwala dodawać i edytować Tip dnia bez zmiany `plugin.py`.
 
-## Uwagi techniczne
-- Transparent Picons: opis uzupełniony o 13E / 19.2E / IPTV
-- wtyczka zachowuje dotychczasową logikę działania; zmiany skupiają się na stabilności i kompatybilności
+## Format pliku
+
+- plik UTF-8
+- komentarze zaczynające się od `#` lub `;` są ignorowane
+- użyj sekcji `[PL]` i `[EN]`
+- jeden tip = jedna linia
+
+## Przykład
+
+```
+[PL]
+To jest przykładowy tip po polsku.
+
+[EN]
+This is an example tip in English.
+```
+
+
+## 10.0.3
+Tip dnia otwiera się teraz w dedykowanym oknie AIO zamiast w systemowym MessageBox.
