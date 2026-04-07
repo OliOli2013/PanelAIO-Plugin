@@ -1,19 +1,162 @@
-[PL]
-Po większej aktualizacji AIO Panel wykonaj pełny restart tunera, aby ograniczyć ryzyko zawieszenia na ekranie startowym.
-Jeśli po instalacji dodatku nie widać go od razu w systemie, sprawdź go ponownie po restarcie GUI lub pełnym restarcie odbiornika.
-Przed zmianą list kanałów lub piconów zrób szybki backup – przywrócenie trwa chwilę, a oszczędza dużo czasu.
-Gdy feed lub GitHub działa niestabilnie, najpierw sprawdź sieć, certyfikaty CA i wolne miejsce we flashu.
-Na boxach z mniejszą ilością RAM używaj funkcji czyszczenia pamięci rozsądnie i po większych operacjach instalacyjnych.
-Jeżeli używasz skinu z mniejszym oknem TV, po aktualizacji sprawdź czy wszystkie okna AIO mieszczą się poprawnie na ekranie.
-W Super Konfiguratorze po instalacji Oscam warto sprawdzić, czy softcam jest obecny po restarcie i widoczny w menedżerze camów.
+# AIO Panel - Tipy dnia / Tips of the day
+# Format:
+# - Use sections [PL] and [EN]
+# - One tip per line
+# - Lines starting with # or ; are ignored
+# - Save file as UTF-8
 
+[PL]
+Po większej aktualizacji AIO wykonaj pełny restart tunera, aby poprawnie odświeżyć GUI, skiny i zależności systemowe.
+Jeśli po instalacji lub aktualizacji wtyczka zatrzyma się na ekranie startowym, wykonaj pełny restart odbiornika.
+Przed zmianą list kanałów, piconów, skinów lub softcamów wykonaj kopię zapasową ustawień.
+Jeżeli instalator dodatku zgłasza błąd, sprawdź po restarcie, czy wtyczka nie została mimo to zainstalowana poprawnie.
+Niektóre skiny mogą niepoprawnie wyświetlać okna pluginów — przy problemach przetestuj działanie na prostszym skinie.
+Jeśli okno wtyczki jest zbyt duże lub źle dopasowane, zmień skin albo sprawdź ustawienia rozdzielczości GUI.
+Po instalacji Oscam sprawdź, czy softcam jest widoczny w menedżerze camów i czy uruchamia się po restarcie.
+Jeżeli Oscam nie pojawi się po restarcie, sprawdź uprawnienia plików, katalog docelowy i konfigurację autostartu w image.
+Przed pobieraniem piconów upewnij się, że masz wystarczająco wolnego miejsca w pamięci flash lub na nośniku zewnętrznym.
+Picony 13E, 19.2E i IPTV najlepiej instalować na nośniku zewnętrznym, jeśli tuner ma mało pamięci wewnętrznej.
+Przy problemach z feedem sprawdź połączenie z internetem, konfigurację DNS oraz poprawną datę i godzinę w tunerze.
+Nieudana instalacja pakietu często wynika z brakujących bibliotek, konfliktu zależności albo chwilowego problemu z repozytorium.
+Po aktualizacji list kanałów warto odświeżyć EPG, aby uniknąć pustych pozycji programu.
+Jeżeli plugin uruchamia się wolno, sprawdź liczbę dodatków startujących razem z Enigma2.
+Im mniej rozszerzeń działa w tle, tym stabilniej i szybciej pracuje cały system.
+Przy błędach Python sprawdź, czy używana wersja pluginu jest zgodna z Python 2 lub Python 3 w Twoim image.
+Jeśli jakaś funkcja po aktualizacji działa inaczej niż wcześniej, wykonaj restart GUI przed zgłoszeniem błędu.
+Przed aktualizacją AIO usuń stare, ręcznie kopiowane pliki tej samej wtyczki, aby uniknąć konfliktów.
+Po instalacji nowej wersji AIO zajrzyj do changelogu — zobaczysz tam nowe funkcje, poprawki i ważne uwagi.
+Wtyczki instalowane z zewnętrznych skryptów mogą wymagać dodatkowego restartu GUI albo całego tunera.
+Gdy po instalacji dodatku nie widać go w menu, wykonaj restart GUI lub pełny restart odbiornika.
+Przy problemach z odtwarzaniem IPTV sprawdź kodeki, połączenie sieciowe i poprawność źródła playlisty.
+Jeżeli używasz kilku paneli naraz, zwróć uwagę na możliwe konflikty skryptów, ikon i wpisów w menu.
+Regularne czyszczenie niepotrzebnych pakietów poprawia stabilność systemu i ilość wolnego miejsca.
+Po zmianie skina sprawdź działanie najważniejszych funkcji AIO, bo nie każdy skin obsługuje wszystkie elementy tak samo.
+Gdy plugin nie reaguje na pilota, zamknij inne aktywne okna dialogowe i spróbuj ponownie.
+Jeśli aktualizacja nie nadpisuje plików poprawnie, usuń starą wersję i zainstaluj paczkę ponownie.
+Do testów nowych funkcji najlepiej używać świeżo uruchomionego systemu, bez zalegających procesów w tle.
+Przy zgłaszaniu błędu dołącz crashlog, nazwę image, model tunera i wersję AIO — to znacznie przyspiesza diagnozę.
+AIO działa najstabilniej, gdy system, feedy i zależności są aktualne.
+Tipy dnia możesz edytować ręcznie w pliku aio_tips.txt bez ingerencji w główny kod pluginu.
+Komentarze w pliku tipów możesz zaczynać od znaku # lub ; — takie linie są pomijane.
+Każda nowa linia w sekcji [PL] to osobny tip wyświetlany użytkownikowi.
+Po zmianie pliku aio_tips.txt uruchom ponownie AIO, aby wczytać nową listę wskazówek.
+Gdy używasz nośnika USB do piconów lub nagrań, sprawdź jego poprawne montowanie po restarcie.
+W razie problemów z instalacją z GitHub sprawdź, czy serwer źródłowy jest dostępny i czy połączenie HTTPS działa poprawnie.
+Jeżeli tuner działa niestabilnie po kilku zmianach naraz, cofaj modyfikacje etapami i testuj po każdej z nich.
+Czasem restart GUI wystarczy, ale po większych zmianach bezpieczniejszy jest pełny restart systemu.
+Po każdej większej instalacji warto sprawdzić log z konsoli, nawet jeśli wszystko wydaje się działać poprawnie.
+Nie instaluj kilku ciężkich dodatków jednocześnie bez testów pośrednich — trudniej wtedy ustalić źródło problemu.
+Przed zmianami systemowymi upewnij się, że masz sprawny dostęp przez FTP lub SSH na wypadek konieczności ręcznej naprawy.
+Jeżeli korzystasz z dysku USB, sprawdzaj jego system plików i stan zamontowania po nieoczekiwanym restarcie.
+Nadmierna liczba piconów w pamięci wewnętrznej może spowolnić działanie tunera i skrócić ilość wolnego miejsca.
+Przy problemach z ikonami lub grafiką wyczyść cache GUI i wykonaj restart interfejsu.
+Jeśli po aktualizacji zmienił się wygląd okna, sprawdź czy aktywny skin nie nadpisuje części elementów AIO.
+Warto zostawić trochę wolnego miejsca w pamięci flash — system działa wtedy wyraźnie stabilniej.
+Nie każdy błąd instalacji oznacza realną awarię — czasem problem dotyczy tylko końcowego komunikatu GUI.
+Gdy instalujesz dodatki z repozytoriów zewnętrznych, pamiętaj, że ich zawartość może zmieniać się niezależnie od AIO.
+Po aktualizacji AIO sprawdź działanie kluczowych funkcji: instalatory, konfigurator, tipy dnia, picony i narzędzia systemowe.
+Jeśli po zmianie ustawień nie widzisz efektu, zamknij i uruchom wtyczkę ponownie.
+Przy pracy na starszych image testuj nowe dodatki ostrożnie — część z nich może wymagać nowszych bibliotek.
+Nie usuwaj ręcznie plików systemowych, jeśli nie masz pewności do czego służą.
+Dobrą praktyką jest wykonywanie backupu przed każdą większą modyfikacją systemu.
+Jeżeli korzystasz z automatycznych skryptów instalacyjnych, sprawdzaj ich wynik końcowy i komunikaty w konsoli.
+Szybkie działanie Enigma2 zależy nie tylko od pluginów, ale też od jakości image, skina i ilości wolnej pamięci.
+Po aktualizacji kanałów satelitarnych sprawdź, czy przypisane picony nadal pasują do nowych referencji serwisów.
+Jeśli korzystasz z IPTV i satelity jednocześnie, dobrze opisz swoje bukiety — późniejsze porządki będą łatwiejsze.
+Przy problemach z odświeżaniem menu sprawdź, czy system nie ma zawieszonych procesów w tle.
+Restart po instalacji nowych komponentów bywa szybszy niż ręczne szukanie drobnych problemów po czasie.
+AIO ma pomagać, a nie komplikować — testuj zmiany małymi krokami i zachowuj własny porządek w systemie.
+Własny plik z tipami to wygodny sposób na dodawanie porad bez ruszania głównego kodu pluginu.
+Możesz tworzyć tipy techniczne, porządkowe, informacyjne albo promujące nowe funkcje AIO.
+Krótsze tipy zwykle czyta się wygodniej na małych ekranach i prostszych skinach.
+Jeśli dodajesz długie wskazówki, sprawdź ich wyświetlanie na kilku skinach i rozdzielczościach.
+Warto raz na jakiś czas uporządkować listę tipów i usunąć te, które dotyczą nieaktualnych funkcji.
+Dobrze napisany tip powinien być krótki, praktyczny i zrozumiały dla mniej zaawansowanego użytkownika.
+Jeżeli chcesz wyróżnić ważną poradę, umieść ją blisko początku listy tipów.
+Tipy możesz wykorzystać także do informowania o nowych wtyczkach dostępnych z poziomu AIO.
+Przed instalacją większej liczby dodatków sprawdź dostępne miejsce na /tmp, bo część instalatorów używa go tymczasowo.
+Przy błędach SSL lub certyfikatów sprawdź, czy image ma aktualne certyfikaty CA i poprawną datę systemową.
+Jeśli po aktualizacji nadal widzisz stare zachowanie, możliwe że część plików nie została nadpisana — sprawdź wersję ręcznie.
+Niektóre dodatki wymagają bibliotek, których nie ma w minimalnych image — w takich przypadkach sprawdź zależności przed instalacją.
+Gdy coś działa tylko po ręcznej instalacji, porównaj logi z instalatora automatycznego i ręcznego.
+Warto przechowywać własny zestaw sprawdzonych dodatków, zamiast testować za każdym razem wszystko od nowa.
+Jeżeli używasz AIO na kilku tunerach, trzymaj te same wersje ważnych pluginów, żeby łatwiej porównywać zachowanie.
+Po dłuższym czasie pracy tunera pełny restart potrafi rozwiązać problemy z pamięcią i stabilnością GUI.
 
 [EN]
-After a larger AIO Panel update, perform a full receiver reboot to reduce the chance of getting stuck on the startup screen.
-If an addon does not appear immediately after installation, check again after a GUI restart or full reboot.
-Create a quick backup before changing channel lists or picons – restore is fast and saves time.
-When a feed or GitHub behaves inconsistently, first verify network access, CA certificates and free flash space.
-On low-memory boxes, use RAM cleanup tools mainly after larger installation tasks.
-If you use a skin with a smaller TV window, verify after an update that all AIO windows still fit correctly on screen.
-After installing Oscam from Super Configurator, verify after reboot that the softcam is present and visible in the cam manager.
-
+After a major AIO update, perform a full receiver restart to properly refresh the GUI, skins and system dependencies.
+If the plugin stays on the startup screen after installation or update, perform a full receiver reboot.
+Before changing channel lists, picons, skins or softcams, make a backup of your settings.
+If an addon installer reports an error, check after reboot whether the plugin was actually installed successfully.
+Some skins may display plugin windows incorrectly — if needed, test with a simpler skin.
+If a plugin window is too large or badly aligned, change the skin or review your GUI resolution settings.
+After installing Oscam, verify that the softcam is visible in the cam manager and starts after reboot.
+If Oscam is missing after restart, check file permissions, target directories and autostart configuration in your image.
+Before downloading picons, make sure you have enough free space in internal flash or on external storage.
+13E, 19.2E and IPTV picons are best installed on external media when the receiver has limited internal memory.
+If you have feed issues, check internet access, DNS settings and the correct date and time on the receiver.
+A failed package installation is often caused by missing libraries, dependency conflicts or a temporary repository issue.
+After updating channel lists, refreshing EPG can help avoid empty program entries.
+If a plugin starts slowly, check how many addons are launched together with Enigma2.
+The fewer background extensions are running, the more stable and responsive the whole system will be.
+If you encounter Python errors, verify that the plugin version matches Python 2 or Python 3 used by your image.
+If a feature behaves differently after an update, restart the GUI before reporting it as a bug.
+Before updating AIO, remove old manually copied files of the same plugin to avoid conflicts.
+After installing a new AIO version, read the changelog to see new features, fixes and important notes.
+Plugins installed from external scripts may require an additional GUI restart or a full system reboot.
+If a newly installed addon is missing from the menu, restart the GUI or fully reboot the receiver.
+For IPTV playback issues, check codecs, network stability and the correctness of the playlist source.
+If you use multiple panels at once, watch for possible script, icon and menu entry conflicts.
+Regular cleanup of unnecessary packages improves system stability and frees storage space.
+After changing a skin, test the main AIO functions because not every skin handles UI elements the same way.
+If the plugin does not react to the remote control, close other active dialog windows and try again.
+If an update does not overwrite files correctly, remove the old version and install the package again.
+The best way to test new features is on a freshly started system without leftover background processes.
+When reporting a bug, include the crash log, image name, receiver model and AIO version — it speeds up diagnosis.
+AIO is most stable when the system, feeds and dependencies are up to date.
+You can edit daily tips manually in aio_tips.txt without touching the main plugin code.
+Comments in the tips file can start with # or ; — such lines are ignored.
+Each new line in the [EN] section is treated as a separate tip.
+After editing aio_tips.txt, restart AIO to load the updated tip list.
+If you use USB storage for picons or recordings, make sure it mounts correctly after reboot.
+If GitHub installation fails, check whether the source server is reachable and whether HTTPS works properly.
+If the receiver becomes unstable after several changes at once, roll them back step by step and test after each change.
+A GUI restart may be enough sometimes, but after larger changes a full system reboot is safer.
+After every larger installation, it is worth checking the console log even if everything seems to work.
+Do not install several heavy addons at once without testing in between — it becomes harder to identify the source of a problem.
+Before system-level modifications, make sure you still have working FTP or SSH access in case manual repair is needed.
+If you use a USB drive, verify its filesystem and mount status after any unexpected restart.
+Too many picons in internal memory can slow down the receiver and reduce free space significantly.
+If icons or graphics behave strangely, clear GUI cache and restart the interface.
+If the window layout changed after an update, check whether the active skin overrides part of the AIO interface.
+Keeping some free flash space available usually improves overall stability.
+Not every installation error means a real failure — sometimes only the final GUI message is affected.
+When installing addons from external repositories, remember that their content may change independently of AIO.
+After updating AIO, test the key functions: installers, configurator, daily tips, picons and system tools.
+If you changed settings and see no effect, close and reopen the plugin.
+When working on older images, test new addons carefully — some may require newer libraries.
+Do not remove system files manually unless you are sure what they are used for.
+Creating a backup before every major system modification is always a good practice.
+If you rely on automatic install scripts, review the final result and console messages.
+Fast Enigma2 performance depends not only on plugins, but also on image quality, skin choice and available memory.
+After updating satellite channels, verify that your picons still match the new service references.
+If you use both IPTV and satellite, keep your bouquets well organized — future maintenance will be easier.
+If the menu does not refresh correctly, check whether the system has stuck background processes.
+A restart after installing new components is often faster than hunting small problems later.
+AIO should help, not complicate things — test changes in small steps and keep your system organized.
+A separate tips file is a convenient way to add new guidance without modifying the main plugin code.
+You can use tips for technical advice, maintenance reminders, useful information or highlighting new AIO features.
+Shorter tips are usually easier to read on smaller screens and simpler skins.
+If you add longer hints, test their display on several skins and resolutions.
+From time to time, clean up your tips list and remove entries that refer to outdated functions.
+A good tip should be short, practical and understandable even for less advanced users.
+If you want to highlight an important note, place it near the beginning of the tips list.
+Tips can also be used to inform users about new plugins available directly from AIO.
+Before installing several addons, check free space on /tmp because some installers use it temporarily.
+If you see SSL or certificate errors, check whether the image has updated CA certificates and a correct system date.
+If old behavior remains after an update, some files may not have been overwritten — verify the version manually.
+Some addons require libraries missing from minimal images — in such cases review dependencies before installation.
+If something works only after manual installation, compare logs from the automatic and manual installation process.
+It is worth keeping your own list of proven addons instead of testing everything from scratch every time.
+If you use AIO on multiple receivers, keep the same versions of important plugins to compare behavior more easily.
+After a long uptime, a full reboot can solve memory-related issues and improve GUI stability.
