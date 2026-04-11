@@ -1,4 +1,4 @@
-AIO Panel 11.0
+[AIO Panel 11.0]
 Data wydania: 11.04.2026
 
 Zmiany wprowadzone od wersji 10.0.3:
