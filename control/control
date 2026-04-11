@@ -1,0 +1,8 @@
+Package: enigma2-plugin-extensions-panelaio
+Version: 11.0
+Section: extra
+Priority: optional
+Architecture: all
+Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
+Description: AIO Panel 11.0 complete GitHub-ready build with modular architecture, GitHub updater fix and repository data stability improvements
+Depends: enigma2

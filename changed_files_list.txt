@@ -1,0 +1,14 @@
+__init__.py
+README.md
+aio_tips.txt
+changelog.txt
+rebuild_notes.txt
+version.txt
+installer.sh
+install_archive_script.sh
+legacy_plugin.py
+core/network.py
+core/system.py
+data/skins.py
+control/control
+control/postinst

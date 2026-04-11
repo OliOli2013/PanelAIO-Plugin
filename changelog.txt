@@ -1,98 +1,13 @@
-[10.0.3]
-- Poprawiono okno "Tip dnia AIO": zamiast systemowego MessageBox otwiera się dedykowane okno AIO.
-- Usunięto licznik timeout z tytułu typu "Informacje (12)", który był widoczny na części skinów.
-- Dodano wygodniejszy odczyt wskazówek: OK/EXIT zamyka, LEFT/RIGHT przełącza tipy, UP/DOWN przewija dłuższy tekst.
-- Zmiana ma charakter UI-only i nie ingeruje w mechanikę instalacji ani pozostałe funkcje wtyczki.
+AIO Panel 11.0
+Data wydania: 11.04.2026
 
-[10.0.2]
-Data wydania: 05.04.2026
-- Dodano zewnętrzny plik aio_tips.txt do obsługi funkcji "Tip dnia AIO" bez ingerencji w plugin.py.
-- Dodano parser sekcji [PL]/[EN] z bezpiecznym fallbackiem do tipów wbudowanych.
-- Dodano startowy zestaw przykładowych tipów dla użytkowników.
-- Zaktualizowano installer.sh, aby pobierał nowy plik aio_tips.txt z repozytorium.
-
-[10.0.1]
-Data wydania: 05.04.2026
-- Hotfix dla instalatorów uruchamianych w oknie Console (m.in. TV Garden, XStreamity i inne pozycje bash_raw).
-- Usunięto błąd modalny po zamknięciu Console: „Modal open are allowed only from a screen which is modal!”.
-- Okno pytania o pełny restart po instalacji otwierane jest teraz z bezpiecznym opóźnieniem po całkowitym zamknięciu Console.
-- Sama instalacja wtyczek przebiegała poprawnie już wcześniej; poprawka dotyczy komunikatu końcowego i stabilności GUI po instalacji.
-
-[10.0]
-Data wydania: 03.04.2026
-- Podniesiono wersję AIO Panel do 10.0.
-- Usunięto instalator FilmXY z menu Softcam i Wtyczki.
-- Dodano instalator TV Garden oparty o skrypt Belfagor2005 (wget | /bin/sh).
-- Dodano instalator Simple ZOOM Panel oparty o skrypt Belfagor2005 (wget | /bin/sh).
-- Rozszerzono i doprecyzowano zgodność Python 2 / Python 3, zachowując dotychczasową logikę działania wtyczki.
-- Dodano watchdog ekranu ładowania, który ogranicza ryzyko pozostania na ekranie startowym po instalacji/aktualizacji.
-- Zmieniono logikę aktualizacji AIO Panel oraz wybranych instalatorów tak, aby po zakończeniu proponowały lub wykonywały pełny restart tunera zamiast samego restartu GUI.
-- Poprawiono Super Konfigurator: tryby BASIC/FULL znowu instalują zależności, instalacja Oscam została rozszerzona o weryfikację pakietu po instalacji, próbę odświeżenia Softcam i pełny restart po zakończeniu.
-- Poprawiono opisy narzędzi i nowości w tooltipach PL/EN, w tym opis piconów Transparent: 13E, 19.2E, IPTV.
-- Dodano dodatkowe, mniejsze układy okien dla skinów z mniejszą powierzchnią roboczą i lepsze dopasowanie do okna TV/UI.
-- Zaktualizowano pliki repozytorium i instalacyjne do wydania 10.0 (plugin.py, version.txt, changelog.txt, installer.sh, install_archive_script.sh, control).
-
-[9.7]
-Data wydania: 28.03.2026
-- Dodano sekcję „AIO Extra” z nowymi pozycjami: AIO Szybki Start / Polecane, Test zgodności systemu, Tip dnia AIO oraz Lokalny changelog.
-- Dodano AIO Quick Start: ekran szybkiego wyboru najciekawszych funkcji wtyczki (aktualizacje, monitor systemu, feedy, naprawa, tipy, changelog).
-- Dodano lokalny raport zgodności systemu dla Enigma2 / Python 2 / Python 3 (narzędzia, certyfikaty CA, flash, podstawowe zależności).
-- Dodano lokalny podgląd changeloga działający także offline jako fallback, gdy GitHub jest chwilowo niedostępny.
-- Ujednolicono dane kontaktowe autora na adres aio-iptv@wp.pl w ekranach informacyjnych i metadanych pakietu.
-- Zaktualizowano wpisy wersji pakietu oraz skrypty instalacyjne do 9.7.
-
-[9.6]
-Data wydania: 16.03.2026
-- Zaktualizowano installer.sh i install_archive_script.sh do wersji 9.6.
-- installer.sh zapisuje także własną kopię w katalogu wtyczki podczas instalacji/aktualizacji.
-- Dodano instalator „Simple IPTV EPG” oparty o polecenie wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh.
-- Zaktualizowano wpisy wersji pakietu do 9.6.
-
-[9.5]
-Data wydania: 16.03.2026
-- Usunięto eksport raportu systemowego z menu głównego.
-- Usunięto pełny backup Enigma2 z menu głównego.
-- Dodano Menedżer Feedów / Repozytoriów z: testem działania feedów, podglądem aktywnych repozytoriów, odświeżaniem cache opkg i backupem plików repozytoriów.
-- Dodano Tryb Naprawy po Instalacji: uprawnienia, Softcam, EPG, picony, ServiceApp, Streamlink oraz tryb pełny.
-- Zaktualizowano opisy funkcji PL/EN i podniesiono wersję do 9.5.
-
-[9.4]
-Data wydania: 15.03.2026
-- Dodano pełny backup Enigma2 (ustawienia /etc/enigma2, Oscam, /usr/keys, opkg, lista pakietów).
-- Dodano eksport raportu systemowego do pliku TXT dla wsparcia technicznego.
-- Dodano Smart Cleanup: czyszczenie archiwów tymczasowych, crashlogów, logów i odświeżenie cache RAM.
-- Dodano opisy nowych funkcji w tooltipach PL/EN.
-- Podniesiono wersję wtyczki do 9.4.
-
-[9.3]
-Data wydania: 08.03.2026
-- Dodano wybór katalogu docelowego dla opcji "Pobierz Picony (Transparent)".
-- Dodano instalator MyUpdater v5.1.
-- Zachowano dotychczasowe, domyślne zachowanie Super Konfiguratora dla instalacji piconów.
-- Przeniesiono bukiety Azman na sam dół list kanałów.
-- Zmniejszono i uelastyczniono główne okna UI dla obrazów HD (m.in. mymetrix i podobne skiny).
-- Zaktualizowano fallback domyślnej listy Bzyk83 Hotbird 13E.
-- Uporządkowano changelog oraz zaktualizowano wpisy wersji do 9.3.
-
-[9.2]
-Data wydania: 26.02.2026
-- Dodano instalator VAVOO (online).
-- Dodano logo autora w nagłówku.
-- Dodano opcję ukrycia pozycji AIO Panel w menu tunera.
-- Poprawiono instalację Softcam w Super Konfiguratorze.
-- Poprawiono kolejność i stabilność trybu FULL/BASIC.
-
-[9.1.1]
-Data wydania: 22.02.2026
-- Poprawiono instalator e-stralker/EStalker (feed).
-- Zaktualizowano wpisy i skrypty instalacyjne.
-
-[9.1]
-Data wydania: 22.02.2026
-- Poprawiono kompatybilność Py2 (OpenATV 6.4 / VTi) dla list GUI.
-
-[9.0]
-Data wydania: 18.02.2026
-- Wprowadzono nowy interfejs Dashboard (Sidebar + Content).
-- Dodano podkategorie jako osobne zakładki.
-- Dodano zakładkę "Skins / Skórki" oraz poprawki fokusu i zgodności Py2/Py3.
+Zmiany wprowadzone od wersji 10.0.3:
+- uporządkowano repozytorium i ujednolicono wersjonowanie całego projektu do 11.0
+- usunięto pozostałości po starszych wydaniach z plików metadanych, README, skinów, helperów sieciowych i domyślnych opisów wersji
+- poprawiono mechanizm aktualizacji z GitHuba: installer pobiera teraz pełne drzewo repozytorium, wykrywa właściwy katalog źródłowy i podmienia komplet plików wymaganych przez nową architekturę
+- poprawiono ręczne sprawdzanie aktualizacji: dodano bezpieczniejsze pobieranie version.txt oraz fallback wget/curl przy uruchamianiu aktualizacji
+- poprawiono obsługę danych repozytorium list kanałów: retry, cache ostatniego poprawnego manifestu, akceptacja różnych formatów manifest.json oraz filtracja pustych/uszkodzonych wpisów
+- ograniczono przypadki błędu „Błąd danych repo” zgłaszanego przez część użytkowników przy pobieraniu list kanałów z repozytorium
+- zaktualizowano aio_tips.txt o nowy pełny zestaw tipów PL/EN z pliku zewnętrznego
+- zachowano funkcję aktualizacji z GitHuba, lokalny changelog, tipy dnia, instalatory, konfigurator i wszystkie sekcje menu
+- odświeżono pliki pakietu IPK oraz pliki repo gotowe do wrzucenia na GitHuba

@@ -1,0 +1,10 @@
+AIO Panel 11.0
+
+Wersja repozytoryjna przygotowana do publikacji na GitHubie i dalszej rozbudowy.
+
+Najważniejsze poprawki:
+- wyczyszczone stare oznaczenia wersji w plikach projektu
+- poprawiona aktualizacja z GitHuba dla architektury wielokatalogowej
+- poprawione pobieranie manifestu list kanałów z fallbackiem do ostatniej poprawnej kopii
+- zaktualizowany changelog od wersji 10.0.3
+- podmieniony aio_tips.txt na dostarczony plik użytkownika
