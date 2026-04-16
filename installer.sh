@@ -1,5 +1,5 @@
 #!/bin/sh
-# PanelAIO 11.0 - pełna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
+# PanelAIO 11.1.2 - pełna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"

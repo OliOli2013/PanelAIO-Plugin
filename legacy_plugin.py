@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 11.0
+Wersja 11.1.2
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -291,7 +291,10 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("11.0")
+VER = _read_local_version("11.1.2")
+CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
+CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
+
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
 FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
@@ -765,6 +768,436 @@ def _command_exists(cmd):
     except Exception:
         return False
 
+
+def _decode_bytes(payload):
+    if payload is None:
+        return ""
+    try:
+        if IS_PY3:
+            if isinstance(payload, bytes):
+                return payload.decode("utf-8", "ignore")
+            return str(payload)
+        try:
+            if isinstance(payload, _unicode_type):
+                return payload
+        except Exception:
+            pass
+        try:
+            return payload.decode("utf-8", "ignore")
+        except Exception:
+            return str(payload)
+    except Exception:
+        return ""
+
+def _run_shell_capture(cmd):
+    try:
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        return process.returncode, _decode_bytes(stdout), _decode_bytes(stderr)
+    except Exception as e:
+        return 255, "", ensure_unicode(e)
+
+def _safe_shell_arg(value):
+    txt = ensure_unicode(value).replace("'", "'\''")
+    return "'{}'".format(txt)
+
+def _parse_opkg_installed_map(raw_text):
+    installed = {}
+    for raw_line in ensure_unicode(raw_text).splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = line.split(" - ", 1)
+        pkg = parts[0].strip()
+        ver = parts[1].strip() if len(parts) > 1 else ""
+        if pkg:
+            installed[pkg] = ver
+    return installed
+
+def _parse_opkg_upgradable_list(raw_text):
+    updates = []
+    for raw_line in ensure_unicode(raw_text).splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split(" - ")]
+        if len(parts) >= 3:
+            pkg = parts[0]
+            current_ver = parts[1]
+            new_ver = parts[2]
+        elif len(parts) == 2:
+            pkg = parts[0]
+            current_ver = ""
+            new_ver = parts[1]
+        else:
+            continue
+        if not pkg.startswith("enigma2-plugin-"):
+            continue
+        updates.append({
+            "type": "opkg",
+            "package": pkg,
+            "name": pkg,
+            "current_version": current_ver,
+            "remote_version": new_ver
+        })
+    updates.sort(key=lambda item: ensure_unicode(item.get("name", item.get("package", ""))).lower())
+    return updates
+
+def _opkg_compare_versions(v1, operator, v2):
+    if not _command_exists("opkg"):
+        return None
+    try:
+        cmd = "opkg compare-versions {v1} {op} {v2}".format(
+            v1=_safe_shell_arg(v1),
+            op=operator,
+            v2=_safe_shell_arg(v2)
+        )
+        return subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
+    except Exception:
+        return None
+
+def _is_remote_version_newer(local_ver, remote_ver):
+    local_txt = ensure_unicode(local_ver).strip()
+    remote_txt = ensure_unicode(remote_ver).strip()
+    if not local_txt or not remote_txt:
+        return False
+    cmp_result = _opkg_compare_versions(local_txt, "<", remote_txt)
+    if cmp_result is not None:
+        return bool(cmp_result)
+    return _version_to_tuple(remote_txt) > _version_to_tuple(local_txt)
+
+def _fetch_text_url(url, timeout=20, tries=2):
+    if not url:
+        return ""
+    prepare_tmp_dir()
+    safe_name = re.sub(r"[^A-Za-z0-9]+", "_", ensure_unicode(url))[:80] or "remote"
+    tmp_path = os.path.join(PLUGIN_TMP_PATH, "fetch_{0}.txt".format(safe_name))
+    if _download_url_to_file(url, tmp_path, timeout=timeout, tries=tries, allow_insecure_fallback=True):
+        return _read_text_file(tmp_path, "")
+    return ""
+
+def _fetch_json_url(url, timeout=20, tries=2):
+    if not url:
+        return None
+    prepare_tmp_dir()
+    safe_name = re.sub(r"[^A-Za-z0-9]+", "_", ensure_unicode(url))[:80] or "remote_json"
+    tmp_path = os.path.join(PLUGIN_TMP_PATH, "fetch_{0}.json".format(safe_name))
+    if _download_url_to_file(url, tmp_path, timeout=timeout, tries=tries, allow_insecure_fallback=True):
+        return _load_json_from_file(tmp_path)
+    return None
+
+def _resolve_final_url(url, timeout=20, tries=2):
+    if not url:
+        return ""
+    last_error = None
+    for _idx in range(max(1, int(tries))):
+        try:
+            request = Request(url, headers={'User-Agent': 'Enigma2'})
+            response = urlopen(request, timeout=timeout)
+            try:
+                final_url = ensure_unicode(getattr(response, 'geturl', lambda: url)())
+            finally:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            if final_url:
+                return final_url
+        except Exception as exc:
+            last_error = exc
+        tool_cmds = []
+        if _command_exists('curl'):
+            tool_cmds.append(['curl', '-L', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', '/dev/null', '-w', '%{url_effective}', url])
+            tool_cmds.append(['curl', '-L', '-k', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', '/dev/null', '-w', '%{url_effective}', url])
+        for cmd in tool_cmds:
+            try:
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                if process.returncode == 0:
+                    final_url = _decode_bytes(stdout).strip()
+                    if final_url:
+                        return final_url
+                last_error = stderr
+            except Exception as exc:
+                last_error = exc
+    if last_error:
+        print('[AIO Panel] final URL resolve error for {}: {}'.format(url, last_error))
+    return ""
+
+def _extract_remote_version(value, version_regex=""):
+    text = ensure_unicode(value).strip()
+    if not text:
+        return ""
+    if version_regex:
+        try:
+            match = re.search(version_regex, text)
+            if match:
+                return ensure_unicode(match.group(1)).strip()
+        except Exception:
+            pass
+    if text.startswith("v") and len(text) > 1 and re.search(r"\d", text[1:]):
+        return text[1:]
+    return text
+
+def _load_custom_updates_manifest_entries():
+    # Prefer the bundled local manifest so GitHub/Custom checks keep working even
+    # when the remote raw file is missing, rate-limited or temporarily unavailable.
+    manifest = _load_json_from_file(CUSTOM_UPDATES_MANIFEST_LOCAL)
+    remote_payload = _fetch_json_url(CUSTOM_UPDATES_MANIFEST_REMOTE, timeout=20, tries=2)
+    if remote_payload is not None:
+        manifest = remote_payload
+
+    entries = []
+    if isinstance(manifest, list):
+        entries = manifest
+    elif isinstance(manifest, dict):
+        for key in ("entries", "items", "plugins", "data"):
+            value = manifest.get(key)
+            if isinstance(value, list):
+                entries = value
+                break
+    return entries if isinstance(entries, list) else []
+
+def _entry_local_package_name(entry):
+    package = ensure_unicode(entry.get("package", "")).strip()
+    if package:
+        return package
+    packages = entry.get("packages")
+    if isinstance(packages, list):
+        for item in packages:
+            item_txt = ensure_unicode(item).strip()
+            if item_txt:
+                return item_txt
+    return ""
+
+def _entry_candidate_packages(entry):
+    packages = []
+    exact = ensure_unicode(entry.get("package", "")).strip()
+    if exact:
+        packages.append(exact)
+
+    extra = entry.get("packages")
+    if isinstance(extra, list):
+        for item in extra:
+            item_txt = ensure_unicode(item).strip()
+            if item_txt and item_txt not in packages:
+                packages.append(item_txt)
+
+    guessed = []
+    name_seed = ensure_unicode(entry.get("package_hint") or entry.get("slug") or entry.get("repo") or entry.get("name") or "").lower()
+    if "/" in name_seed:
+        name_seed = name_seed.split("/")[-1]
+    name_seed = re.sub(r"[^a-z0-9]+", "", name_seed)
+    if name_seed:
+        guessed.extend([
+            "enigma2-plugin-extensions-" + name_seed,
+            "enigma2-plugin-systemplugins-" + name_seed,
+            name_seed,
+        ])
+    for item in guessed:
+        if item and item not in packages:
+            packages.append(item)
+    return packages
+
+def _find_installed_package_for_entry(entry, installed_map):
+    candidates = _entry_candidate_packages(entry)
+
+    # Exact package names first.
+    for pkg in candidates:
+        if pkg in installed_map:
+            return pkg
+
+    # Optional explicit regex for packages that changed naming scheme.
+    regex_value = ensure_unicode(entry.get("installed_match_regex") or entry.get("package_regex") or "").strip()
+    if regex_value:
+        try:
+            matcher = re.compile(regex_value, re.I)
+            for pkg in sorted(installed_map.keys()):
+                if matcher.search(pkg):
+                    return pkg
+        except Exception:
+            pass
+
+    # Conservative fuzzy fallback: match the normalized trailing token.
+    normalized = []
+    for item in candidates:
+        token = item.lower().split("/")[-1]
+        token = token.replace("enigma2-plugin-extensions-", "").replace("enigma2-plugin-systemplugins-", "")
+        token = re.sub(r"[^a-z0-9]+", "", token)
+        if token and token not in normalized:
+            normalized.append(token)
+    for pkg in sorted(installed_map.keys()):
+        pkg_norm = re.sub(r"[^a-z0-9]+", "", ensure_unicode(pkg).lower())
+        for token in normalized:
+            if token and token in pkg_norm:
+                return pkg
+    return ""
+
+def _resolve_latest_url_by_shell(url, timeout=20):
+    if not url:
+        return ""
+    timeout = max(5, int(timeout))
+    probes = []
+    if _command_exists("wget"):
+        probes.extend([
+            "wget -S --max-redirect=0 --no-check-certificate -U Enigma2 -T {t} -O /dev/null {u} 2>&1".format(
+                t=timeout, u=_safe_shell_arg(url)
+            ),
+            "wget -S --max-redirect=0 -U Enigma2 -T {t} -O /dev/null {u} 2>&1".format(
+                t=timeout, u=_safe_shell_arg(url)
+            ),
+        ])
+    if _command_exists("curl"):
+        probes.extend([
+            "curl -I -L -k --ipv4 -A Enigma2 --max-time {t} {u} 2>/dev/null".format(
+                t=timeout, u=_safe_shell_arg(url)
+            ),
+            "curl -I -L --ipv4 -A Enigma2 --max-time {t} {u} 2>/dev/null".format(
+                t=timeout, u=_safe_shell_arg(url)
+            ),
+        ])
+
+    for cmd in probes:
+        rc, out, err = _run_shell_capture(cmd)
+        blob = ensure_unicode(out or err)
+        for line in blob.splitlines():
+            m = re.search(r"Location:\s*(https?://\S+)", line, re.I)
+            if m:
+                return ensure_unicode(m.group(1)).strip()
+    return ""
+
+def _entry_display_name(entry, lang="PL"):
+    lang = "PL" if lang == "PL" else "EN"
+    if lang == "PL":
+        return ensure_unicode(entry.get("name_pl") or entry.get("name") or entry.get("title") or "").strip()
+    return ensure_unicode(entry.get("name_en") or entry.get("name") or entry.get("title") or "").strip()
+
+def _resolve_custom_remote_data(entry):
+    source = ensure_unicode(entry.get("source", "github_release")).strip() or "github_release"
+    version_regex = ensure_unicode(entry.get("version_regex", "")).strip()
+    remote_version = ""
+    install_cmd = ensure_unicode(entry.get("install_cmd", "")).strip()
+    download_url = ensure_unicode(entry.get("download_url", "")).strip()
+
+    if source == "github_release":
+        repo = ensure_unicode(entry.get("repo", "")).strip()
+        api_url = ensure_unicode(entry.get("api_url", "")).strip()
+        latest_url = ensure_unicode(entry.get("latest_url", "")).strip()
+        if not latest_url and repo:
+            latest_url = "https://github.com/{}/releases/latest".format(repo)
+        if not api_url and repo:
+            api_url = "https://api.github.com/repos/{}/releases/latest".format(repo)
+        payload = _fetch_json_url(api_url, timeout=20, tries=2)
+        if isinstance(payload, dict):
+            remote_version = _extract_remote_version(payload.get("tag_name") or payload.get("name") or "", version_regex)
+            asset_name = ensure_unicode(entry.get("asset_name", "")).strip()
+            assets = payload.get("assets", [])
+            if isinstance(assets, list):
+                for asset in assets:
+                    if not isinstance(asset, dict):
+                        continue
+                    asset_url = ensure_unicode(asset.get("browser_download_url", "")).strip()
+                    current_name = ensure_unicode(asset.get("name", "")).strip()
+                    if asset_name:
+                        if current_name == asset_name and asset_url:
+                            download_url = asset_url
+                            break
+                    elif asset_url:
+                        download_url = asset_url
+                        break
+        if not remote_version and latest_url:
+            final_url = _resolve_final_url(latest_url, timeout=20, tries=2)
+            match = re.search(r"/releases/tag/v?([^/?#]+)", ensure_unicode(final_url), re.I)
+            if match:
+                remote_version = _extract_remote_version(match.group(1), version_regex)
+        if not remote_version and latest_url:
+            latest_html = _fetch_text_url(latest_url, timeout=20, tries=2)
+            match = re.search(r"/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
+            if not match:
+                match = re.search(r"#\s*[^\n]*?v([0-9A-Za-z._-]+)", latest_html, re.I)
+            if match:
+                remote_version = _extract_remote_version(match.group(1), version_regex)
+    elif source == "github_latest_redirect":
+        latest_url = ensure_unicode(entry.get("latest_url", "")).strip()
+        final_url = _resolve_final_url(latest_url, timeout=20, tries=2)
+        if not final_url:
+            final_url = _resolve_latest_url_by_shell(latest_url, timeout=20)
+        match = re.search(r"/releases/tag/v?([^/?#]+)", ensure_unicode(final_url), re.I)
+        if match:
+            remote_version = _extract_remote_version(match.group(1), version_regex)
+        if not remote_version:
+            latest_html = _fetch_text_url(latest_url, timeout=20, tries=2)
+            match = re.search(r"/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
+            if not match:
+                match = re.search(r"href=[\"']?/[^\"']+/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
+            if not match:
+                match = re.search(r"#\s*[^\n]*?v([0-9A-Za-z._-]+)", latest_html, re.I)
+            if match:
+                remote_version = _extract_remote_version(match.group(1), version_regex)
+    elif source == "version_text":
+        version_url = ensure_unicode(entry.get("version_url", "")).strip()
+        remote_version = _extract_remote_version(_fetch_text_url(version_url, timeout=20, tries=2), version_regex)
+    elif source == "static":
+        remote_version = _extract_remote_version(entry.get("remote_version", ""), version_regex)
+
+    if not install_cmd and download_url:
+        tmp_ipk = ensure_unicode(entry.get("tmp_ipk", "")).strip() or "/tmp/custom_update.ipk"
+        install_cmd = "wget -O {tmp} {url} && opkg install {tmp} && killall -9 enigma2".format(
+            tmp=tmp_ipk,
+            url=download_url
+        )
+
+    return {
+        "remote_version": remote_version,
+        "install_cmd": install_cmd,
+        "download_url": download_url
+    }
+
+def _collect_custom_manifest_updates(installed_map, lang="PL"):
+    results = []
+    for entry in _load_custom_updates_manifest_entries():
+        try:
+            if not isinstance(entry, dict):
+                continue
+            package = _find_installed_package_for_entry(entry, installed_map)
+            if not package:
+                continue
+            local_version = ensure_unicode(installed_map.get(package, "")).strip()
+            remote_data = _resolve_custom_remote_data(entry)
+            remote_version = ensure_unicode(remote_data.get("remote_version", "")).strip()
+            install_cmd = ensure_unicode(remote_data.get("install_cmd", "")).strip()
+            if not install_cmd or not remote_version:
+                continue
+            if not _is_remote_version_newer(local_version, remote_version):
+                continue
+            name = _entry_display_name(entry, lang) or package
+            results.append({
+                "type": "custom",
+                "package": package,
+                "name": name,
+                "current_version": local_version,
+                "remote_version": remote_version,
+                "install_cmd": install_cmd
+            })
+        except Exception as e:
+            print("[AIO Panel] Custom update entry skipped:", e)
+    results.sort(key=lambda item: ensure_unicode(item.get("name", item.get("package", ""))).lower())
+    return results
+
+def _collect_plugin_updates_snapshot(lang="PL"):
+    update_rc, _, update_err = _run_shell_capture("opkg update")
+    if update_rc != 0:
+        print("[AIO Panel] opkg update returned {}".format(update_rc))
+        if update_err:
+            print("[AIO Panel] opkg update stderr: {}".format(update_err))
+    _, installed_raw, _ = _run_shell_capture("opkg list-installed")
+    _, upgradable_raw, _ = _run_shell_capture("opkg list-upgradable")
+    installed_map = _parse_opkg_installed_map(installed_raw)
+    return {
+        "opkg": _parse_opkg_upgradable_list(upgradable_raw),
+        "custom": _collect_custom_manifest_updates(installed_map, lang)
+    }
+
 def _pick_tip_index(total):
     try:
         return datetime.date.today().toordinal() % max(total, 1)
@@ -1082,6 +1515,7 @@ SYSTEM_TOOLS_PL = [
     ("👁️ Widoczność w menu tunera (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
     (r"\c00FFD200--- Narzędzia Systemowe ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
+    ("🔎 Sprawdź aktualizacje zainstalowanych wtyczek", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 Monitor Systemowy", "CMD:SYSTEM_MONITOR"),
@@ -1106,6 +1540,7 @@ SYSTEM_TOOLS_EN = [
     ("👁️ Show in receiver menu (ON/OFF)", "CMD:TOGGLE_MENU_VISIBILITY"),
     (r"\c00FFD200--- System Tools ---\c00ffffff", "SEPARATOR"),
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
+    ("🔎 Check updates for installed plugins", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
     ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 System Monitor", "CMD:SYSTEM_MONITOR"),
@@ -2645,6 +3080,238 @@ class UninstallManagerScreen(Screen):
         )
 
 
+
+
+class PluginUpdateManagerScreen(Screen):
+    skin = """
+    <screen name="PluginUpdateManagerScreen" position="center,center" size="1160,690" title="Plugin Updates">
+        <widget name="list" position="20,20" size="1120,560" scrollbarMode="showOnDemand" />
+        <widget name="status" position="20,595" size="1120,35" font="Regular;24" halign="left" valign="center" />
+        <widget name="hint" position="20,635" size="1120,35" font="Regular;22" halign="left" valign="center" />
+    </screen>
+    """
+
+    def __init__(self, session, lang='PL'):
+        Screen.__init__(self, session)
+        self.lang = lang or 'PL'
+        self.session = session
+        self._load_started = False
+        self._loading = False
+        self._worker_state = {"done": False, "result": None, "error": None}
+
+        if self.lang == 'PL':
+            self.setTitle("Aktualizacje zainstalowanych wtyczek")
+            self._t_loading = "Sprawdzanie aktualizacji OPKG i GitHub/Custom..."
+            self._t_ready = "OPKG: {opkg} | GitHub/Custom: {custom} | Czerwony=odśwież, Zielony/OK=aktualizuj, Niebieski=wyjście"
+            self._t_none = "Brak dostępnych aktualizacji."
+            self._t_error = "Błąd sprawdzania aktualizacji."
+            self._t_opkg_header = r"\c00FFD200--- Aktualizacje OPKG ---\c00ffffff"
+            self._t_custom_header = r"\c00FFD200--- Aktualizacje GitHub/Custom ---\c00ffffff"
+            self._t_no_opkg = "Brak aktualizacji OPKG"
+            self._t_no_custom = "Brak aktualizacji GitHub/Custom"
+            self._t_no_sel = "Wybierz pozycję z listy aktualizacji."
+            self._t_confirm_opkg = "Zaktualizować pakiet OPKG?\n\n{pkg}\n\nWersja lokalna: {local}\nWersja dostępna: {remote}"
+            self._t_confirm_custom = "Zainstalować aktualizację GitHub/Custom?\n\n{name}\n\nWersja lokalna: {local}\nWersja dostępna: {remote}"
+            self._t_running = "Uruchamianie aktualizacji: {name}"
+            self._t_refresh_hint = "Lista obejmuje tylko zainstalowane wtyczki Enigma2 z widoczną nowszą wersją."
+        else:
+            self.setTitle("Installed plugin updates")
+            self._t_loading = "Checking OPKG and GitHub/Custom updates..."
+            self._t_ready = "OPKG: {opkg} | GitHub/Custom: {custom} | Red=refresh, Green/OK=update, Blue=exit"
+            self._t_none = "No updates available."
+            self._t_error = "Update check error."
+            self._t_opkg_header = r"\c00FFD200--- OPKG Updates ---\c00ffffff"
+            self._t_custom_header = r"\c00FFD200--- GitHub/Custom Updates ---\c00ffffff"
+            self._t_no_opkg = "No OPKG updates"
+            self._t_no_custom = "No GitHub/Custom updates"
+            self._t_no_sel = "Select an update entry from the list."
+            self._t_confirm_opkg = "Update OPKG package?\n\n{pkg}\n\nLocal version: {local}\nAvailable version: {remote}"
+            self._t_confirm_custom = "Install GitHub/Custom update?\n\n{name}\n\nLocal version: {local}\nAvailable version: {remote}"
+            self._t_running = "Running update: {name}"
+            self._t_refresh_hint = "The list contains only installed Enigma2 plugins with a newer visible release."
+
+        self["list"] = MenuList([])
+        self["status"] = Label(self._t_loading)
+        self["hint"] = Label(self._t_refresh_hint)
+
+        self["actions"] = ActionMap(
+            ["OkCancelActions", "ColorActions"],
+            {
+                "ok": self.update_selected,
+                "cancel": self.close,
+                "red": self.reload_list,
+                "green": self.update_selected,
+                "blue": self.close,
+            },
+            -1
+        )
+
+        self._poll_timer = eTimer()
+        try:
+            self._poll_conn = self._poll_timer.timeout.connect(self._poll_worker)
+        except Exception:
+            self._poll_conn = None
+            try:
+                self._poll_timer.callback.append(self._poll_worker)
+            except Exception:
+                pass
+
+        self.onShown.append(self._start_reload_once)
+
+    def _start_reload_once(self):
+        if self._load_started:
+            return
+        self._load_started = True
+        self.reload_list()
+
+    def _build_list_entries(self, result):
+        entries = []
+        opkg_items = result.get("opkg", []) if isinstance(result, dict) else []
+        custom_items = result.get("custom", []) if isinstance(result, dict) else []
+
+        entries.append((self._t_opkg_header, {"type": "separator"}))
+        if opkg_items:
+            for item in opkg_items:
+                text = "📦 {name} | {local} → {remote}".format(
+                    name=ensure_unicode(item.get("name") or item.get("package") or "").strip(),
+                    local=ensure_unicode(item.get("current_version", "")).strip() or "?",
+                    remote=ensure_unicode(item.get("remote_version", "")).strip() or "?"
+                )
+                entries.append((text, item))
+        else:
+            entries.append((self._t_no_opkg, {"type": "placeholder"}))
+
+        entries.append((self._t_custom_header, {"type": "separator"}))
+        if custom_items:
+            for item in custom_items:
+                text = "🌐 {name} | {local} → {remote}".format(
+                    name=ensure_unicode(item.get("name") or item.get("package") or "").strip(),
+                    local=ensure_unicode(item.get("current_version", "")).strip() or "?",
+                    remote=ensure_unicode(item.get("remote_version", "")).strip() or "?"
+                )
+                entries.append((text, item))
+        else:
+            entries.append((self._t_no_custom, {"type": "placeholder"}))
+        return entries
+
+    def _current_entry(self):
+        try:
+            current = self["list"].getCurrent()
+            if not current or len(current) < 2:
+                return None
+            data = current[1]
+            if not isinstance(data, dict):
+                return None
+            if data.get("type") in ("separator", "placeholder"):
+                return None
+            return data
+        except Exception:
+            return None
+
+    def reload_list(self):
+        if self._loading:
+            return
+        self._loading = True
+        self["status"].setText(self._t_loading)
+        self["list"].setList([(self._t_loading, {"type": "placeholder"})])
+        self._worker_state = {"done": False, "result": None, "error": None}
+
+        def worker():
+            try:
+                self._worker_state["result"] = _collect_plugin_updates_snapshot(self.lang)
+            except Exception as e:
+                self._worker_state["error"] = ensure_unicode(e)
+            self._worker_state["done"] = True
+
+        thread = Thread(target=worker)
+        try:
+            thread.setDaemon(True)
+        except Exception:
+            pass
+        thread.start()
+
+        try:
+            self._poll_timer.start(250, True)
+        except Exception:
+            pass
+
+    def _poll_worker(self):
+        if not self._worker_state.get("done"):
+            try:
+                self._poll_timer.start(250, True)
+            except Exception:
+                pass
+            return
+
+        self._loading = False
+        error = self._worker_state.get("error")
+        result = self._worker_state.get("result") or {"opkg": [], "custom": []}
+
+        if error:
+            self["list"].setList([(self._t_error, {"type": "placeholder"})])
+            self["status"].setText("{0}: {1}".format(self._t_error, error))
+            return
+
+        entries = self._build_list_entries(result)
+        self["list"].setList(entries)
+
+        opkg_count = len(result.get("opkg", []))
+        custom_count = len(result.get("custom", []))
+        total = opkg_count + custom_count
+        if total > 0:
+            self["status"].setText(self._t_ready.format(opkg=opkg_count, custom=custom_count))
+        else:
+            self["status"].setText(self._t_none)
+
+    def update_selected(self):
+        entry = self._current_entry()
+        if not entry:
+            show_message_compat(self.session, self._t_no_sel)
+            return
+
+        entry_type = ensure_unicode(entry.get("type", "")).strip()
+        package = ensure_unicode(entry.get("package", "")).strip()
+        display_name = ensure_unicode(entry.get("name") or package).strip()
+        local_ver = ensure_unicode(entry.get("current_version", "")).strip() or "?"
+        remote_ver = ensure_unicode(entry.get("remote_version", "")).strip() or "?"
+
+        if entry_type == "opkg":
+            message = self._t_confirm_opkg.format(pkg=package, local=local_ver, remote=remote_ver)
+        else:
+            message = self._t_confirm_custom.format(name=display_name, local=local_ver, remote=remote_ver)
+
+        self.session.openWithCallback(
+            lambda answer: self._run_update(answer, entry),
+            MessageBox,
+            message,
+            MessageBox.TYPE_YESNO
+        )
+
+    def _run_update(self, answer, entry):
+        if not answer:
+            return
+        entry_type = ensure_unicode(entry.get("type", "")).strip()
+        package = ensure_unicode(entry.get("package", "")).strip()
+        display_name = ensure_unicode(entry.get("name") or package).strip()
+
+        if entry_type == "opkg":
+            cmd = "opkg update && opkg upgrade {pkg}".format(pkg=package)
+        else:
+            cmd = ensure_unicode(entry.get("install_cmd", "")).strip()
+
+        if not cmd:
+            show_message_compat(self.session, self._t_error)
+            return
+
+        console_screen_open(
+            self.session,
+            self._t_running.format(name=display_name),
+            [cmd],
+            callback=lambda *args: self.reload_list(),
+            close_on_finish=True
+        )
+
+
 # === OPISY FUNKCJI DLA SYSTEMU TOOLTIP (v6.1) ===
 FUNCTION_DESCRIPTIONS = {
     "PL": {
@@ -2683,6 +3350,7 @@ FUNCTION_DESCRIPTIONS = {
         "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
         ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Bzyk83 13E Hotbird)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
+        "🔎 Sprawdź aktualizacje zainstalowanych wtyczek": "Sprawdza zainstalowane wtyczki i pokazuje dwie sekcje aktualizacji: OPKG oraz GitHub/Custom.\nPozwala uruchomić aktualizację tylko dla pozycji, dla których wykryto nowszą wersję.",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
         "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) obejmujący 13E, 19.2E oraz IPTV i przed instalacją pyta o katalog docelowy.\nMożesz wybrać lokalizację domyślną albo urządzenie zewnętrzne; po zakończeniu zalecany jest restart GUI lub pełny restart przy większych zmianach.",
         "📊 Monitor Systemowy": "Podgląd wykorzystania CPU, RAM, temperatury",
@@ -3722,6 +4390,7 @@ class Panel(Screen):
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
+            elif key == "PLUGIN_UPDATE_MANAGER": self.show_plugin_update_manager()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
             elif key == "CLEAR_FTP_PASS": run_command_in_background(self.sess, title, ["passwd -d root"])
             elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
@@ -4680,6 +5349,9 @@ class Panel(Screen):
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
         self.sess.open(UninstallManagerScreen, self.lang)
+
+    def show_plugin_update_manager(self):
+        self.sess.open(PluginUpdateManagerScreen, self.lang)
     def install_best_oscam(self):
         title = "Oscam - Instalator (Auto)" if self.lang == 'PL' else "Oscam - Installer (Auto)"
         cmd = r"""

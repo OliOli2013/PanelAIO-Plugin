@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "name": "NeoRadio Online",
+      "name_pl": "NeoRadio Online",
+      "name_en": "NeoRadio Online",
+      "package": "enigma2-plugin-extensions-neoradio",
+      "source": "github_latest_redirect",
+      "install_cmd": "wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && killall -9 enigma2",
+      "version_regex": "([0-9]+(?:[._-][0-9A-Za-z]+)*)",
+      "tmp_ipk": "/tmp/neoradio.ipk",
+      "latest_url": "https://github.com/OliOli2013/NeoRadio/releases/latest",
+      "download_url": "https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk",
+      "packages": [
+        "enigma2-plugin-extensions-neoradio",
+        "enigma2-plugin-extensions-neoradioonline",
+        "enigma2-plugin-extensions-neoradio-online",
+        "neoradio"
+      ],
+      "installed_match_regex": "neoradio",
+      "repo": "OliOli2013/NeoRadio"
+    }
+  ]
+}

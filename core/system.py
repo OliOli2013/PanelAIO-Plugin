@@ -85,7 +85,7 @@ def append_line_if_missing(path, line):
         write_text(path, text + suffix + line + '\n')
 
 def plugin_version():
-    return read_text(VERSION_FILE, '11.0').strip() or '11.0'
+    return read_text(VERSION_FILE, '11.1.2').strip() or '11.1.2'
 
 def parse_tips(lang='PL'):
     raw = read_text(TIPS_FILE, '')

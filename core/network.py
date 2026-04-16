@@ -55,7 +55,7 @@ class HTTPClient(object):
             attempt += 1
             response = None
             try:
-                request = Request(url, headers={'User-Agent': 'AIO-Panel/11.0'})
+                request = Request(url, headers={'User-Agent': 'AIO-Panel/11.1.2'})
                 response = urlopen(request, timeout=timeout or self.timeout, context=_ssl_context())
                 try:
                     total = int(response.headers.get('Content-Length') or -1)

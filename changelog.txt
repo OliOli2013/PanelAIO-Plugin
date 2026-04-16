@@ -1,26 +1,13 @@
-[AIO Panel 11.0]
+AIO Panel 11.1.2
 Data wydania: 11.04.2026
 
-### Added
-- Dodano pełne drzewo katalogów: core/, ui/, data/, control/.
-- Wprowadzono legacy_plugin.py jako warstwę zgodności (compatibility layer), zapewniając wsparcie dla funkcji z wersji 10.0.x podczas przebudowy.
-- Dodano wrappery ekranów w ui/screens/.
-- Dodano automatyczne czyszczenie katalogów __pycache__ oraz plików *.pyc przy aktualizacji.
-- Dodano mechanizm bezpiecznego ładowania zakładek w ui/main.py, zapobiegający awarii całej wtyczki przy błędach pomocniczych.
-
-### Changed
-- Przebudowano architekturę: plugin.py służy teraz wyłącznie jako punkt wejścia (entry point), a ui/main.py pełni rolę mostu do nowej struktury.
-- Zaktualizowano skrypt installer.sh: pobiera teraz pełne drzewo repozytorium (w tym core/, ui/, data/) wraz z plikami pomocniczymi.
-- Zoptymalizowano pobieranie manifestu list kanałów: dodano mechanizm retry, fallback do pamięci podręcznej (cache), zwiększono tolerancję na błędy parsowania manifest.json oraz wprowadzono filtrowanie uszkodzonych wpisów.
-- Przeniesiono wszystkie statyczne sekcje menu do data/menus.py.
-- Zaktualizowano plik aio_tips.txt na nową wersję.
-- Poprawiono wyrażenia regularne (regex) w data/menus.py.
-- Zaktualizowano pliki systemowe i dokumentację: version.txt, README.md, control/control, changelog.txt, rebuild_notes.txt.
-
-### Fixed
-- Poprawiono mechanizm ręcznego sprawdzania aktualizacji bezpośrednio wewnątrz wtyczki.
-- Wyczyszczono pozostałości po starszych wersjach w plikach projektu.
-- Naprawiono błąd aktualizacji z poziomu GitHuba, który powodował pomijanie kluczowych katalogów.
-
-### Notes
-- W plikach changelog.txt oraz rebuild_notes.txt celowo zachowano wyłącznie historyczne odniesienie do wersji 10.0.3.
+Zmiany wprowadzone od wersji 10.0.3:
+- uporządkowano repozytorium i ujednolicono wersjonowanie całego projektu do 11.0
+- usunięto pozostałości po starszych wydaniach z plików metadanych, README, skinów, helperów sieciowych i domyślnych opisów wersji
+- poprawiono mechanizm aktualizacji z GitHuba: installer pobiera teraz pełne drzewo repozytorium, wykrywa właściwy katalog źródłowy i podmienia komplet plików wymaganych przez nową architekturę
+- poprawiono ręczne sprawdzanie aktualizacji: dodano bezpieczniejsze pobieranie version.txt oraz fallback wget/curl przy uruchamianiu aktualizacji
+- poprawiono obsługę danych repozytorium list kanałów: retry, cache ostatniego poprawnego manifestu, akceptacja różnych formatów manifest.json oraz filtracja pustych/uszkodzonych wpisów
+- ograniczono przypadki błędu „Błąd danych repo” zgłaszanego przez część użytkowników przy pobieraniu list kanałów z repozytorium
+- zaktualizowano aio_tips.txt o nowy pełny zestaw tipów PL/EN z pliku zewnętrznego
+- zachowano funkcję aktualizacji z GitHuba, lokalny changelog, tipy dnia, instalatory, konfigurator i wszystkie sekcje menu
+- odświeżono pliki pakietu IPK oraz pliki repo gotowe do wrzucenia na GitHuba

@@ -1,4 +1,4 @@
-AIO Panel 11.0
+AIO Panel 11.1.2
 
 Wersja repozytoryjna przygotowana do publikacji na GitHubie i dalszej rozbudowy.
 

@@ -1,4 +1,4 @@
-# AIO Panel 11.0
+# AIO Panel 11.1.2
 
 Ta paczka zawiera kompletną wersję repozytorium AIO Panel przygotowaną do publikacji na GitHubie oraz do budowy paczki IPK.
 

@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 def main_skin():
     return """
-    <screen name="AIOMainScreen" position="center,center" size="1180,690" title="AIO Panel 11.0">
+    <screen name="AIOMainScreen" position="center,center" size="1180,690" title="AIO Panel 11.1.2">
         <widget name="title" position="20,15" size="900,40" font="Regular;34" transparent="1" />
         <widget name="status" position="20,58" size="700,32" font="Regular;24" transparent="1" />
         <widget name="version" position="920,15" size="240,40" font="Regular;26" halign="right" transparent="1" />
