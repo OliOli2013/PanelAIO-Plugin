@@ -1,15 +1,11 @@
-[AIO Panel 11.1.2]
-Data wydania: 11.04.2026
+AIO Panel 12.0.0
+Data wydania: 04.05.2026
 
-- Instalator NeoRadio Online
-- Dodna opcja sprawdzania możliwych aktualizacji oprogramownia. 
-Zmiany wprowadzone od wersji 10.0.3:
-- uporządkowano repozytorium i ujednolicono wersjonowanie całego projektu do 11.0
-- usunięto pozostałości po starszych wydaniach z plików metadanych, README, skinów, helperów sieciowych i domyślnych opisów wersji
-- poprawiono mechanizm aktualizacji z GitHuba: installer pobiera teraz pełne drzewo repozytorium, wykrywa właściwy katalog źródłowy i podmienia komplet plików wymaganych przez nową architekturę
-- poprawiono ręczne sprawdzanie aktualizacji: dodano bezpieczniejsze pobieranie version.txt oraz fallback wget/curl przy uruchamianiu aktualizacji
-- poprawiono obsługę danych repozytorium list kanałów: retry, cache ostatniego poprawnego manifestu, akceptacja różnych formatów manifest.json oraz filtracja pustych/uszkodzonych wpisów
-- ograniczono przypadki błędu „Błąd danych repo” zgłaszanego przez część użytkowników przy pobieraniu list kanałów z repozytorium
-- zaktualizowano aio_tips.txt o nowy pełny zestaw tipów PL/EN z pliku zewnętrznego
-- zachowano funkcję aktualizacji z GitHuba, lokalny changelog, tipy dnia, instalatory, konfigurator i wszystkie sekcje menu
-- odświeżono pliki pakietu IPK oraz pliki repo gotowe do wrzucenia na GitHuba
+Zmiany wprowadzone względem 11.1.2:
+- dodano mechanizm premiowania list kanałów wybranych twórców: Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller, Koncior, Twarek, Conrado i Dominiko/Dominico
+- listy premiowanych twórców są automatycznie sortowane na górze od najnowszej do najstarszej na podstawie daty z nazwy, wersji lub adresu URL
+- pozostałe listy kanałów pozostają dostępne po listach premiowanych
+- naprawiono obsługę akcji „Widoczność w menu tunera (ON/OFF)” — dodano brakujący handler CMD:TOGGLE_MENU_VISIBILITY
+- dodano trwalszy zapis stanu widoczności menu przez ConfigYesNo oraz fallback w /etc/enigma2/.panelaio_show_in_menu
+- etykieta widoczności w panelu pokazuje aktualny stan ON/OFF po przełączeniu
+- zachowano zgodność z Python 2 i Python 3

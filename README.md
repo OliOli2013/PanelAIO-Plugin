@@ -1,15 +1,14 @@
-# AIO Panel 11.1.2
+# AIO Panel 12.0.0
 
 Ta paczka zawiera kompletną wersję repozytorium AIO Panel przygotowaną do publikacji na GitHubie oraz do budowy paczki IPK.
 
-## Najważniejsze założenia wersji 11.0
+## Najważniejsze zmiany wersji 12.0.0
 
-- ujednolicone wersjonowanie całego projektu do `11.0`
-- usunięte pozostałości po starszych wersjach z plików metadanych, README, ekranów i helperów
-- poprawiona aktualizacja z GitHuba: instalator pobiera pełne drzewo repozytorium, a nie tylko wybrane pliki
-- wzmocnione pobieranie danych repozytorium list kanałów: retry, fallback do cache i bardziej tolerancyjny parser manifestu
-- zaktualizowany `aio_tips.txt` z zewnętrznego pliku użytkownika
-- zachowana zgodność z Python 2 / Python 3 i dotychczasową logiką menu
+- dodano automatyczne premiowanie list kanałów twórców: Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller, Koncior, Twarek, Conrado i Dominiko/Dominico
+- premiowane listy są pokazywane na górze od najnowszej do najstarszej na podstawie daty wykrytej w nazwie, wersji lub URL
+- pozostałe listy kanałów pozostają w menu po premiowanych pozycjach
+- naprawiono akcję „Widoczność w menu tunera (ON/OFF)” — komenda jest teraz obsługiwana, zapisuje stan i odświeża etykietę ON/OFF w panelu
+- zachowana zgodność z Python 2 / Python 3 oraz dotychczasową logiką instalacji archiwów, bukietów M3U/REF i narzędzi systemowych
 
 ## Układ repozytorium
 
@@ -22,4 +21,4 @@ Ta paczka zawiera kompletną wersję repozytorium AIO Panel przygotowaną do pub
 
 ## Ważne
 
-Aktualizacja z GitHuba w wersji 11.0 pobiera i podmienia całe drzewo wtyczki, więc nie pomija katalogów `core`, `ui`, `data` ani plików pomocniczych.
+Aktualizacja z GitHuba pobiera i podmienia całe drzewo wtyczki, więc nie pomija katalogów `core`, `ui`, `data` ani plików pomocniczych.

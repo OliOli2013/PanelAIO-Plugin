@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 11.1.2
+Wersja 12.0.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -205,6 +205,91 @@ if config is not None:
     except Exception as e:
         print("[AIO Panel] Config init error:", e)
 
+
+# --- Menu visibility helpers (v12) ---
+# Some Enigma2 images do not persist custom ConfigSubsection values reliably until a
+# full settings save/restart.  Keep a small fallback file as the source of truth for
+# the AIO entry in the receiver main/system menu.
+MENU_VISIBILITY_FALLBACK_FILE = "/etc/enigma2/.panelaio_show_in_menu"
+
+def _ensure_panelaio_config():
+    try:
+        if config is None or ConfigSubsection is None:
+            return False
+        if not hasattr(config.plugins, "panelaio"):
+            config.plugins.panelaio = ConfigSubsection()
+        if ConfigYesNo is not None and not hasattr(config.plugins.panelaio, "show_in_menu"):
+            config.plugins.panelaio.show_in_menu = ConfigYesNo(default=True)
+        return hasattr(config.plugins.panelaio, "show_in_menu")
+    except Exception as e:
+        print("[AIO Panel] Menu visibility config init error:", e)
+        return False
+
+def _bool_from_text(value, default=True):
+    txt = ensure_unicode(value).strip().lower()
+    if txt in ("1", "true", "yes", "on", "enabled", "wlaczone", "włączone"):
+        return True
+    if txt in ("0", "false", "no", "off", "disabled", "wylaczone", "wyłączone"):
+        return False
+    return default
+
+def _read_menu_visibility_fallback():
+    try:
+        if os.path.exists(MENU_VISIBILITY_FALLBACK_FILE):
+            with open(MENU_VISIBILITY_FALLBACK_FILE, "r") as f:
+                return _bool_from_text(f.read(), True)
+    except Exception as e:
+        print("[AIO Panel] Menu visibility fallback read error:", e)
+    return None
+
+def _write_menu_visibility_fallback(value):
+    try:
+        parent = os.path.dirname(MENU_VISIBILITY_FALLBACK_FILE)
+        if parent and not os.path.exists(parent):
+            os.makedirs(parent)
+        with open(MENU_VISIBILITY_FALLBACK_FILE, "w") as f:
+            f.write("1\n" if value else "0\n")
+        return True
+    except Exception as e:
+        print("[AIO Panel] Menu visibility fallback write error:", e)
+        return False
+
+def _get_show_in_menu_setting(default=True):
+    fallback = _read_menu_visibility_fallback()
+    if fallback is not None:
+        try:
+            if _ensure_panelaio_config():
+                config.plugins.panelaio.show_in_menu.value = bool(fallback)
+        except Exception:
+            pass
+        return bool(fallback)
+    try:
+        if _ensure_panelaio_config():
+            return bool(config.plugins.panelaio.show_in_menu.value)
+    except Exception:
+        pass
+    return bool(default)
+
+def _set_show_in_menu_setting(value):
+    value = bool(value)
+    saved = False
+    try:
+        if _ensure_panelaio_config():
+            config.plugins.panelaio.show_in_menu.value = value
+            try:
+                config.plugins.panelaio.show_in_menu.save()
+            except Exception:
+                pass
+            try:
+                if configfile is not None:
+                    configfile.save()
+            except Exception:
+                pass
+            saved = True
+    except Exception as e:
+        print("[AIO Panel] Menu visibility config save error:", e)
+    return _write_menu_visibility_fallback(value) or saved
+
 try:
     from Components.ScrollLabel import ScrollLabel
 except Exception:
@@ -291,7 +376,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("11.1.2")
+VER = _read_local_version("12.0.0")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -1250,7 +1335,7 @@ def _get_aio_tips(lang="PL"):
         "Zakładka Informacje o Systemie to dobry pierwszy krok przy diagnozie: od razu widać uptime, RAM i aktywne IP.",
         "Lokalny changelog działa także bez internetu – przydatne, gdy GitHub chwilowo nie odpowiada na starszych obrazach.",
         "Po większej aktualizacji AIO Panel zaakceptuj pełny restart tunera – zmniejsza to ryzyko zawieszenia na ekranie startowym.",
-        "W wersji 11.0 możesz nadal edytować Tip dnia w pliku aio_tips.txt bez ingerencji w plugin.py – wystarczy dopisać nowe linie w sekcji [PL]."
+        "W wersji 12.0 możesz nadal edytować Tip dnia w pliku aio_tips.txt bez ingerencji w plugin.py – wystarczy dopisać nowe linie w sekcji [PL]."
     ]
     tips_en = [
         "Use AIO Quick Start when you want to showcase the most useful features without browsing the full menu.",
@@ -1262,7 +1347,7 @@ def _get_aio_tips(lang="PL"):
         "System Information is a good first stop for troubleshooting: uptime, RAM and active IPs are visible immediately.",
         "The local changelog works even without internet access, which helps on older images when GitHub is unreachable.",
         "After a larger AIO Panel update, accept the full receiver reboot – it reduces the risk of getting stuck on the startup screen.",
-        "In version 11.0 you can still edit the daily tip in aio_tips.txt without touching plugin.py – just add new lines under [EN]."
+        "In version 12.0 you can still edit the daily tip in aio_tips.txt without touching plugin.py – just add new lines under [EN]."
     ]
     return tips_pl if lang == "PL" else tips_en
 
@@ -1627,6 +1712,97 @@ COL_TITLES = {
     "EN": ("📺 Channel Lists", "🔑 Softcam & Plugins", "⚙️ System Tools", "ℹ️ Info & Diagnostics")
 }
 
+
+
+# === SORTOWANIE LIST KANAŁÓW v12 ===
+# Premiowane pozycje (Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller,
+# Koncior, Twarek, Conrado, Dominiko/Dominico) są automatycznie przenoszone na górę
+# i sortowane wg najnowszej daty znalezionej w nazwie, wersji lub URL.  Pozostałe
+# listy zostają zachowane po nich w dotychczasowej kolejności.
+CHANNEL_LIST_PREMIUM_CREATORS = (
+    u"bzyk83", u"bzyk 83", u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek",
+    u"jakitaki", u"jaki taki", u"fullkiler", u"fullkiller", u"koncior", u"twarek",
+    u"conrado", u"dominiko", u"dominico"
+)
+
+def _normalize_channel_sort_text(value):
+    txt = ensure_unicode(value).lower()
+    replacements = (
+        (u"ą", u"a"), (u"ć", u"c"), (u"ę", u"e"), (u"ł", u"l"),
+        (u"ń", u"n"), (u"ó", u"o"), (u"ś", u"s"), (u"ż", u"z"), (u"ź", u"z"),
+        (u"Ą", u"a"), (u"Ć", u"c"), (u"Ę", u"e"), (u"Ł", u"l"),
+        (u"Ń", u"n"), (u"Ó", u"o"), (u"Ś", u"s"), (u"Ż", u"z"), (u"Ź", u"z")
+    )
+    for src, dst in replacements:
+        txt = txt.replace(src, dst)
+    txt = re.sub(u"[^a-z0-9]+", u" ", txt)
+    return re.sub(u"\\s+", u" ", txt).strip()
+
+def _is_premium_channel_list_item(name, action=""):
+    txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
+    padded = u" %s " % txt
+    for creator in CHANNEL_LIST_PREMIUM_CREATORS:
+        c = _normalize_channel_sort_text(creator)
+        if c and (u" %s " % c) in padded:
+            return True
+        # Support compact names stored without spaces, e.g. "jakitaki".
+        if c and c.replace(u" ", u"") in txt.replace(u" ", u""):
+            return True
+    return False
+
+def _make_date_key(year, month=0, day=0):
+    try:
+        y = int(year)
+        m = int(month)
+        d = int(day)
+        if y < 1900 or y > 2100:
+            return 0
+        if m == 0 and d == 0:
+            return y * 10000
+        datetime.date(y, m, d)
+        return y * 10000 + m * 100 + d
+    except Exception:
+        return 0
+
+def _extract_channel_date_key(name, action=""):
+    text = ensure_unicode(name) + u" " + ensure_unicode(action)
+    text = text.replace(u"_", u"-")
+    keys = []
+    # 2026-04-23 / 2026.04.23 / 2026 04 23
+    for m in re.finditer(r"(?<!\d)((?:19|20)\d{2})[-\./ ]+([01]?\d)[-\./ ]+([0-3]?\d)(?!\d)", text):
+        key = _make_date_key(m.group(1), m.group(2), m.group(3))
+        if key:
+            keys.append(key)
+    # 23-04-2026 / 23.04.2026
+    for m in re.finditer(r"(?<!\d)([0-3]?\d)[-\./ ]+([01]?\d)[-\./ ]+((?:19|20)\d{2})(?!\d)", text):
+        key = _make_date_key(m.group(3), m.group(2), m.group(1))
+        if key:
+            keys.append(key)
+    if keys:
+        return max(keys)
+    # Year-only versions such as "2024--" stay sortable but below full dates.
+    for m in re.finditer(r"(?<!\d)((?:19|20)\d{2})(?:--)?(?!\d)", text):
+        key = _make_date_key(m.group(1), 0, 0)
+        if key:
+            keys.append(key)
+    return max(keys) if keys else 0
+
+def _sort_channel_lists_v12(items):
+    decorated = []
+    for idx, item in enumerate(items or []):
+        try:
+            name, action = item[0], item[1]
+        except Exception:
+            continue
+        premium = _is_premium_channel_list_item(name, action)
+        date_key = _extract_channel_date_key(name, action)
+        if premium:
+            sort_key = (0, -date_key, idx)
+        else:
+            sort_key = (1, idx)
+        decorated.append((sort_key, item))
+    decorated.sort(key=lambda row: row[0])
+    return [row[1] for row in decorated]
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
 def _get_lists_from_repo_sync():
@@ -3741,9 +3917,10 @@ class Panel(Screen):
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
             
-            keywords_to_remove = ['bzyk', 'jakitaki']
-            s4a_lists_filtered = [item for item in s4a_lists_full if not any(keyword in item[0].lower() for keyword in keywords_to_remove)]
+            # v12: nie usuwamy żadnych istniejących pozycji; tylko zmieniamy kolejność.
+            s4a_lists_filtered = list(s4a_lists_full)
             final_channel_lists = repo_lists + s4a_lists_filtered
+            final_channel_lists = _sort_channel_lists_v12(final_channel_lists)
             azman_items = [item for item in final_channel_lists if 'azman' in ensure_unicode(item[0]).lower()]
             non_azman_items = [item for item in final_channel_lists if 'azman' not in ensure_unicode(item[0]).lower()]
             final_channel_lists = non_azman_items + azman_items
@@ -3784,6 +3961,13 @@ class Panel(Screen):
             for i, (name, action) in enumerate(tools_menu):
                 if action == "CMD:SUPER_SETUP_WIZARD":
                     tools_menu[i] = (TRANSLATIONS[lang]["sk_wizard_title"], action)
+                elif action == "CMD:TOGGLE_MENU_VISIBILITY":
+                    enabled = _get_show_in_menu_setting(True)
+                    state = "ON" if enabled else "OFF"
+                    if lang == 'PL':
+                        tools_menu[i] = ("👁️ Widoczność w menu tunera: %s" % state, action)
+                    else:
+                        tools_menu[i] = ("👁️ Show in receiver menu: %s" % state, action)
 
             # Build sidebar tabs from subcategories (SEPARATOR sections)
             tabs = []
@@ -4146,7 +4330,7 @@ class Panel(Screen):
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
             "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM",
-            "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR"
+            "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR", "CMD:TOGGLE_MENU_VISIBILITY"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -4396,6 +4580,7 @@ class Panel(Screen):
             elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
             elif key == "RESTART_OSCAM": self.restart_oscam()
             elif key == "SETUP_AUTO_RAM": self.show_auto_ram_menu()
+            elif key == "TOGGLE_MENU_VISIBILITY": self.toggle_menu_visibility()
             elif key == "CLEAR_TMP_CACHE": self.clear_tmp_cache()
             elif key == "CLEAR_RAM_CACHE": self.clear_ram_memory()
             elif key == "INSTALL_E2KODI": install_e2kodi(self.sess)
@@ -4505,20 +4690,23 @@ class Panel(Screen):
     def toggle_menu_visibility(self):
         # Toggle visibility of AIO Panel entry in receiver main/system menu (WHERE_MENU)
         try:
-            if config is None or not hasattr(config.plugins, 'panelaio') or not hasattr(config.plugins.panelaio, 'show_in_menu'):
-                show_message_compat(self.sess, 'Brak obsługi ustawień na tym obrazie.', MessageBox.TYPE_ERROR)
+            current = _get_show_in_menu_setting(True)
+            new_value = not current
+            if not _set_show_in_menu_setting(new_value):
+                show_message_compat(self.sess, 'Błąd zapisu ustawień widoczności menu.', MessageBox.TYPE_ERROR)
                 return
-            config.plugins.panelaio.show_in_menu.value = not config.plugins.panelaio.show_in_menu.value
+            state_pl = 'WŁĄCZONE' if new_value else 'WYŁĄCZONE'
+            state_en = 'ENABLED' if new_value else 'DISABLED'
             try:
-                config.plugins.panelaio.show_in_menu.save()
-                if configfile is not None:
-                    configfile.save()
+                self.set_language(self.lang)
             except Exception:
                 pass
-            state = 'WŁĄCZONE' if config.plugins.panelaio.show_in_menu.value else 'WYŁĄCZONE'
+            msg = ('Widoczność w menu tunera: %s\n\nPozycja w menu głównym/systemowym zmieni się po ponownym otwarciu menu. Jeśli obraz trzyma stare menu w pamięci, zrób Restart GUI.' % state_pl)
+            if self.lang != 'PL':
+                msg = ('Receiver menu visibility: %s\n\nThe main/system menu entry changes after reopening the menu. If your image caches the menu, restart GUI.' % state_en)
             show_message_compat(
                 self.sess,
-                'Widoczność w menu tunera: %s\n\nZmiana zadziała po restarcie GUI.' % state,
+                msg,
                 MessageBox.TYPE_INFO,
                 timeout=8
             )
@@ -5723,9 +5911,8 @@ def menu(menuid, **kwargs):
     if menuid in ("system", "mainmenu"):
         # Optional: hide AIO Panel from receiver menu
         try:
-            if config is not None and hasattr(config.plugins, "panelaio") and hasattr(config.plugins.panelaio, "show_in_menu"):
-                if not config.plugins.panelaio.show_in_menu.value:
-                    return []
+            if not _get_show_in_menu_setting(True):
+                return []
         except Exception:
             pass
         # Use different entry ids to avoid any potential collisions in some images.

@@ -1,10 +1,9 @@
-AIO Panel 11.1.2
+AIO Panel 12.0.0
 
 Wersja repozytoryjna przygotowana do publikacji na GitHubie i dalszej rozbudowy.
 
 Najważniejsze poprawki:
-- wyczyszczone stare oznaczenia wersji w plikach projektu
-- poprawiona aktualizacja z GitHuba dla architektury wielokatalogowej
-- poprawione pobieranie manifestu list kanałów z fallbackiem do ostatniej poprawnej kopii
-- zaktualizowany changelog od wersji 10.0.3
-- podmieniony aio_tips.txt na dostarczony plik użytkownika
+- automatyczne sortowanie premiowanych list kanałów od najnowszej do najstarszej
+- premiowani twórcy: Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller, Koncior, Twarek, Conrado, Dominiko/Dominico
+- naprawiona akcja Widoczność w menu tunera ON/OFF
+- aktualizacja numeru wersji i metadanych pakietu do 12.0.0
