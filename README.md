@@ -175,8 +175,8 @@ Kontakt: **aio-iptv@wp.pl**
 Jeżeli chcesz wesprzeć rozwój wtyczki, użyj kodu QR dostępnego w repozytorium lub w panelu wtyczki.
 
 ```text
-Kod_QR_buycoffee.png
-qr_support.png
+(https://ko-fi.com/pawelpawlek)
+[qr_support.png](https://buycoffee.to/pawelpawelek)
 ```
 
 ---
