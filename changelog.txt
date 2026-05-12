@@ -1,13 +1,24 @@
-[12.0.0]
+[12.0.1]
+AIO Panel 12.0.1
 
-AIO Panel 12.0.0
-Data wydania: 04.05.2026
-
-Zmiany wprowadzone względem 11.1.2:
-- dodano mechanizm premiowania list kanałów wybranych twórców: Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller, Koncior, Twarek, Conrado i Dominiko/Dominico
-- listy premiowanych twórców są automatycznie sortowane na górze od najnowszej do najstarszej na podstawie daty z nazwy, wersji lub adresu URL
-- pozostałe listy kanałów pozostają dostępne po listach premiowanych
-- naprawiono obsługę akcji „Widoczność w menu tunera (ON/OFF)” — dodano brakujący handler CMD:TOGGLE_MENU_VISIBILITY
-- dodano trwalszy zapis stanu widoczności menu przez ConfigYesNo oraz fallback w /etc/enigma2/.panelaio_show_in_menu
-- etykieta widoczności w panelu pokazuje aktualny stan ON/OFF po przełączeniu
-- zachowano zgodność z Python 2 i Python 3
+- usunięto dublowanie list Bzyk83, JakiTaki,
+- listy tych autorów są pobierane tylko z jednego repozytorium,
+- ukryto listy kanałów starsze niż 2026,
+- zachowano sortowanie list od najnowszej do najstarszej,
+- dodano instalator Bouquet Maker Xtream,
+- poprawiono działanie Backup List Kanałów,
+- poprawiono działanie Restore Listy Kanałów,
+- backup obejmuje teraz pełne pliki list: lamedb, lamedb5, bouquets.tv, bouquets.radio, userbouquet.*,
+- Restore czyści stare listy i przywraca pełną kopię,
+- dodano informację o dostępnej aktualizacji AIO Panel na dole ekranu,
+- dodano podgląd listy zmian przed aktualizacją,
+- dodano wybór TAK/NIE przy aktualizacji, bez wymuszania instalacji,
+- dodano funkcję Czyszczenie niedziałających wtyczek,
+- czyszczenie usuwa uszkodzone wtyczki z systemu,
+- poprawiono widoczność wtyczki na skinach Infinity Neo i MyMetrix-neo,
+- poprawiono czytelność zaznaczonej funkcji w menu,
+- poprawiono kolory, tła i warstwy ekranu wtyczki,
+- uzupełniono opisy funkcji po polsku i angielsku,
+- uzupełniono dolne informacje, co robi dana funkcja,
+- dodano automatyczne przeładowanie list kanałów po instalacji bez wymuszania restartu GUI,
+- zaktualizowano version.txt, changelog.txt, README.md, installer.sh, menu i kontrolę IPK.

@@ -1,13 +1,10 @@
-version.txt
-README.md
-changelog.txt
-rebuild_notes.txt
-changed_files_list.txt
-legacy_plugin.py
-core/system.py
-core/network.py
-data/menus.py
-data/skins.py
-installer.sh
-install_archive_script.sh
-control/control
+AIO Panel 12.0.1 - zmienione pliki
+- legacy_plugin.py
+- data/menus.py
+- sel_menu.png
+- sel_sidebar.png
+- selection.png
+- version.txt
+- changelog.txt
+- README.md
+- installer.sh

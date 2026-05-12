@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 12.0.0
+Wersja 12.0.2
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -363,6 +363,8 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
 PLUGIN_PP_LOGO_PATH = os.path.join(PLUGIN_PATH, "pp_logo.png")
+PLUGIN_SEL_MENU_PATH = os.path.join(PLUGIN_PATH, "sel_menu.png")
+PLUGIN_SEL_SIDEBAR_PATH = os.path.join(PLUGIN_PATH, "sel_sidebar.png")
 AIO_TIPS_FILE = os.path.join(PLUGIN_PATH, "aio_tips.txt")
 
 # --- VERSION: single source of truth (version.txt) ---
@@ -376,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.0")
+VER = _read_local_version("12.0.1")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -412,20 +414,20 @@ def _super_wizard_choice_skin():
         return """
     <screen position="center,center" size="690,420" title="Super Konfigurator">
         <widget name="list" position="18,18" size="654,240" scrollbarMode="showOnDemand" />
-        <widget name="description" position="18,272" size="654,92" font="Regular;18" halign="center" valign="center" foregroundColor="#0000C2FF" />
+        <widget name="description" position="18,272" size="654,92" font="Regular;18" halign="center" valign="center" foregroundColor="#00C2FF" />
         <widget name="actions" position="18,386" size="654,22" font="Regular;16" halign="right" />
     </screen>"""
     if _is_hd_ui():
         return """
     <screen position="center,center" size="760,460" title="Super Konfigurator">
         <widget name="list" position="20,20" size="720,270" scrollbarMode="showOnDemand" />
-        <widget name="description" position="20,305" size="720,95" font="Regular;20" halign="center" valign="center" foregroundColor="#0000C2FF" />
+        <widget name="description" position="20,305" size="720,95" font="Regular;20" halign="center" valign="center" foregroundColor="#00C2FF" />
         <widget name="actions" position="20,420" size="720,24" font="Regular;18" halign="right" />
     </screen>"""
     return """
     <screen position="center,center" size="800,500" title="Super Konfigurator">
         <widget name="list" position="20,20" size="760,300" scrollbarMode="showOnDemand" />
-        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="#0000C2FF" />
+        <widget name="description" position="20,340" size="760,100" font="Regular;22" halign="center" valign="center" foregroundColor="#00C2FF" />
         <widget name="actions" position="20,460" size="760,30" font="Regular;20" halign="right" />
     </screen>"""
 
@@ -448,32 +450,32 @@ def _wizard_progress_skin():
 def _support_screen_skin():
     if _is_small_ui():
         return """
-    <screen position="center,center" size="680,500" title="Wsparcie / Support" backgroundColor="#000B0F14">
-        <eLabel position="0,0" size="680,500" backgroundColor="#000B0F14" zPosition="-1" />
-        <eLabel position="0,0" size="680,64" backgroundColor="#00121824" zPosition="-1" />
-        <widget name="title" position="16,14" size="648,30" font="Regular;22" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+    <screen position="center,center" size="680,500" title="Wsparcie / Support" backgroundColor="#0B0F14">
+        <eLabel position="0,0" size="680,500" backgroundColor="#0B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="680,64" backgroundColor="#121824" zPosition="-1" />
+        <widget name="title" position="16,14" size="648,30" font="Regular;22" halign="center" foregroundColor="#00C2FF" transparent="1" />
         <widget name="qr_big" position="160,86" size="360,360" pixmap="{qr}" alphatest="blend" scale="1" />
         <widget name="qr_huge" position="24,78" size="632,400" pixmap="{qr}" alphatest="blend" scale="1" />
-        <widget name="txt" position="16,468" size="648,20" font="Regular;16" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+        <widget name="txt" position="16,468" size="648,20" font="Regular;16" halign="center" valign="center" foregroundColor="#D7DEE9" transparent="1" />
     </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
     if _is_hd_ui():
         return """
-    <screen position="center,center" size="760,560" title="Wsparcie / Support" backgroundColor="#000B0F14">
-        <eLabel position="0,0" size="760,560" backgroundColor="#000B0F14" zPosition="-1" />
-        <eLabel position="0,0" size="760,70" backgroundColor="#00121824" zPosition="-1" />
-        <widget name="title" position="20,15" size="720,34" font="Regular;26" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+    <screen position="center,center" size="760,560" title="Wsparcie / Support" backgroundColor="#0B0F14">
+        <eLabel position="0,0" size="760,560" backgroundColor="#0B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="760,70" backgroundColor="#121824" zPosition="-1" />
+        <widget name="title" position="20,15" size="720,34" font="Regular;26" halign="center" foregroundColor="#00C2FF" transparent="1" />
         <widget name="qr_big" position="170,88" size="420,420" pixmap="{qr}" alphatest="blend" scale="1" />
         <widget name="qr_huge" position="30,82" size="700,450" pixmap="{qr}" alphatest="blend" scale="1" />
-        <widget name="txt" position="20,525" size="720,24" font="Regular;18" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+        <widget name="txt" position="20,525" size="720,24" font="Regular;18" halign="center" valign="center" foregroundColor="#D7DEE9" transparent="1" />
     </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
     return """
-    <screen position="center,center" size="900,650" title="Wsparcie / Support" backgroundColor="#000B0F14">
-        <eLabel position="0,0" size="900,650" backgroundColor="#000B0F14" zPosition="-1" />
-        <eLabel position="0,0" size="900,80" backgroundColor="#00121824" zPosition="-1" />
-        <widget name="title" position="20,18" size="860,40" font="Regular;30" halign="center" foregroundColor="#0000C2FF" transparent="1" />
+    <screen position="center,center" size="900,650" title="Wsparcie / Support" backgroundColor="#0B0F14">
+        <eLabel position="0,0" size="900,650" backgroundColor="#0B0F14" zPosition="-1" />
+        <eLabel position="0,0" size="900,80" backgroundColor="#121824" zPosition="-1" />
+        <widget name="title" position="20,18" size="860,40" font="Regular;30" halign="center" foregroundColor="#00C2FF" transparent="1" />
         <widget name="qr_big" position="200,100" size="500,500" pixmap="{qr}" alphatest="blend" scale="1" />
         <widget name="qr_huge" position="50,90" size="800,540" pixmap="{qr}" alphatest="blend" scale="1" />
-        <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" transparent="1" />
+        <widget name="txt" position="20,610" size="860,35" font="Regular;22" halign="center" valign="center" foregroundColor="#D7DEE9" transparent="1" />
     </screen>""".format(qr=PLUGIN_QR_CODE_BIG_PATH)
 
 def _aio_tip_screen_skin():
@@ -481,24 +483,24 @@ def _aio_tip_screen_skin():
         return """
     <screen position="center,center" size="720,320" title="AIO Tip dnia">
         <widget name="title" position="18,14" size="684,30" font="Regular;22" halign="center" valign="center" />
-        <widget name="counter" position="18,48" size="684,22" font="Regular;18" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="counter" position="18,48" size="684,22" font="Regular;18" halign="center" valign="center" foregroundColor="#D7DEE9" />
         <widget name="text" position="24,84" size="672,170" font="Regular;22" halign="center" valign="center" />
-        <widget name="help" position="18,284" size="684,20" font="Regular;16" halign="center" valign="center" foregroundColor="#008A94A6" />
+        <widget name="help" position="18,284" size="684,20" font="Regular;16" halign="center" valign="center" foregroundColor="#8A94A6" />
     </screen>"""
     if _is_hd_ui():
         return """
     <screen position="center,center" size="820,360" title="AIO Tip dnia">
         <widget name="title" position="20,16" size="780,34" font="Regular;26" halign="center" valign="center" />
-        <widget name="counter" position="20,56" size="780,24" font="Regular;20" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="counter" position="20,56" size="780,24" font="Regular;20" halign="center" valign="center" foregroundColor="#D7DEE9" />
         <widget name="text" position="28,96" size="764,190" font="Regular;25" halign="center" valign="center" />
-        <widget name="help" position="20,324" size="780,22" font="Regular;18" halign="center" valign="center" foregroundColor="#008A94A6" />
+        <widget name="help" position="20,324" size="780,22" font="Regular;18" halign="center" valign="center" foregroundColor="#8A94A6" />
     </screen>"""
     return """
     <screen position="center,center" size="980,420" title="AIO Tip dnia">
         <widget name="title" position="24,18" size="932,38" font="Regular;30" halign="center" valign="center" />
-        <widget name="counter" position="24,62" size="932,26" font="Regular;22" halign="center" valign="center" foregroundColor="#00D7DEE9" />
+        <widget name="counter" position="24,62" size="932,26" font="Regular;22" halign="center" valign="center" foregroundColor="#D7DEE9" />
         <widget name="text" position="34,110" size="912,220" font="Regular;30" halign="center" valign="center" />
-        <widget name="help" position="24,382" size="932,24" font="Regular;20" halign="center" valign="center" foregroundColor="#008A94A6" />
+        <widget name="help" position="24,382" size="932,24" font="Regular;20" halign="center" valign="center" foregroundColor="#8A94A6" />
     </screen>"""
 
 def _info_screen_skin():
@@ -538,66 +540,75 @@ def _info_screen_skin():
 def _panel_main_skin():
     if _is_small_ui():
         return """
-    <screen name='PanelAIO' position='center,center' size='900,560' title='AIO Panel' backgroundColor='#000B0F14'>
-        <eLabel position='0,0' size='900,74' backgroundColor='#00121824' zPosition='-1' />
+    <screen name='PanelAIO' position='center,center' size='900,560' title='AIO Panel' backgroundColor='#0B0F14' zPosition='99'>
+        <eLabel position='0,0' size='900,560' backgroundColor='#0B0F14' zPosition='-10' />
+        <eLabel position='0,76' size='900,434' backgroundColor='#0B0F14' zPosition='-9' />
+        <eLabel position='0,0' size='900,74' backgroundColor='#121824' zPosition='-1' />
         <widget name='qr_code_small' position='14,18' size='36,36' pixmap="{qr}" alphatest='blend' scale='1' />
         <widget name='pp_logo' position='850,18' size='36,36' pixmap="{pp_logo}" alphatest='blend' scale='1' />
-        <widget name='support_label' position='58,8' size='300,52' font='Regular;18' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='title_label' position='362,9' size='478,28' font='Regular;24' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='health' position='362,40' size='478,20' font='Regular;16' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
-        <eLabel position='0,74' size='900,2' backgroundColor='#0000C2FF' />
+        <widget name='support_label' position='58,8' size='300,52' font='Regular;18' halign='left' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='title_label' position='362,9' size='478,28' font='Regular;24' halign='right' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='health' position='362,40' size='478,20' font='Regular;16' halign='right' valign='center' foregroundColor='#A9B4C2' transparent='1' />
+        <eLabel position='0,74' size='900,2' backgroundColor='#00C2FF' />
 
-        <widget name='sidebar' position='0,76' size='220,434' itemHeight='46' font='Regular;19' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
-        <eLabel position='220,76' size='2,434' backgroundColor='#00203346' />
-        <widget name='menu' position='234,76' size='650,370' itemHeight='36' font='Regular;18' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
-        <widget name='function_description' position='234,450' size='650,50' font='Regular;16' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
+        <widget name='sidebar' position='0,76' size='220,434' itemHeight='46' font='Regular;19' scrollbarMode='showOnDemand' selectionPixmap='{sel_sidebar}' foregroundColor='#00C2FF' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <eLabel position='220,76' size='2,434' backgroundColor='#203346' />
+        <widget name='menu' position='234,76' size='650,370' itemHeight='36' font='Regular;18' scrollbarMode='showOnDemand' selectionPixmap='{sel_menu}' foregroundColor='#D7DEE9' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <widget name='function_description' position='234,450' size='650,50' font='Regular;16' halign='left' valign='top' foregroundColor='#00C2FF' backgroundColor='#121824' transparent='0' />
         <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
 
-        <eLabel position='0,510' size='900,50' backgroundColor='#00121824' zPosition='-1' />
-        <widget name='legend' position='10,518' size='880,18' font='Regular;16' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
-        <widget name='footer' position='10,538' size='880,16' font='Regular;14' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
-    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
+        <eLabel position='0,510' size='900,50' backgroundColor='#121824' zPosition='-1' />
+        <widget name='update_status' position='10,518' size='300,18' font='Regular;15' halign='left' foregroundColor='#FFD200' transparent='1'/>
+        <widget name='legend' position='320,518' size='570,18' font='Regular;16' halign='right' foregroundColor='#D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,538' size='880,16' font='Regular;14' halign='center' valign='center' foregroundColor='#8A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH, sel_menu=PLUGIN_SEL_MENU_PATH, sel_sidebar=PLUGIN_SEL_SIDEBAR_PATH)
     if _is_hd_ui():
         return """
-    <screen name='PanelAIO' position='center,center' size='980,620' title='AIO Panel' backgroundColor='#000B0F14'>
-        <eLabel position='0,0' size='980,82' backgroundColor='#00121824' zPosition='-1' />
+    <screen name='PanelAIO' position='center,center' size='980,620' title='AIO Panel' backgroundColor='#0B0F14' zPosition='99'>
+        <eLabel position='0,0' size='980,620' backgroundColor='#0B0F14' zPosition='-10' />
+        <eLabel position='0,84' size='980,490' backgroundColor='#0B0F14' zPosition='-9' />
+        <eLabel position='0,0' size='980,82' backgroundColor='#121824' zPosition='-1' />
         <widget name='qr_code_small' position='16,20' size='40,40' pixmap="{qr}" alphatest='blend' scale='1' />
         <widget name='pp_logo' position='924,20' size='40,40' pixmap="{pp_logo}" alphatest='blend' scale='1' />
-        <widget name='support_label' position='66,9' size='350,60' font='Regular;20' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='title_label' position='420,10' size='490,30' font='Regular;28' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='health' position='420,44' size='490,22' font='Regular;18' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
-        <eLabel position='0,82' size='980,2' backgroundColor='#0000C2FF' />
+        <widget name='support_label' position='66,9' size='350,60' font='Regular;20' halign='left' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='title_label' position='420,10' size='490,30' font='Regular;28' halign='right' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='health' position='420,44' size='490,22' font='Regular;18' halign='right' valign='center' foregroundColor='#A9B4C2' transparent='1' />
+        <eLabel position='0,82' size='980,2' backgroundColor='#00C2FF' />
 
-        <widget name='sidebar' position='0,84' size='240,490' itemHeight='52' font='Regular;21' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
-        <eLabel position='240,84' size='2,490' backgroundColor='#00203346' />
-        <widget name='menu' position='255,84' size='710,420' itemHeight='40' font='Regular;20' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
-        <widget name='function_description' position='255,508' size='710,56' font='Regular;18' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
+        <widget name='sidebar' position='0,84' size='240,490' itemHeight='52' font='Regular;21' scrollbarMode='showOnDemand' selectionPixmap='{sel_sidebar}' foregroundColor='#00C2FF' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <eLabel position='240,84' size='2,490' backgroundColor='#203346' />
+        <widget name='menu' position='255,84' size='710,420' itemHeight='40' font='Regular;20' scrollbarMode='showOnDemand' selectionPixmap='{sel_menu}' foregroundColor='#D7DEE9' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <widget name='function_description' position='255,508' size='710,56' font='Regular;18' halign='left' valign='top' foregroundColor='#00C2FF' backgroundColor='#121824' transparent='0' />
         <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
 
-        <eLabel position='0,574' size='980,46' backgroundColor='#00121824' zPosition='-1' />
-        <widget name='legend' position='10,580'  size='960,20'  font='Regular;18' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
-        <widget name='footer' position='10,600' size='960,16' font='Regular;15' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
-    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
+        <eLabel position='0,574' size='980,46' backgroundColor='#121824' zPosition='-1' />
+        <widget name='update_status' position='10,580' size='330,20' font='Regular;17' halign='left' foregroundColor='#FFD200' transparent='1'/>
+        <widget name='legend' position='350,580'  size='620,20'  font='Regular;18' halign='right' foregroundColor='#D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,600' size='960,16' font='Regular;15' halign='center' valign='center' foregroundColor='#8A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH, sel_menu=PLUGIN_SEL_MENU_PATH, sel_sidebar=PLUGIN_SEL_SIDEBAR_PATH)
     return """
-    <screen name='PanelAIO' position='center,center' size='1100,690' title='AIO Panel' backgroundColor='#000B0F14'>
-        <eLabel position='0,0' size='1100,90' backgroundColor='#00121824' zPosition='-1' />
+    <screen name='PanelAIO' position='center,center' size='1100,690' title='AIO Panel' backgroundColor='#0B0F14' zPosition='99'>
+        <eLabel position='0,0' size='1100,690' backgroundColor='#0B0F14' zPosition='-10' />
+        <eLabel position='0,92' size='1100,548' backgroundColor='#0B0F14' zPosition='-9' />
+        <eLabel position='0,0' size='1100,90' backgroundColor='#121824' zPosition='-1' />
         <widget name='qr_code_small' position='18,23' size='44,44' pixmap="{qr}" alphatest='blend' scale='1' />
         <widget name='pp_logo' position='1036,23' size='44,44' pixmap="{pp_logo}" alphatest='blend' scale='1' />
-        <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='title_label' position='470,12' size='560,36' font='Regular;32' halign='right' valign='center' foregroundColor='#0000C2FF' transparent='1' />
-        <widget name='health' position='470,52' size='560,26' font='Regular;20' halign='right' valign='center' foregroundColor='#00A9B4C2' transparent='1' />
-        <eLabel position='0,90' size='1100,2' backgroundColor='#0000C2FF' />
+        <widget name='support_label' position='72,10' size='420,70' font='Regular;22' halign='left' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='title_label' position='470,12' size='560,36' font='Regular;32' halign='right' valign='center' foregroundColor='#00C2FF' transparent='1' />
+        <widget name='health' position='470,52' size='560,26' font='Regular;20' halign='right' valign='center' foregroundColor='#A9B4C2' transparent='1' />
+        <eLabel position='0,90' size='1100,2' backgroundColor='#00C2FF' />
 
-        <widget name='sidebar' position='0,92' size='270,548' itemHeight='58' font='Regular;24' scrollbarMode='showOnDemand' selectionPixmap='sel_sidebar.png' foregroundColor='#0000C2FF' foregroundColorSelected='#0000C2FF' transparent='1'/>
-        <eLabel position='270,92' size='2,548' backgroundColor='#00203346' />
-        <widget name='menu' position='285,92' size='800,468' itemHeight='44' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='sel_menu.png' transparent='1'/>
-        <widget name='function_description' position='285,565' size='800,70' font='Regular;20' halign='left' valign='top' foregroundColor='#0000C2FF' backgroundColor='#00121824' transparent='0' />
+        <widget name='sidebar' position='0,92' size='270,548' itemHeight='58' font='Regular;24' scrollbarMode='showOnDemand' selectionPixmap='{sel_sidebar}' foregroundColor='#00C2FF' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <eLabel position='270,92' size='2,548' backgroundColor='#203346' />
+        <widget name='menu' position='285,92' size='800,468' itemHeight='44' font='Regular;22' scrollbarMode='showOnDemand' selectionPixmap='{sel_menu}' foregroundColor='#D7DEE9' foregroundColorSelected='#FFFFFF' backgroundColor='#0B0F14' transparent='0'/>
+        <widget name='function_description' position='285,565' size='800,70' font='Regular;20' halign='left' valign='top' foregroundColor='#00C2FF' backgroundColor='#121824' transparent='0' />
         <widget name='tabs_display' position='0,0' size='0,0' font='Regular;1' transparent='1' />
 
-        <eLabel position='0,640' size='1100,50' backgroundColor='#00121824' zPosition='-1' />
-        <widget name='legend' position='10,646'  size='1080,22'  font='Regular;20' halign='center' foregroundColor='#00D7DEE9' transparent='1'/>
-        <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#008A94A6' transparent='1'/>
-    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH)
+        <eLabel position='0,640' size='1100,50' backgroundColor='#121824' zPosition='-1' />
+        <widget name='update_status' position='10,646' size='380,22' font='Regular;18' halign='left' foregroundColor='#FFD200' transparent='1'/>
+        <widget name='legend' position='400,646'  size='690,22'  font='Regular;20' halign='right' foregroundColor='#D7DEE9' transparent='1'/>
+        <widget name='footer' position='10,668' size='1080,18' font='Regular;16' halign='center' valign='center' foregroundColor='#8A94A6' transparent='1'/>
+    </screen>""".format(qr=PLUGIN_QR_CODE_SMALL_PATH, pp_logo=PLUGIN_PP_LOGO_PATH, sel_menu=PLUGIN_SEL_MENU_PATH, sel_sidebar=PLUGIN_SEL_SIDEBAR_PATH)
 
 # === TŁUMACZENIA ===
 TRANSLATIONS = {
@@ -613,6 +624,9 @@ Czy chcesz ją teraz zainstalować?\n\nPo instalacji lub aktualizacji zalecany j
         "already_latest": "Używasz najnowszej wersji wtyczki ({ver}).",
         "update_check_error": "Nie można sprawdzić dostępności aktualizacji.\nSprawdź połączenie z internetem.",
         "update_generic_error": "Wystąpił błąd podczas sprawdzania aktualizacji.",
+        "update_status_label": "🔔 Dostępna aktualizacja AIO",
+        "update_menu_label": "🔔 Dostępna aktualizacja AIO Panel {ver} - pokaż zmiany",
+        "update_changelog_unavailable": "Nie udało się pobrać listy zmian. Spróbuj ponownie później.",
         "loading_text": "Ładowanie...",
         "loading_error_text": "Błąd wczytywania danych",
         "sk_wizard_title": ">>> Super Konfigurator (Pierwsza Instalacja)",
@@ -648,6 +662,9 @@ Do you want to install it now?\n\nA full receiver reboot is recommended after in
         "already_latest": "You are using the latest version of the plugin ({ver}).",
         "update_check_error": "Could not check for updates.\nPlease check your internet connection.",
         "update_generic_error": "An error occurred while checking for updates.",
+        "update_status_label": "🔔 AIO update available",
+        "update_menu_label": "🔔 AIO Panel {ver} update available - show changes",
+        "update_changelog_unavailable": "Could not download the changelog. Try again later.",
         "loading_text": "Loading...",
         "loading_error_text": "Error loading data",
         "sk_wizard_title": ">>> Super Setup Wizard (First Installation)",
@@ -1538,6 +1555,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("📺 Simple IPTV EPG - Instalator", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
     ("📻 NeoRadio Online - Instalator", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && killall -9 enigma2"),
+    ("📺 Bouquet Maker Xtream - Instalator", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && killall -9 enigma2"),
     ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -1576,6 +1594,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("📺 Simple IPTV EPG - Installer", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
     ("📻 NeoRadio Online - Installer", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && killall -9 enigma2"),
+    ("📺 Bouquet Maker Xtream - Installer", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && killall -9 enigma2"),
     ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -1660,6 +1679,7 @@ DIAGNOSTICS_PL = [
     ("⏱️ Auto RAM Cleaner (Konfiguruj)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
+    ("🧹 Czyszczenie niedziałających wtyczek", "CMD:BROKEN_PLUGIN_CLEANER"),
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
@@ -1682,6 +1702,7 @@ DIAGNOSTICS_EN = [
     ("⏱️ Auto RAM Cleaner (Setup)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
+    ("🧹 Clean broken plugins", "CMD:BROKEN_PLUGIN_CLEANER"),
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
@@ -1724,6 +1745,14 @@ CHANNEL_LIST_PREMIUM_CREATORS = (
     u"jakitaki", u"jaki taki", u"fullkiler", u"fullkiller", u"koncior", u"twarek",
     u"conrado", u"dominiko", u"dominico"
 )
+
+# These creators are maintained only in the PanelAIO-Lists repository.
+# Any matching copies coming from S4aUpdater are filtered out to avoid duplicates.
+CHANNEL_LIST_REPO_ONLY_CREATORS = (
+    u"bzyk83", u"bzyk 83", u"jakitaki", u"jaki taki",
+    u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek"
+)
+CHANNEL_LIST_MIN_YEAR = 2026
 
 def _normalize_channel_sort_text(value):
     txt = ensure_unicode(value).lower()
@@ -1787,6 +1816,65 @@ def _extract_channel_date_key(name, action=""):
             keys.append(key)
     return max(keys) if keys else 0
 
+def _channel_date_year(date_key):
+    try:
+        return int(date_key) // 10000
+    except Exception:
+        return 0
+
+def _channel_item_is_2026_or_newer(item):
+    try:
+        name, action = item[0], item[1]
+    except Exception:
+        return True
+    if action == "SEPARATOR":
+        return True
+    date_key = _extract_channel_date_key(name, action)
+    if not date_key:
+        # Keep undated entries; they are not proven to be older than 2026.
+        return True
+    return _channel_date_year(date_key) >= CHANNEL_LIST_MIN_YEAR
+
+def _is_repo_only_creator_item(name, action=""):
+    txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
+    compact = txt.replace(u" ", u"")
+    padded = u" %s " % txt
+    for creator in CHANNEL_LIST_REPO_ONLY_CREATORS:
+        c = _normalize_channel_sort_text(creator)
+        if not c:
+            continue
+        if (u" %s " % c) in padded or c.replace(u" ", u"") in compact:
+            return True
+    return False
+
+def _dedupe_channel_lists(items):
+    result = []
+    seen = set()
+    for item in items or []:
+        try:
+            name, action = item[0], item[1]
+        except Exception:
+            continue
+        if action == "SEPARATOR":
+            result.append(item)
+            continue
+        norm_name = _normalize_channel_sort_text(name)
+        # Remove volatile dates and generic source words before duplicate comparison.
+        norm_name = re.sub(u"\\b(?:19|20)\\d{2}(?:[ -]?[01]?\\d[ -]?[0-3]?\\d)?\\b", u" ", norm_name)
+        norm_name = re.sub(u"\\b(?:brak daty|dodaj bukiet m3u|dodaj bukiet ref|s4aupdater|s4a|repo)\\b", u" ", norm_name)
+        norm_name = re.sub(u"\\s+", u" ", norm_name).strip()
+        url = ensure_unicode(action)
+        if url.startswith("archive:"):
+            url_key = url.split(":", 1)[1].split("?", 1)[0].lower()
+        else:
+            url_key = ""
+        key = norm_name or url_key
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
+
 def _sort_channel_lists_v12(items):
     decorated = []
     for idx, item in enumerate(items or []):
@@ -1794,15 +1882,40 @@ def _sort_channel_lists_v12(items):
             name, action = item[0], item[1]
         except Exception:
             continue
+        if action == "SEPARATOR":
+            sort_key = (9, idx, 0)
+            decorated.append((sort_key, item))
+            continue
         premium = _is_premium_channel_list_item(name, action)
         date_key = _extract_channel_date_key(name, action)
+        # Premium creators stay above the rest, but every dated list is ordered newest first.
         if premium:
             sort_key = (0, -date_key, idx)
         else:
-            sort_key = (1, idx)
+            sort_key = (1, -date_key, idx)
         decorated.append((sort_key, item))
     decorated.sort(key=lambda row: row[0])
     return [row[1] for row in decorated]
+
+def _prepare_channel_lists_v1201(repo_lists, s4a_lists_full):
+    repo_filtered = [item for item in (repo_lists or []) if _channel_item_is_2026_or_newer(item)]
+    s4a_filtered = []
+    for item in (s4a_lists_full or []):
+        try:
+            name, action = item[0], item[1]
+        except Exception:
+            continue
+        if not _channel_item_is_2026_or_newer(item):
+            continue
+        if _is_repo_only_creator_item(name, action):
+            # Bzyk83, JakiTaki, Anom and Paweł Pawełek are loaded only from PanelAIO-Lists.
+            continue
+        s4a_filtered.append(item)
+    final_channel_lists = _dedupe_channel_lists(repo_filtered + s4a_filtered)
+    final_channel_lists = _sort_channel_lists_v12(final_channel_lists)
+    azman_items = [item for item in final_channel_lists if 'azman' in ensure_unicode(item[0]).lower()]
+    non_azman_items = [item for item in final_channel_lists if 'azman' not in ensure_unicode(item[0]).lower()]
+    return non_azman_items + azman_items
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
 def _get_lists_from_repo_sync():
@@ -3511,6 +3624,8 @@ FUNCTION_DESCRIPTIONS = {
         "🛠 AJPanel - Instalator": "Instaluje AJPanel – zestaw narzędzi serwisowych i administracyjnych.\nPrzydatne do szybkiej diagnostyki i obsługi systemu.",
         "▶️ E2iPlayer Master - Instalacja/Aktualizacja": "Instaluje lub aktualizuje E2iPlayer (Master).\nDostarcza dostęp do wielu serwisów VOD/stream i narzędzi multimedialnych.",
         "📅 EPG Import - Instalator": "Instaluje EPGImport – automatyczny import programu TV.\nPo instalacji skonfiguruj źródła EPG i harmonogram aktualizacji.",
+        "📻 NeoRadio Online - Instalator": "Instaluje NeoRadio Online z najnowszej paczki GitHub.\nPo instalacji wykonuje restart GUI, aby wtyczka była od razu widoczna.",
+        "📺 Bouquet Maker Xtream - Instalator": "Instaluje Bouquet Maker Xtream 1.76-20260510 z archiwum GitHub.\nPo skopiowaniu plików wykonuje restart Enigma2, aby plugin był widoczny w menu.",
         "🔄 S4aUpdater - Instalator": "Instaluje S4aUpdater do aktualizacji wybranych dodatków.\nUłatwia utrzymanie wtyczek w aktualnej wersji bez ręcznej instalacji.",
         "🔄 MyUpdater v5.1 - Instalator": "Instaluje MyUpdater v5.1 z oficjalnego skryptu instalacyjnego.\nSłuży do aktualizacji i utrzymania dodatków bez ręcznego pobierania paczek.",
         "📺 JediMakerXtream - Instalator": "Instaluje JediMakerXtream do budowy bukietów IPTV z kont Xtream.\nPo instalacji dodaj dane logowania i wygeneruj listę/bukiety.",
@@ -3538,15 +3653,16 @@ FUNCTION_DESCRIPTIONS = {
         "🔑 Aktualizuj SoftCam.Key (Online)": "Pobiera i aktualizuje plik SoftCam.Key (Online) w typowych lokalizacjach kluczy.\nPo zakończeniu wykonuje restart emulatora (jeśli uruchomiony).",
         "🌐 Menedżer Feedów / Repozytoriów": "Menedżer repozytoriów opkg. Pozwala podejrzeć aktywne feedy, wykonać test połączenia z feedami, wyczyścić cache list pakietów i odświeżyć repozytoria.",
         "🛠 Tryb Naprawy po Instalacji": "Uruchamia zestaw naprawczy po instalacji dodatków lub po nieudanym update. Dostępne moduły: uprawnienia, Softcam, EPG, picony, ServiceApp i Streamlink oraz tryb pełny.",
-        "💾 Backup Listy Kanałów": "Kopia zapasowa list kanałów",
+        "💾 Backup Listy Kanałów": "Tworzy pełną kopię list kanałów: lamedb/lamedb5, bouquets.tv/radio, wszystkie userbouquet TV/Radio i pliki pomocnicze.\nBackup zapisuje się na HDD/USB w katalogu aio_backups.",
         "💾 Backup Konfiguracji Oscam": "Kopia zapasowa konfiguracji Oscam",
-        "♻️ Restore Listy Kanałów": "Przywracanie list kanałów z backupu",
+        "♻️ Restore Listy Kanałów": "Przywraca pełną kopię list kanałów z aio_channels_backup.tar.gz.\nDla poprawnego odtworzenia bukietów zatrzymuje Enigma2, czyści stare pliki list i uruchamia GUI ponownie.",
         "♻️ Restore Konfiguracji Oscam": "Przywracanie konfiguracji Oscam z backupu",
 
         # Info i Diagnostyka
         "ℹ️ Info i Diagnostyka": "Informacje o wtyczce i narzędzia diagnostyczne",
         "ℹ️ Informacje o AIO Panel": "Informacje o wersji, licencji i autorze",
         "🔄 Aktualizacja Wtyczki": "Sprawdzenie i instalacja aktualizacji AIO Panel",
+        "🔔 Dostępna aktualizacja AIO": "Informacja o wykrytej aktualizacji AIO Panel. Kliknij pozycję aktualizacji w zakładce Informacje i Aktualizacje, aby zobaczyć listę zmian oraz wybrać TAK/NIE.",
         "⭐ AIO Szybki Start / Polecane": "Nowa, atrakcyjna sekcja startowa z polecanymi akcjami i skrótami do najważniejszych funkcji AIO Panel.",
         "🧪 Test zgodności systemu": "Generuje lokalny raport zgodności: Python, narzędzia systemowe, certyfikaty CA, pamięć flash i podstawowe zależności AIO.",
         "💡 Tip dnia AIO": "Wyświetla praktyczną wskazówkę dnia dotyczącą obsługi AIO Panel i konserwacji systemu.",
@@ -3556,6 +3672,7 @@ FUNCTION_DESCRIPTIONS = {
         "⏱️ Auto RAM Cleaner (Konfiguruj)": "Automatyczne czyszczenie pamięci RAM",
         "🧹 Wyczyść Pamięć Tymczasową": "Usunięcie plików tymczasowych z /tmp",
         "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Bezpieczne czyszczenie zbędnych archiwów, crashlogów i logów tymczasowych oraz odświeżenie cache RAM.\nPomaga odzyskać miejsce bez naruszania ustawień użytkownika.",
+        "🧹 Czyszczenie niedziałających wtyczek": "Czyści cache Pythona i sprawdza plugin.py w Extensions/SystemPlugins.\nWtyczki z błędem kompilacji są teraz usuwane całkowicie z systemu.",
         "🧹 Wyczyść Pamięć RAM": "Ręczne czyszczenie pamięci RAM",
         "🔑 Kasuj hasło FTP": "Usuwa hasło użytkownika root (FTP/SSH).\nPo wykonaniu logowanie odbywa się bez hasła (jeśli obraz na to pozwala).",
         "🔑 Ustaw Hasło FTP": "Ustawia nowe hasło dla użytkownika root (FTP/SSH).\nZwiększa bezpieczeństwo dostępu do tunera z sieci.",
@@ -3581,6 +3698,8 @@ FUNCTION_DESCRIPTIONS = {
         "🛠 AJPanel - Installer": "Installs AJPanel – a set of service/administration tools.\nUseful for quick maintenance and diagnostics.",
         "▶️ E2iPlayer Master - Install/Update": "Installs or updates E2iPlayer (Master).\nProvides access to multiple streaming/VOD sources and media tools.",
         "📅 EPG Import - Installer": "Installs EPGImport for automatic EPG data import.\nAfter install, set sources and schedule periodic updates.",
+        "📻 NeoRadio Online - Installer": "Installs NeoRadio Online from the latest GitHub package.\nAfter installation it restarts the GUI so the plugin appears immediately.",
+        "📺 Bouquet Maker Xtream - Installer": "Installs Bouquet Maker Xtream 1.76-20260510 from the GitHub archive.\nAfter copying files it restarts Enigma2 so the plugin appears in the menu.",
         "🔄 S4aUpdater - Installer": "Installs S4aUpdater to keep selected add-ons up to date.\nReduces manual package installs/updates.",
         "🔄 MyUpdater v5.1 - Installer": "Installs MyUpdater v5.1 using the official installer script.\nHelps keep selected add-ons updated without manual package downloads.",
         "📺 JediMakerXtream - Installer": "Installs JediMakerXtream to build IPTV bouquets from Xtream accounts.\nAdd your credentials and generate bouquets after installation.",
@@ -3607,15 +3726,16 @@ FUNCTION_DESCRIPTIONS = {
         "🔑 Update SoftCam.Key (Online)": "Downloads and updates SoftCam.Key (Online) to common key/config locations.\nRestarts the emulator (if running).",
         "🌐 Feed / Repository Manager": "Opkg repository manager. Lets you inspect active feeds, test feed connectivity, clear package-list cache and refresh repositories.",
         "🛠 Post-Install Repair Mode": "Runs a post-install repair toolkit after a failed install/update. Available modules: permissions, Softcam, EPG, picons, ServiceApp and Streamlink, plus a full repair mode.",
-        "💾 Backup Channel List": "Backup channel lists",
+        "💾 Backup Channel List": "Creates a complete channel-list backup: lamedb/lamedb5, bouquets.tv/radio, all TV/Radio userbouquets and helper files.\nThe backup is saved to aio_backups on HDD/USB.",
         "💾 Backup Oscam Config": "Backup Oscam configuration",
-        "♻️ Restore Channel List": "Restore channel lists from backup",
+        "♻️ Restore Channel List": "Restores the complete channel-list backup from aio_channels_backup.tar.gz.\nTo restore bouquets reliably it stops Enigma2, clears old list files and starts the GUI again.",
         "♻️ Restore Oscam Config": "Restore Oscam config from backup",
 
         # Info & Diagnostics
         "ℹ️ Info & Diagnostics": "Plugin info and diagnostic tools",
         "ℹ️ About AIO Panel": "Version, license and author info",
         "🔄 Update Plugin": "Check and install AIO Panel updates",
+        "🔔 AIO update available": "AIO Panel update notification. Open the update item in Info & Updates to view the changelog and choose YES/NO.",
         "⭐ AIO Quick Start / Recommended": "New welcome section with recommended actions and shortcuts to the most useful AIO Panel functions.",
         "🧪 System compatibility check": "Builds a local compatibility report: Python, system tools, CA certificates, flash space and core AIO dependencies.",
         "💡 AIO tip of the day": "Shows a practical daily tip for using AIO Panel and keeping the receiver in good shape.",
@@ -3625,6 +3745,7 @@ FUNCTION_DESCRIPTIONS = {
         "⏱️ Auto RAM Cleaner (Setup)": "Automatic RAM cleaning",
         "🧹 Clear Temporary Cache": "Remove temporary files from /tmp",
         "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Safely removes leftover archives, crashlogs and temporary logs, then refreshes RAM cache.\nHelps recover space without touching user settings.",
+        "🧹 Clean broken plugins": "Clears Python cache and checks plugin.py files in Extensions/SystemPlugins.\nPlugins with compile errors are now permanently removed from the system.",
         "🧹 Clear RAM Cache": "Manual RAM cache clearing",
         "🔑 Clear FTP Password": "Removes the root password (FTP/SSH).\nAfterwards, login may be passwordless (depends on image security settings).",
         "🔑 Set FTP Password": "Sets a new password for the root user (FTP/SSH).\nImproves security for network access to the receiver.",
@@ -3689,6 +3810,9 @@ class Panel(Screen):
 
     def __init__(self, session, fetched_data):
         Screen.__init__(self, session)
+        # Force our own internal skin name. Some external skins define a generic
+        # screen named "Panel"; without this, the dashboard can open but remain invisible.
+        self.skinName = ["PanelAIO"]
         self.setTitle("Panel AIO " + VER)
         self.sess = session
         self.lang = 'PL'
@@ -3729,6 +3853,7 @@ class Panel(Screen):
         self["menu"] = MenuList([])
         self["sidebar"] = MenuList([])
         self["health"] = Label("")
+        self["update_status"] = Label("")
         self._focus = "menu"
         self._prev_cpu = None
 
@@ -3917,17 +4042,21 @@ class Panel(Screen):
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
             
-            # v12: nie usuwamy żadnych istniejących pozycji; tylko zmieniamy kolejność.
-            s4a_lists_filtered = list(s4a_lists_full)
-            final_channel_lists = repo_lists + s4a_lists_filtered
-            final_channel_lists = _sort_channel_lists_v12(final_channel_lists)
-            azman_items = [item for item in final_channel_lists if 'azman' in ensure_unicode(item[0]).lower()]
-            non_azman_items = [item for item in final_channel_lists if 'azman' not in ensure_unicode(item[0]).lower()]
-            final_channel_lists = non_azman_items + azman_items
+            # v12.0.1: usuń duplikaty z S4aUpdater dla repo-only, ukryj listy starsze niż 2026
+            # i zachowaj kolejność od najnowszej do najstarszej.
+            final_channel_lists = _prepare_channel_lists_v1201(repo_lists, s4a_lists_full)
             
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
             tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
             diag_menu = list(DIAGNOSTICS_PL if lang == 'PL' else DIAGNOSTICS_EN)
+            if self.update_info:
+                try:
+                    up_ver = ensure_unicode(self.update_info.get("version", "")).strip()
+                    label = TRANSLATIONS[lang]["update_menu_label"].format(ver=up_ver)
+                    insert_at = 1 if diag_menu and diag_menu[0][1] == "SEPARATOR" else 0
+                    diag_menu.insert(insert_at, (label, "CMD:SHOW_PENDING_AIO_UPDATE"))
+                except Exception:
+                    pass
             
             # --- FILTROWANIE DLA PYTHON 2 (Kompatybilność) ---
             if IS_PY2:
@@ -4330,7 +4459,7 @@ class Panel(Screen):
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
             "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
             "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM",
-            "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR", "CMD:TOGGLE_MENU_VISIBILITY"
+            "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR", "CMD:TOGGLE_MENU_VISIBILITY", "CMD:SHOW_PENDING_AIO_UPDATE"
         ]
         
         if self.image_type in ["hyperion", "vti"] and action == "CMD:MANAGE_DVBAPI":
@@ -4410,16 +4539,50 @@ class Panel(Screen):
         Thread(target=self.perform_update_check_silent).start()
 
     def perform_update_check_silent(self):
-        # Wersja cicha - uruchamiana w tle
+        # Silent mode: do not open a modal window. Show a small bottom-left status instead.
         self._check_update(silent=True)
 
     def check_for_updates_manual(self):
-        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji...", type=MessageBox.TYPE_INFO, timeout=3)
-        # Callback uruchomi się po zamknięciu komunikatu, ale lepiej uruchomić sprawdzanie w tle
+        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji..." if self.lang == 'PL' else "Checking for updates...", type=MessageBox.TYPE_INFO, timeout=3)
         self._check_update(silent=False)
 
     def _manual_update_callback(self, result):
         pass
+
+    def _fetch_remote_changelog(self):
+        changelog_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/changelog.txt"
+        text = _fetch_text_url(changelog_url, timeout=10, tries=2)
+        text = ensure_unicode(text).strip()
+        if not text:
+            return TRANSLATIONS[self.lang].get("update_changelog_unavailable", "Changelog unavailable.")
+        # Keep dialog readable on HD skins.
+        if len(text) > 2500:
+            text = text[:2500].rstrip() + "\n..."
+        return text
+
+    def _set_update_available_ui(self, remote_ver_str, changelog_text):
+        self.update_info = {"version": ensure_unicode(remote_ver_str), "changelog": ensure_unicode(changelog_text)}
+        try:
+            self["update_status"].setText(TRANSLATIONS[self.lang]["update_status_label"])
+        except Exception:
+            pass
+        try:
+            self.set_language(self.lang)
+        except Exception as e:
+            print("[AIO Panel] Update UI refresh error:", e)
+
+    def show_detected_update_prompt(self):
+        if not self.update_info:
+            self.check_for_updates_manual()
+            return
+        remote_ver_str = ensure_unicode(self.update_info.get("version", ""))
+        changelog_text = ensure_unicode(self.update_info.get("changelog", "")) or self._fetch_remote_changelog()
+        msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
+            latest_ver=remote_ver_str,
+            current_ver=VER,
+            changelog=changelog_text
+        )
+        self.sess.openWithCallback(self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def _check_update(self, silent=False):
         version_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/version.txt"
@@ -4438,14 +4601,18 @@ class Panel(Screen):
             remote_ver = _version_to_tuple(remote_ver_str)
 
             if remote_ver > local_ver:
-                changelog_text = "Aktualizacja zalecana."
-                msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
-                    latest_ver=remote_ver_str,
-                    current_ver=VER,
-                    changelog=changelog_text
-                )
-                reactor.callFromThread(self.sess.openWithCallback, self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
+                changelog_text = self._fetch_remote_changelog()
+                if silent:
+                    reactor.callFromThread(self._set_update_available_ui, remote_ver_str, changelog_text)
+                else:
+                    self.update_info = {"version": ensure_unicode(remote_ver_str), "changelog": ensure_unicode(changelog_text)}
+                    reactor.callFromThread(self.show_detected_update_prompt)
             else:
+                self.update_info = None
+                try:
+                    reactor.callFromThread(self["update_status"].setText, "")
+                except Exception:
+                    pass
                 if not silent:
                     reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER), MessageBox.TYPE_INFO)
 
@@ -4565,6 +4732,7 @@ class Panel(Screen):
             key = action.split(':', 1)[1]
             if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
             elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
+            elif key == "SHOW_PENDING_AIO_UPDATE": self.show_detected_update_prompt()
             elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
             elif key == "IPTV_DEPS": self.install_iptv_deps()
@@ -4602,6 +4770,7 @@ class Panel(Screen):
             elif key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
             elif key == "FREE_SPACE_DISPLAY": console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
             elif key == "SMART_CLEANUP": self.smart_cleanup()
+            elif key == "BROKEN_PLUGIN_CLEANER": self.clean_broken_plugins()
             elif key == "AIO_QUICKSTART": self.open_aio_quickstart()
             elif key == "COMPATIBILITY_CHECK": self.open_compatibility_check()
             elif key == "SHOW_AIO_TIP": self.show_aio_tip()
@@ -5434,6 +5603,59 @@ class Panel(Screen):
         '''
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
+    def clean_broken_plugins(self):
+        title = "Czyszczenie niedziałających wtyczek" if self.lang == 'PL' else "Clean broken plugins"
+        cmd = r'''
+            echo "=== AIO Broken Plugin Cleaner ==="
+            echo "Start: $(date)"
+            echo ""
+            PY=""
+            command -v python3 >/dev/null 2>&1 && PY="python3"
+            [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY="python"
+            if [ -z "$PY" ]; then
+                echo "Brak interpretera Python - przerwano."
+                exit 1
+            fi
+
+            BASE="/usr/lib/enigma2/python/Plugins"
+            FOUND=0
+            echo "[1/3] Czyszczenie cache Pythona..."
+            find "$BASE" -type d -name __pycache__ -prune -exec rm -rf {} \; 2>/dev/null || true
+            find "$BASE" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+
+            echo "[2/3] Sprawdzanie plugin.py w Extensions/SystemPlugins..."
+            for GROUP in Extensions SystemPlugins; do
+                [ -d "$BASE/$GROUP" ] || continue
+                for DIR in "$BASE/$GROUP"/*; do
+                    [ -d "$DIR" ] || continue
+                    NAME=$(basename "$DIR")
+                    [ "$NAME" = "PanelAIO" ] && continue
+                    [ -f "$DIR/plugin.py" ] || continue
+                    ERR="/tmp/aio_pycheck_${GROUP}_${NAME}.log"
+                    "$PY" -m py_compile "$DIR/plugin.py" >"$ERR" 2>&1
+                    if [ $? -ne 0 ]; then
+                        FOUND=$((FOUND+1))
+                        echo "Uszkodzona wtyczka: $GROUP/$NAME"
+                        echo "  -> usuwam całkowicie: $DIR"
+                        cat "$ERR" 2>/dev/null || true
+                        rm -rf "$DIR" 2>/dev/null || echo "  !! Nie udało się usunąć $DIR"
+                    fi
+                    rm -f "$ERR" 2>/dev/null || true
+                done
+            done
+
+            echo "[3/3] Podsumowanie..."
+            if [ "$FOUND" -eq 0 ]; then
+                echo "Nie wykryto niedziałających wtyczek na podstawie kompilacji plugin.py."
+            else
+                echo "Usunięto niedziałających wtyczek: $FOUND"
+                echo "Po restarcie GUI lista wtyczek powinna być odświeżona."
+            fi
+            sync
+            echo "Koniec: $(date)"
+        '''
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+
     def _get_backup_path(self):
         if os.path.exists("/media/hdd") and os.path.ismount("/media/hdd"): return "/media/hdd/aio_backups/"
         elif os.path.exists("/media/usb") and os.path.ismount("/media/usb"): return "/media/usb/aio_backups/"
@@ -5444,9 +5666,31 @@ class Panel(Screen):
     def backup_lists(self):
         path = self._get_backup_path()
         if not path:
-            show_message_compat(self.sess, "Brak nośnika HDD/USB.", MessageBox.TYPE_ERROR); return
-        cmd = "mkdir -p \"{p}\" && cd /etc/enigma2 && tar -czf \"{p}aio_channels_backup.tar.gz\" lamedb bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio 2>/dev/null && echo 'Backup OK'".format(p=path)
-        run_command_in_background(self.sess, "Backup Listy", [cmd])
+            show_message_compat(self.sess, "Brak nośnika HDD/USB." if self.lang == 'PL' else "No HDD/USB device found.", MessageBox.TYPE_ERROR); return
+        cmd = r'''
+            set -e
+            P="{p}"
+            OUT="$P/aio_channels_backup.tar.gz"
+            WORK="/tmp/aio_channels_backup_work"
+            mkdir -p "$P"
+            rm -rf "$WORK"
+            mkdir -p "$WORK"
+            cd /etc/enigma2
+            for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml; do
+                [ -f "$F" ] && cp -a "$F" "$WORK/" || true
+            done
+            for F in userbouquet.*.tv userbouquet.*.radio *.del; do
+                [ -f "$F" ] && cp -a "$F" "$WORK/" || true
+            done
+            if [ -z "$(ls -A "$WORK" 2>/dev/null)" ]; then
+                echo "Brak plików list kanałów do backupu."
+                exit 1
+            fi
+            tar -czf "$OUT" -C "$WORK" .
+            rm -rf "$WORK"
+            echo "Backup list kanałów zapisany do: $OUT"
+        '''.format(p=path.rstrip('/'))
+        run_command_in_background(self.sess, "Backup Listy" if self.lang == 'PL' else "Channel List Backup", [cmd])
 
     def backup_oscam(self):
         path = self._get_backup_path()
@@ -5457,10 +5701,42 @@ class Panel(Screen):
 
     def restore_lists(self):
         path = self._get_backup_path()
-        if not path: return
+        if not path:
+            show_message_compat(self.sess, "Brak nośnika HDD/USB." if self.lang == 'PL' else "No HDD/USB device found.", MessageBox.TYPE_ERROR); return
         f = os.path.join(path, "aio_channels_backup.tar.gz")
-        if not fileExists(f): show_message_compat(self.sess, "Brak pliku backupu.", MessageBox.TYPE_ERROR); return
-        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie", ["tar -xzf \"{}\" -C /etc/enigma2/".format(f)], self.reload_settings_python) if c else None, MessageBox, "Przywrócić listę?", MessageBox.TYPE_YESNO)
+        if not fileExists(f):
+            show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
+        msg = "Przywrócić listę kanałów?\n\nEnigma2 zostanie zatrzymana i uruchomiona ponownie, aby przywrócić wszystkie bukiety poprawnie." if self.lang == 'PL' else "Restore channel list?\n\nEnigma2 will be stopped and started again to restore all bouquets correctly."
+        cmd = r'''
+            set -e
+            ARCH="{archive}"
+            DEST="/etc/enigma2"
+            PRE="/tmp/aio_pre_restore_enigma2_$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$DEST"
+            mkdir -p "$PRE"
+            cd "$DEST"
+            for F in lamedb lamedb5 bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml; do
+                [ -f "$F" ] && cp -a "$F" "$PRE/" || true
+            done
+            echo "Zapisano awaryjną kopię obecnych list w: $PRE"
+            if command -v init >/dev/null 2>&1; then
+                init 4 || true
+                sleep 3
+            fi
+            rm -f "$DEST"/lamedb "$DEST"/lamedb5 "$DEST"/bouquets.tv "$DEST"/bouquets.radio \
+                  "$DEST"/userbouquet.*.tv "$DEST"/userbouquet.*.radio \
+                  "$DEST"/blacklist "$DEST"/whitelist 2>/dev/null || true
+            tar -xzf "$ARCH" -C "$DEST"
+            chmod 644 "$DEST"/lamedb "$DEST"/lamedb5 "$DEST"/bouquets.tv "$DEST"/bouquets.radio "$DEST"/userbouquet.*.tv "$DEST"/userbouquet.*.radio 2>/dev/null || true
+            sync
+            echo "Restore list kanałów zakończony."
+            if command -v init >/dev/null 2>&1; then
+                init 3 || true
+            else
+                killall -9 enigma2 2>/dev/null || true
+            fi
+        '''.format(archive=f)
+        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd]) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def restore_oscam(self):
         path = self._get_backup_path()
@@ -5499,7 +5775,39 @@ class Panel(Screen):
         console_screen_open(self.sess, title, cmdlist, callback=self._ask_reboot_after_install, close_on_finish=False)
 
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
-    def reload_settings_python(self, *args): eDVBDB.getInstance().reloadServicelist(); eDVBDB.getInstance().reloadBouquets(); show_message_compat(self.sess, "Listy przeładowane.", timeout=3)
+
+    def _reload_channel_lists_core(self):
+        """Reload Enigma2 services/bouquets after installing channel lists without GUI restart."""
+        try:
+            os.system("sync")
+        except Exception:
+            pass
+        try:
+            db = eDVBDB.getInstance()
+            db.reloadServicelist()
+            db.reloadBouquets()
+        except Exception as e:
+            print("[AIO Panel] Python channel reload error:", e)
+        try:
+            os.system("(wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1) &")
+        except Exception as e:
+            print("[AIO Panel] OpenWebif channel reload error:", e)
+
+    def reload_settings_python(self, *args):
+        def _pass_one():
+            self._reload_channel_lists_core()
+            reactor.callLater(1.2, _pass_two)
+
+        def _pass_two():
+            self._reload_channel_lists_core()
+            reactor.callLater(1.8, _pass_three)
+
+        def _pass_three():
+            self._reload_channel_lists_core()
+            msg = "Listy kanałów przeładowane." if self.lang == 'PL' else "Channel lists reloaded."
+            show_message_compat(self.sess, msg, timeout=4)
+
+        reactor.callLater(0.4, _pass_one)
     def clear_oscam_password(self): run_command_in_background(self.sess, "Kasowanie hasła", ["sed -i '/httppwd/d' /etc/tuxbox/config/oscam.conf"])
     def manage_dvbapi(self):
         opt = [("Kasuj zawartość", "clear")] if self.lang == 'PL' else [("Clear file", "clear")]
