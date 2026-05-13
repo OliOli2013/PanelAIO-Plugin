@@ -1,31 +1,45 @@
-# AIO Panel 12.0.1
+# AIO Panel 12.0.2
 
-AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.1 naprawia błąd ładowania wtyczki po wersji 12.0.4 oraz dodatkowo wzmacnia zgodność wyglądu z zewnętrznymi skinami.
+AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.2 zachowuje zmiany z 12.0.1, ale usuwa ryzyko bootloopa podczas startu GUI na części image, szczególnie OpenATV 8 / beta.
 
-## Najważniejsze zmiany wersji 12.0.1
+## Najważniejsza poprawka 12.0.2
 
-- Naprawiono błąd: `name 'SOFTCAM_AND_PLUGINS_PL' is not defined`.
-- Zabezpieczono `data/menus.py`, aby błąd importu nie wyłączał całej wtyczki w menu Enigma2.
-- Wymuszono własną nazwę ekranu `PanelAIO`, aby skiny zewnętrzne nie podmieniały widoku przez ogólną nazwę `Panel`.
-- Podniesiono `zPosition` ekranu głównego do 99.
-- Wymieniono grafiki zaznaczenia na pełne, nieprzezroczyste PNG bez kanału alpha, aby aktywna funkcja była czytelna.
-- Instalator TvMad Pro E2 nadal pozostaje całkowicie usunięty.
+- odchudzono `plugin.py`, aby podczas startu Enigma2 nie ładował całej warstwy runtime `legacy_plugin.py`,
+- pełna logika AIO Panel jest teraz ładowana dopiero po ręcznym otwarciu wtyczki,
+- menu AIO Panel i `sessionstart` działają lekko i bezpiecznie podczas bootowania,
+- Auto RAM Cleaner nadal może odtworzyć ustawienie po restarcie bez importowania całego panelu,
+- dodano bezpieczny komunikat błędu, jeśli runtime wtyczki nie uruchomi się po wejściu do AIO Panel,
+- zaktualizowano metadane do wersji 12.0.2.
 
-## Zachowane zmiany z poprzednich wersji
+## Zachowane zmiany z 12.0.1
 
-- Listy Bzyk83, JakiTaki, Anom i Paweł Pawełek są pobierane tylko z repozytorium PanelAIO-Lists.
-- Listy starsze niż 2026 są ukrywane.
-- Zachowano sortowanie list od najnowszej na górze.
-- Dodano instalator Bouquet Maker Xtream.
-- Poprawiono Backup/Restore Listy Kanałów.
-- Czyszczenie niedziałających wtyczek usuwa wadliwe katalogi całkowicie.
+- usunięto dublowanie list Bzyk83, JakiTaki,
+- listy tych autorów są pobierane tylko z jednego repozytorium,
+- ukryto listy kanałów starsze niż 2026,
+- zachowano sortowanie list od najnowszej do najstarszej,
+- dodano instalator Bouquet Maker Xtream,
+- poprawiono działanie Backup List Kanałów,
+- poprawiono działanie Restore Listy Kanałów,
+- backup obejmuje pełne pliki list: `lamedb`, `lamedb5`, `bouquets.tv`, `bouquets.radio`, `userbouquet.*`,
+- Restore czyści stare listy i przywraca pełną kopię,
+- dodano informację o dostępnej aktualizacji AIO Panel na dole ekranu,
+- dodano podgląd listy zmian przed aktualizacją,
+- dodano wybór TAK/NIE przy aktualizacji, bez wymuszania instalacji,
+- dodano funkcję Czyszczenie niedziałających wtyczek,
+- czyszczenie usuwa uszkodzone wtyczki z systemu,
+- poprawiono widoczność wtyczki na skinach Infinity Neo i MyMetrix-neo,
+- poprawiono czytelność zaznaczonej funkcji w menu,
+- poprawiono kolory, tła i warstwy ekranu wtyczki,
+- uzupełniono opisy funkcji po polsku i angielsku,
+- uzupełniono dolne informacje, co robi dana funkcja,
+- dodano automatyczne przeładowanie list kanałów po instalacji bez wymuszania restartu GUI.
 
 ## Instalacja z IPK
 
 ```sh
 opkg remove enigma2-plugin-extensions-panelaio
-opkg install /tmp/enigma2-plugin-extensions-panelaio_12.0.1_all.ipk
-killall -9 enigma2
+opkg install /tmp/enigma2-plugin-extensions-panelaio_12.0.2_all.ipk
+reboot
 ```
 
 ## Aktualizacja z GitHuba
@@ -34,11 +48,9 @@ killall -9 enigma2
 wget -qO- https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
 ```
 
-## Układ repozytorium
+## Struktura repozytorium
 
-- `plugin.py` — entry point wtyczki
-- `legacy_plugin.py` — główna logika i zgodność runtime
-- `core/` — helpery systemowe, sieciowe i bezpieczeństwa
-- `ui/` — ekrany i most do architektury modułowej
-- `data/` — menu, tłumaczenia i skiny
-- `installer.sh` — aktualizacja z GitHuba
+- `plugin.py` — lekki i bezpieczny entry point ładowany przy starcie Enigma2,
+- `legacy_plugin.py` — pełna logika AIO Panel ładowana dopiero po otwarciu wtyczki,
+- `core/`, `ui/`, `data/` — moduły architektury AIO,
+- `installer.sh` — aktualizacja z GitHuba.

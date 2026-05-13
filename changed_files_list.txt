@@ -1,10 +1,8 @@
-AIO Panel 12.0.1 - zmienione pliki
+AIO Panel 12.0.2 - zmienione pliki
+- plugin.py
 - legacy_plugin.py
-- data/menus.py
-- sel_menu.png
-- sel_sidebar.png
-- selection.png
 - version.txt
 - changelog.txt
 - README.md
 - installer.sh
+- control/control

@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.1")
+VER = _read_local_version("12.0.2")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 

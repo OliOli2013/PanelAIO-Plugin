@@ -1,3 +1,11 @@
+[12.0.2]
+AIO Panel 12.0.2
+- naprawiono ryzyko bootloopa po restarcie GUI na części systemów, zwłaszcza OpenATV 8 / beta,
+- plugin.py nie importuje już ciężkiego runtime legacy_plugin.py podczas startu Enigma2,
+- pełna logika wtyczki ładuje się dopiero po wejściu do AIO Panel,
+- sessionstart został ograniczony do bezpiecznej obsługi Auto RAM Cleaner bez ładowania całego panelu,
+- zachowano wszystkie poprawki i funkcje dodane w wersji 12.0.1.
+
 [12.0.1]
 AIO Panel 12.0.1
 
@@ -20,5 +28,6 @@ AIO Panel 12.0.1
 - poprawiono kolory, tła i warstwy ekranu wtyczki,
 - uzupełniono opisy funkcji po polsku i angielsku,
 - uzupełniono dolne informacje, co robi dana funkcja,
+- usunięto instalator TvMad Pro E2 ze względów bezpieczeństwa,
 - dodano automatyczne przeładowanie list kanałów po instalacji bez wymuszania restartu GUI,
 - zaktualizowano version.txt, changelog.txt, README.md, installer.sh, menu i kontrolę IPK.
