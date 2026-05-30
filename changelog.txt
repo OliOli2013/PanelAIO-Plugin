@@ -1,3 +1,12 @@
+[12.0.3]
+AIO Panel 12.0.3
+- dodano w zakładce Softcamy funkcję oscam.dvbapi - aktualizacja Poland,
+- dodano do paczki lokalny plik oscam.dvbapi.poland z danymi Poland,
+- przy aktualizacji oscam.dvbapi tworzona jest kopia starego pliku i wykonywane jest odświeżenie Softcam/Oscam,
+- poprawiono Backup Listy Kanałów: lepszy wybór miejsca zapisu, kopia z datą i stały plik ostatniej kopii aio_channels_backup.tar.gz,
+- poprawiono Restore Listy Kanałów: walidacja archiwum, awaryjna kopia obecnych list i bezpieczne przywracanie przez osobny skrypt po zatrzymaniu GUI,
+- nie zmieniano pozostałych działających funkcji wtyczki.
+
 [12.0.2]
 AIO Panel 12.0.2
 - naprawiono ryzyko bootloopa po restarcie GUI na części systemów, zwłaszcza OpenATV 8 / beta,

@@ -1,44 +1,21 @@
-# AIO Panel 12.0.2
+# AIO Panel 12.0.3
 
-AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.2 zachowuje zmiany z 12.0.1, ale usuwa ryzyko bootloopa podczas startu GUI na części image, szczególnie OpenATV 8 / beta.
+AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.3 zachowuje bezpieczne, lekkie ładowanie z 12.0.2 i dodaje poprawki bez naruszania pozostałych funkcji wtyczki.
 
-## Najważniejsza poprawka 12.0.2
+## Najważniejsze zmiany 12.0.3
 
-- odchudzono `plugin.py`, aby podczas startu Enigma2 nie ładował całej warstwy runtime `legacy_plugin.py`,
-- pełna logika AIO Panel jest teraz ładowana dopiero po ręcznym otwarciu wtyczki,
-- menu AIO Panel i `sessionstart` działają lekko i bezpiecznie podczas bootowania,
-- Auto RAM Cleaner nadal może odtworzyć ustawienie po restarcie bez importowania całego panelu,
-- dodano bezpieczny komunikat błędu, jeśli runtime wtyczki nie uruchomi się po wejściu do AIO Panel,
-- zaktualizowano metadane do wersji 12.0.2.
-
-## Zachowane zmiany z 12.0.1
-
-- usunięto dublowanie list Bzyk83, JakiTaki,
-- listy tych autorów są pobierane tylko z jednego repozytorium,
-- ukryto listy kanałów starsze niż 2026,
-- zachowano sortowanie list od najnowszej do najstarszej,
-- dodano instalator Bouquet Maker Xtream,
-- poprawiono działanie Backup List Kanałów,
-- poprawiono działanie Restore Listy Kanałów,
-- backup obejmuje pełne pliki list: `lamedb`, `lamedb5`, `bouquets.tv`, `bouquets.radio`, `userbouquet.*`,
-- Restore czyści stare listy i przywraca pełną kopię,
-- dodano informację o dostępnej aktualizacji AIO Panel na dole ekranu,
-- dodano podgląd listy zmian przed aktualizacją,
-- dodano wybór TAK/NIE przy aktualizacji, bez wymuszania instalacji,
-- dodano funkcję Czyszczenie niedziałających wtyczek,
-- czyszczenie usuwa uszkodzone wtyczki z systemu,
-- poprawiono widoczność wtyczki na skinach Infinity Neo i MyMetrix-neo,
-- poprawiono czytelność zaznaczonej funkcji w menu,
-- poprawiono kolory, tła i warstwy ekranu wtyczki,
-- uzupełniono opisy funkcji po polsku i angielsku,
-- uzupełniono dolne informacje, co robi dana funkcja,
-- dodano automatyczne przeładowanie list kanałów po instalacji bez wymuszania restartu GUI.
+- dodano w zakładce Softcamy funkcję `oscam.dvbapi - aktualizacja Poland`,
+- funkcja korzysta z pliku `oscam.dvbapi.poland` dołączonego do paczki, więc działa offline,
+- przed podmianą istniejącego `oscam.dvbapi` tworzona jest kopia zapasowa starego pliku,
+- poprawiono Backup Listy Kanałów: lepsze wykrywanie zapisywalnego miejsca, kopia z datą oraz plik `aio_channels_backup.tar.gz` jako ostatnia kopia,
+- poprawiono Restore Listy Kanałów: weryfikacja archiwum przed przywróceniem, awaryjna kopia obecnych list i bezpieczne przywracanie przez osobny skrypt, który działa także po zatrzymaniu GUI,
+- zachowano poprawkę 12.0.2 ograniczającą ryzyko bootloopa na OpenATV 8 / beta.
 
 ## Instalacja z IPK
 
 ```sh
 opkg remove enigma2-plugin-extensions-panelaio
-opkg install /tmp/enigma2-plugin-extensions-panelaio_12.0.2_all.ipk
+opkg install /tmp/enigma2-plugin-extensions-panelaio_12.0.3_all.ipk
 reboot
 ```
 
@@ -52,5 +29,6 @@ wget -qO- https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/inst
 
 - `plugin.py` — lekki i bezpieczny entry point ładowany przy starcie Enigma2,
 - `legacy_plugin.py` — pełna logika AIO Panel ładowana dopiero po otwarciu wtyczki,
+- `oscam.dvbapi.poland` — lokalny wzorzec dla funkcji aktualizacji Poland,
 - `core/`, `ui/`, `data/` — moduły architektury AIO,
 - `installer.sh` — aktualizacja z GitHuba.

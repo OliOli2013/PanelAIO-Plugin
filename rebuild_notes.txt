@@ -1,9 +1,8 @@
-AIO Panel 12.0.0
+AIO Panel 12.0.3
 
-Wersja repozytoryjna przygotowana do publikacji na GitHubie i dalszej rozbudowy.
+Zakres aktualizacji:
+- Softcamy: dodano oscam.dvbapi - aktualizacja Poland na bazie pliku dołączonego do paczki.
+- Backup Listy Kanałów: zapis pełnej kopii list z datą oraz pliku ostatniej kopii.
+- Restore Listy Kanałów: przywracanie wykonywane przez oddzielny skrypt, aby operacja nie została przerwana po zatrzymaniu GUI.
 
-Najważniejsze poprawki:
-- automatyczne sortowanie premiowanych list kanałów od najnowszej do najstarszej
-- premiowani twórcy: Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller, Koncior, Twarek, Conrado, Dominiko/Dominico
-- naprawiona akcja Widoczność w menu tunera ON/OFF
-- aktualizacja numeru wersji i metadanych pakietu do 12.0.0
+Pozostałe funkcje wtyczki pozostawiono bez zmian.

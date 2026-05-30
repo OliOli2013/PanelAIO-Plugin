@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 12.0.2
+Wersja 12.0.3
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.2")
+VER = _read_local_version("12.0.3")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -1539,6 +1539,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
     ("⚙️ oscam.dvbapi - kasowanie zawartości", "CMD:MANAGE_DVBAPI"),
+    ("⚙️ oscam.dvbapi - aktualizacja Poland", "CMD:UPDATE_DVBAPI_POLAND"),
     ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Instalator", "CMD:INSTALL_SOFTCAM_SCRIPT"),
@@ -1578,6 +1579,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
     ("⚙️ oscam.dvbapi - clear file", "CMD:MANAGE_DVBAPI"),
+    ("⚙️ oscam.dvbapi - Poland update", "CMD:UPDATE_DVBAPI_POLAND"),
     ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Installer", "CMD:INSTALL_SOFTCAM_SCRIPT"),
@@ -3616,6 +3618,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔄 Restart Oscam": "Restartuje usługę Oscam (jeśli działa w systemie).\nPrzydatne po zmianie konfiguracji lub po zawieszeniu emulatora.",
         "🧹 Kasuj hasło Oscam": "Czyści hasło dostępu do WWW Oscam (jeśli jest ustawione).\nUłatwia odzyskanie dostępu do panelu bez reinstalacji.",
         "⚙️ oscam.dvbapi - kasowanie zawartości": "Czyści (kasuje zawartość) pliku oscam.dvbapi w konfiguracji Oscam.\nPrzydatne, gdy plik zawiera błędne wpisy lub chcesz zacząć od zera.",
+        "⚙️ oscam.dvbapi - aktualizacja Poland": "Podmienia oscam.dvbapi na gotową konfigurację Poland dołączoną do AIO Panel.\nPrzed podmianą tworzy kopię starego pliku i próbuje odświeżyć usługę Softcam/Oscam.",
         "📥 Softcam - Instalator": "Instaluje Softcam za pomocą skryptu (wget | bash).\nPo instalacji możesz doinstalować/wybrać emulator oraz przejść do instalacji Oscam z feed.",
         "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu, weryfikuje obecność pakietu po instalacji i próbuje odświeżyć Softcam.\nPo zakończeniu zalecany jest pełny restart tunera.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
@@ -3690,6 +3693,7 @@ FUNCTION_DESCRIPTIONS = {
         "🔄 Restart Oscam": "Restarts the Oscam service (if available on your image).\nUseful after config changes or when the emulator becomes unresponsive.",
         "🧹 Clear Oscam Password": "Clears the Oscam WebIF password (if configured).\nHelps regain panel access without reinstalling.",
         "⚙️ oscam.dvbapi - clear file": "Clears/truncates the oscam.dvbapi file in Oscam config directories.\nUseful if the file contains wrong entries or you want a clean start.",
+        "⚙️ oscam.dvbapi - Poland update": "Replaces oscam.dvbapi with the bundled Poland profile from AIO Panel.\nCreates a backup of the previous file and tries to refresh Softcam/Oscam afterwards.",
         "📥 Softcam - Installer": "Installs Softcam using the installer script (wget | bash).\nAfter install you can proceed with installing Oscam from your feed.",
         "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed, verifies the package after install and attempts to refresh Softcam.\nA full receiver reboot is recommended afterwards.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
@@ -4071,7 +4075,7 @@ class Panel(Screen):
 
             # Filtrowanie dla Hyperion/VTi
             if self.image_type in ["hyperion", "vti"]:
-                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_BEST_OSCAM"]
+                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:UPDATE_DVBAPI_POLAND", "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_BEST_OSCAM"]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
                     if action not in emu_actions_to_block: softcam_menu_filtered.append((name, action))
@@ -4741,6 +4745,7 @@ class Panel(Screen):
             elif key == "INSTALL_NCAM_FEED": self.install_ncam_feed()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
             elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
+            elif key == "UPDATE_DVBAPI_POLAND": self.update_oscam_dvbapi_poland()
             elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
             elif key == "PLUGIN_UPDATE_MANAGER": self.show_plugin_update_manager()
             elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
@@ -5657,40 +5662,158 @@ class Panel(Screen):
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def _get_backup_path(self):
-        if os.path.exists("/media/hdd") and os.path.ismount("/media/hdd"): return "/media/hdd/aio_backups/"
-        elif os.path.exists("/media/usb") and os.path.ismount("/media/usb"): return "/media/usb/aio_backups/"
-        elif os.path.exists("/media/hdd"): return "/media/hdd/aio_backups/"
-        elif os.path.exists("/media/usb"): return "/media/usb/aio_backups/"
+        # Prefer mounted external media, but fall back to /home/root so backup/restore is still usable.
+        candidates = []
+        for base in ("/media/hdd", "/media/usb", "/media/mmc", "/media/sda1", "/media/sdb1"):
+            try:
+                if os.path.ismount(base):
+                    candidates.append(base)
+            except Exception:
+                pass
+        for base in ("/media/hdd", "/media/usb", "/media/mmc", "/media/sda1", "/media/sdb1", "/home/root"):
+            if base not in candidates and os.path.isdir(base):
+                candidates.append(base)
+        if "/home/root" not in candidates:
+            candidates.append("/home/root")
+
+        for base in candidates:
+            try:
+                path = os.path.join(base, "aio_backups")
+                if not os.path.isdir(path):
+                    os.makedirs(path)
+                test = os.path.join(path, ".aio_write_test")
+                with open(test, "w") as f:
+                    f.write("ok")
+                try:
+                    os.remove(test)
+                except Exception:
+                    pass
+                return path + "/"
+            except Exception as e:
+                print("[AIO Panel] Backup path not writable {}: {}".format(base, e))
         return None
+
+    def _find_channel_backup_file(self, path):
+        latest = os.path.join(path, "aio_channels_backup.tar.gz")
+        if fileExists(latest):
+            return latest
+        try:
+            candidates = []
+            for fn in os.listdir(path):
+                if fn.startswith("aio_channels_backup_") and fn.endswith(".tar.gz"):
+                    candidates.append(os.path.join(path, fn))
+            candidates.sort(reverse=True)
+            if candidates:
+                return candidates[0]
+        except Exception as e:
+            print("[AIO Panel] Backup search error:", e)
+        return latest
 
     def backup_lists(self):
         path = self._get_backup_path()
         if not path:
-            show_message_compat(self.sess, "Brak nośnika HDD/USB." if self.lang == 'PL' else "No HDD/USB device found.", MessageBox.TYPE_ERROR); return
+            show_message_compat(self.sess, "Brak zapisywalnego miejsca na backup." if self.lang == 'PL' else "No writable backup location found.", MessageBox.TYPE_ERROR); return
         cmd = r'''
             set -e
             P="{p}"
-            OUT="$P/aio_channels_backup.tar.gz"
-            WORK="/tmp/aio_channels_backup_work"
+            STAMP=$(date +%Y%m%d_%H%M%S)
+            OUT="$P/aio_channels_backup_$STAMP.tar.gz"
+            LATEST="$P/aio_channels_backup.tar.gz"
+            WORK="/tmp/aio_channels_backup_work_$$"
+            SRC="/etc/enigma2"
+            echo "=== AIO Panel: Backup list kanałów ==="
+            echo "Źródło: $SRC"
+            echo "Katalog backupu: $P"
+            [ -d "$SRC" ] || {{ echo "Brak katalogu /etc/enigma2"; exit 1; }}
             mkdir -p "$P"
             rm -rf "$WORK"
             mkdir -p "$WORK"
-            cd /etc/enigma2
+            cd "$SRC"
             for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml; do
                 [ -f "$F" ] && cp -a "$F" "$WORK/" || true
             done
             for F in userbouquet.*.tv userbouquet.*.radio *.del; do
                 [ -f "$F" ] && cp -a "$F" "$WORK/" || true
             done
-            if [ -z "$(ls -A "$WORK" 2>/dev/null)" ]; then
+            COUNT=$(find "$WORK" -type f 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$COUNT" = "0" ] || [ -z "$COUNT" ]; then
                 echo "Brak plików list kanałów do backupu."
+                rm -rf "$WORK"
                 exit 1
             fi
-            tar -czf "$OUT" -C "$WORK" .
+            tar -czpf "$OUT" -C "$WORK" .
+            cp -f "$OUT" "$LATEST"
             rm -rf "$WORK"
-            echo "Backup list kanałów zapisany do: $OUT"
+            sync
+            echo "Zapisano plik: $OUT"
+            echo "Zaktualizowano kopię ostatnią: $LATEST"
+            echo "Liczba plików w backupie: $COUNT"
+            echo "Backup zakończony poprawnie."
         '''.format(p=path.rstrip('/'))
-        run_command_in_background(self.sess, "Backup Listy" if self.lang == 'PL' else "Channel List Backup", [cmd])
+        console_screen_open(self.sess, "Backup Listy" if self.lang == 'PL' else "Channel List Backup", [cmd], close_on_finish=False)
+
+    def restore_lists(self):
+        path = self._get_backup_path()
+        if not path:
+            show_message_compat(self.sess, "Brak zapisywalnego miejsca na backup." if self.lang == 'PL' else "No writable backup location found.", MessageBox.TYPE_ERROR); return
+        f = self._find_channel_backup_file(path)
+        if not fileExists(f):
+            show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
+        msg = "Przywrócić listę kanałów z pliku:\n{}\n\nEnigma2 zostanie zatrzymana, stare listy zostaną wyczyszczone, a GUI uruchomi się ponownie.".format(f) if self.lang == 'PL' else "Restore channel list from file:\n{}\n\nEnigma2 will be stopped, old lists will be cleared and the GUI will restart.".format(f)
+        cmd = r'''
+            set -e
+            ARCH="{archive}"
+            BACKUP_DIR="{backupdir}"
+            SCRIPT="/tmp/aio_restore_channels.sh"
+            LOG="/tmp/aio_restore_channels.log"
+            [ -f "$ARCH" ] || {{ echo "Brak archiwum: $ARCH"; exit 1; }}
+            tar -tzf "$ARCH" >/dev/null 2>&1 || {{ echo "Uszkodzony backup albo zły format archiwum: $ARCH"; exit 1; }}
+            cat > "$SCRIPT" <<AIO_RESTORE_EOF
+#!/bin/sh
+LOG="$LOG"
+exec >> "\$LOG" 2>&1
+ARCH="$ARCH"
+DEST="/etc/enigma2"
+BACKUP_DIR="$BACKUP_DIR"
+PRE="\$BACKUP_DIR/pre_restore_\$(date +%Y%m%d_%H%M%S)"
+echo "=== AIO Panel: Restore list kanałów ==="
+echo "Start: \$(date)"
+echo "Archiwum: \$ARCH"
+if [ ! -f "\$ARCH" ]; then echo "Brak archiwum: \$ARCH"; exit 1; fi
+if ! tar -tzf "\$ARCH" >/dev/null 2>&1; then echo "Uszkodzone archiwum: \$ARCH"; exit 1; fi
+mkdir -p "\$DEST" "\$PRE"
+cd "\$DEST" || exit 1
+for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml userbouquet.*.tv userbouquet.*.radio *.del; do
+    [ -f "\$F" ] && cp -a "\$F" "\$PRE/" || true
+done
+echo "Awaryjna kopia obecnych list: \$PRE"
+echo "Zatrzymuję Enigma2..."
+if command -v init >/dev/null 2>&1; then init 4 || true; fi
+if command -v systemctl >/dev/null 2>&1; then systemctl stop enigma2 2>/dev/null || true; fi
+killall -9 enigma2 2>/dev/null || true
+sleep 4
+echo "Czyszczę stare pliki list..."
+rm -f "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio \
+      "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio \
+      "\$DEST"/blacklist "\$DEST"/whitelist "\$DEST"/*.del 2>/dev/null || true
+echo "Przywracam backup..."
+tar -xzpf "\$ARCH" -C "\$DEST"
+[ -f "\$DEST/bouquets.tv" ] || printf '#NAME Bouquets (TV)\n' > "\$DEST/bouquets.tv"
+[ -f "\$DEST/bouquets.radio" ] || printf '#NAME Bouquets (Radio)\n' > "\$DEST/bouquets.radio"
+chmod 644 "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio 2>/dev/null || true
+sync
+echo "Restore zakończony: \$(date)"
+echo "Uruchamiam Enigma2..."
+if command -v init >/dev/null 2>&1; then init 3 || true; fi
+if command -v systemctl >/dev/null 2>&1; then systemctl start enigma2 2>/dev/null || true; fi
+exit 0
+AIO_RESTORE_EOF
+            chmod 755 "$SCRIPT"
+            nohup /bin/sh "$SCRIPT" >/tmp/aio_restore_channels_launcher.log 2>&1 &
+            echo "Restore uruchomiony w tle. Log: $LOG"
+            echo "Za chwilę GUI może zostać zatrzymane i uruchomione ponownie."
+        '''.format(archive=f, backupdir=path.rstrip('/'))
+        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def backup_oscam(self):
         path = self._get_backup_path()
@@ -5698,45 +5821,6 @@ class Panel(Screen):
             show_message_compat(self.sess, "Brak nośnika HDD/USB.", MessageBox.TYPE_ERROR); return
         cmd = "mkdir -p \"{p}\" && cd /etc/tuxbox/config && tar -czf \"{p}aio_oscam_config_backup.tar.gz\" . && echo 'Backup Oscam OK'".format(p=path)
         run_command_in_background(self.sess, "Backup Oscam", [cmd])
-
-    def restore_lists(self):
-        path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Brak nośnika HDD/USB." if self.lang == 'PL' else "No HDD/USB device found.", MessageBox.TYPE_ERROR); return
-        f = os.path.join(path, "aio_channels_backup.tar.gz")
-        if not fileExists(f):
-            show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
-        msg = "Przywrócić listę kanałów?\n\nEnigma2 zostanie zatrzymana i uruchomiona ponownie, aby przywrócić wszystkie bukiety poprawnie." if self.lang == 'PL' else "Restore channel list?\n\nEnigma2 will be stopped and started again to restore all bouquets correctly."
-        cmd = r'''
-            set -e
-            ARCH="{archive}"
-            DEST="/etc/enigma2"
-            PRE="/tmp/aio_pre_restore_enigma2_$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$DEST"
-            mkdir -p "$PRE"
-            cd "$DEST"
-            for F in lamedb lamedb5 bouquets.tv bouquets.radio userbouquet.*.tv userbouquet.*.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml; do
-                [ -f "$F" ] && cp -a "$F" "$PRE/" || true
-            done
-            echo "Zapisano awaryjną kopię obecnych list w: $PRE"
-            if command -v init >/dev/null 2>&1; then
-                init 4 || true
-                sleep 3
-            fi
-            rm -f "$DEST"/lamedb "$DEST"/lamedb5 "$DEST"/bouquets.tv "$DEST"/bouquets.radio \
-                  "$DEST"/userbouquet.*.tv "$DEST"/userbouquet.*.radio \
-                  "$DEST"/blacklist "$DEST"/whitelist 2>/dev/null || true
-            tar -xzf "$ARCH" -C "$DEST"
-            chmod 644 "$DEST"/lamedb "$DEST"/lamedb5 "$DEST"/bouquets.tv "$DEST"/bouquets.radio "$DEST"/userbouquet.*.tv "$DEST"/userbouquet.*.radio 2>/dev/null || true
-            sync
-            echo "Restore list kanałów zakończony."
-            if command -v init >/dev/null 2>&1; then
-                init 3 || true
-            else
-                killall -9 enigma2 2>/dev/null || true
-            fi
-        '''.format(archive=f)
-        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd]) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def restore_oscam(self):
         path = self._get_backup_path()
@@ -5840,6 +5924,53 @@ class Panel(Screen):
                 "Kasowanie oscam.dvbapi" if self.lang == 'PL' else "Clearing oscam.dvbapi",
                 [cmd]
             )
+
+    def update_oscam_dvbapi_poland(self):
+        src = os.path.join(PLUGIN_PATH, "oscam.dvbapi.poland")
+        if not fileExists(src):
+            show_message_compat(self.sess, "Brak pliku oscam.dvbapi.poland w paczce AIO." if self.lang == 'PL' else "Missing oscam.dvbapi.poland file in AIO package.", MessageBox.TYPE_ERROR)
+            return
+        title = "oscam.dvbapi - aktualizacja Poland" if self.lang == 'PL' else "oscam.dvbapi - Poland update"
+        cmd = r'''
+            set -u
+            SRC="{src}"
+            BASE="/etc/tuxbox/config"
+            TARGETS="/tmp/aio_dvbapi_targets_$$.txt"
+            STAMP=$(date +%Y%m%d_%H%M%S)
+            echo "=== AIO Panel: oscam.dvbapi Poland ==="
+            [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
+            mkdir -p "$BASE" 2>/dev/null || true
+            find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u > "$TARGETS"
+            if ! grep -qx "$BASE" "$TARGETS" 2>/dev/null; then
+                echo "$BASE" >> "$TARGETS"
+            fi
+            if [ ! -s "$TARGETS" ]; then
+                echo "$BASE" > "$TARGETS"
+            fi
+            COUNT=0
+            while IFS= read -r D; do
+                [ -n "$D" ] || continue
+                mkdir -p "$D" 2>/dev/null || true
+                if [ -f "$D/oscam.dvbapi" ]; then
+                    cp -a "$D/oscam.dvbapi" "$D/oscam.dvbapi.aio-bak-$STAMP" 2>/dev/null || true
+                fi
+                cp -f "$SRC" "$D/oscam.dvbapi"
+                chmod 644 "$D/oscam.dvbapi" 2>/dev/null || true
+                echo "Zaktualizowano: $D/oscam.dvbapi"
+                COUNT=$((COUNT + 1))
+            done < "$TARGETS"
+            rm -f "$TARGETS"
+            sync
+            echo "Zaktualizowanych lokalizacji: $COUNT"
+            echo "Odświeżam Softcam/Oscam..."
+            if [ -x /etc/init.d/softcam ]; then /etc/init.d/softcam restart 2>/dev/null || true; fi
+            if command -v systemctl >/dev/null 2>&1; then
+                systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
+            fi
+            killall -HUP oscam 2>/dev/null || true
+            echo "Gotowe."
+        '''.format(src=src)
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", ["(echo {0}; echo {0}) | passwd".format(p)]) if p else None, InputBox, title="Nowe hasło root")
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])

@@ -1,0 +1,8 @@
+Package: enigma2-plugin-extensions-panelaio
+Version: 12.0.3
+Section: extra
+Priority: optional
+Architecture: all
+Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
+Description: AIO Panel 12.0.3 with oscam.dvbapi Poland update and safer channel list backup/restore
+Depends: enigma2

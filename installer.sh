@@ -1,5 +1,5 @@
 #!/bin/sh
-# PanelAIO 12.0.2 - pełna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
+# PanelAIO 12.0.3 - pełna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -68,6 +68,8 @@ echo "[PanelAIO] Źródło: $SRC"
 rm -rf "$DST.new"
 mkdir -p "$DST.new"
 cp -R "$SRC"/. "$DST.new/"
+# Nie instaluj katalogów technicznych repozytorium na tunerze.
+rm -rf "$DST.new/release" "$DST.new/.git" "$DST.new/.github" 2>/dev/null || true
 
 rm -rf "$OLD" 2>/dev/null || true
 rm -rf "$DST.bak" 2>/dev/null || true

@@ -1,6 +1,7 @@
-AIO Panel 12.0.2 - zmienione pliki
+AIO Panel 12.0.3 - zmienione pliki
 - plugin.py
 - legacy_plugin.py
+- oscam.dvbapi.poland
 - version.txt
 - changelog.txt
 - README.md
