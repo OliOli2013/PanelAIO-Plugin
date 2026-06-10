@@ -1,16 +1,18 @@
+AIO Panel 12.0.5
+- poprawiono instalator z GitHuba na starszych obrazach Python 2 / BusyBox: katalog /tmp/panelaio_github_update/extract jest tworzony przed unzip,
+- dodano kontrolę pustego/uszkodzonego ZIP przed rozpakowaniem,
+- dodano czytelny błąd, gdy unzip nie jest dostępny, oraz próbę doinstalowania unzip przez opkg,
+- instalator dalej nie wymusza restartu tunera,
+- zachowano poprawki 12.0.4: bezpieczny start GUI, oscam.dvbapi Poland, Backup/Restore list kanałów.
+
 [12.0.4]
 AIO Panel 12.0.4
-- wyłączyłem zadania startowe przy uruchamianiu GUI Enigma2 — mniejsze ryzyko bootloopa,
-- usunąłem WHERE_SESSIONSTART z lekkiego plugin.py,
-- dodałem blokadę oczywistych instalatorów Python 3 na obrazach Python 2,
-- dodałem potwierdzenie przed uruchomieniem zewnętrznych instalatorów — domyślnie NIE,
-- AIO Panel nie wymusza już automatycznego restartu po instalatorach z menu,
-- Super Konfigurator nie wymusza już pełnego restartu po zakończeniu,
-- installer.sh z GitHuba nie robi już automatycznego rebootu,
-- dodałem czyszczenie starej lokalizacji:/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
-- dodałem czyszczenie starych pyc/pyo,
-- zostawiłem funkcję oscam.dvbapi - aktualizacja Poland,
-- zostawiłem poprawki Backup/Restore list kanałów.
+- dodano w zakładce Softcamy funkcję oscam.dvbapi - aktualizacja Poland,
+- dodano do paczki lokalny plik oscam.dvbapi.poland z danymi Poland,
+- przy aktualizacji oscam.dvbapi tworzona jest kopia starego pliku i wykonywane jest odświeżenie Softcam/Oscam,
+- poprawiono Backup Listy Kanałów: lepszy wybór miejsca zapisu, kopia z datą i stały plik ostatniej kopii aio_channels_backup.tar.gz,
+- poprawiono Restore Listy Kanałów: walidacja archiwum, awaryjna kopia obecnych list i bezpieczne przywracanie przez osobny skrypt po zatrzymaniu GUI,
+- nie zmieniano pozostałych działających funkcji wtyczki.
 
 [12.0.2]
 AIO Panel 12.0.2
