@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
-PKG="enigma2-plugin-extensions-panelaio_12.0.6_all.ipk"
+PKG="enigma2-plugin-extensions-panelaio_12.0.5_all.ipk"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TMP="/tmp/panelaio_build_12_0_6"
+TMP="/tmp/panelaio_build_12_0_5"
 rm -rf "$TMP"
 mkdir -p "$TMP/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO" "$TMP/ctrl"
 cp -R "$ROOT"/. "$TMP/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO/"

@@ -1,8 +1,8 @@
 Package: enigma2-plugin-extensions-panelaio
-Version: 12.0.6
+Version: 12.0.5
 Section: extra
 Priority: optional
 Architecture: all
 Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
-Description: AIO Panel 12.0.6 - Python 2/3 stability audit fixes: subprocess timeout guard, SSL fallback, PanelAIO class rename, safe desktop and file reads
+Description: AIO Panel 12.0.5 - installer unzip fix for older Python 2/BusyBox images, safe Python 2/3 update, oscam.dvbapi Poland and backup/restore fixes
 Depends: enigma2
