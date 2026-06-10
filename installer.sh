@@ -1,5 +1,5 @@
 #!/bin/sh
-# PanelAIO 12.0.3 - pełna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
+# PanelAIO 12.0.4 - bezpieczna instalacja/aktualizacja z GitHuba dla architektury wielokatalogowej
 set -e
 
 REPO="OliOli2013/PanelAIO-Plugin"
@@ -72,13 +72,15 @@ cp -R "$SRC"/. "$DST.new/"
 rm -rf "$DST.new/release" "$DST.new/.git" "$DST.new/.github" 2>/dev/null || true
 
 rm -rf "$OLD" 2>/dev/null || true
+find "$DST" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
+find "$DST" -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null || true
 rm -rf "$DST.bak" 2>/dev/null || true
 [ -d "$DST" ] && mv "$DST" "$DST.bak" || true
 mv "$DST.new" "$DST"
 rm -rf "$DST.bak" 2>/dev/null || true
 
 find "$DST" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
-find "$DST" -type f -name "*.pyc" -delete 2>/dev/null || true
+find "$DST" -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null || true
 
 find "$DST" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
 find "$DST" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true
@@ -87,14 +89,7 @@ find "$DST" -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true
 
 sync || true
 echo "[PanelAIO] Zainstalowano wersję $(cat "$DST/version.txt" 2>/dev/null || echo unknown)"
-echo "[PanelAIO] Wykonywanie pełnego restartu odbiornika..."
-sleep 2
-if command -v reboot >/dev/null 2>&1; then
-    reboot || init 6 || killall -9 enigma2 2>/dev/null || true
-elif command -v init >/dev/null 2>&1; then
-    init 6 || killall -9 enigma2 2>/dev/null || true
-else
-    killall -9 enigma2 2>/dev/null || true
-fi
+echo "[PanelAIO] Gotowe. AIO Panel 12.0.4 nie wymusza restartu odbiornika."
+echo "[PanelAIO] Zalecenie: wykonaj ręczny restart GUI lub pełny restart wtedy, gdy tuner działa stabilnie."
 
 exit 0

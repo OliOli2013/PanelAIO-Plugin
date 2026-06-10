@@ -1,34 +1,41 @@
-# AIO Panel 12.0.3
+# AIO Panel 12.0.4
 
-AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.3 zachowuje bezpieczne, lekkie ładowanie z 12.0.2 i dodaje poprawki bez naruszania pozostałych funkcji wtyczki.
+AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.4 jest aktualizacją stabilizacyjną po zgłoszeniach użytkowników dotyczących restartów, bootloopów oraz problemów na obrazach Python 2.
 
-## Najważniejsze zmiany 12.0.3
+## Najważniejsze zmiany 12.0.4
 
-- dodano w zakładce Softcamy funkcję `oscam.dvbapi - aktualizacja Poland`,
-- funkcja korzysta z pliku `oscam.dvbapi.poland` dołączonego do paczki, więc działa offline,
-- przed podmianą istniejącego `oscam.dvbapi` tworzona jest kopia zapasowa starego pliku,
-- poprawiono Backup Listy Kanałów: lepsze wykrywanie zapisywalnego miejsca, kopia z datą oraz plik `aio_channels_backup.tar.gz` jako ostatnia kopia,
-- poprawiono Restore Listy Kanałów: weryfikacja archiwum przed przywróceniem, awaryjna kopia obecnych list i bezpieczne przywracanie przez osobny skrypt, który działa także po zatrzymaniu GUI,
-- zachowano poprawkę 12.0.2 ograniczającą ryzyko bootloopa na OpenATV 8 / beta.
+- wyłączono zadania startowe wykonywane przy uruchamianiu GUI,
+- zablokowano oczywiste instalatory Python 3 na obrazach Python 2,
+- dodano potwierdzenie przed uruchamianiem zewnętrznych instalatorów, domyślnie ustawione na NIE,
+- AIO Panel nie wymusza już automatycznego restartu GUI/odbiornika po instalatorach z menu,
+- instalator GitHub nie wykonuje już automatycznego rebootu po aktualizacji,
+- dodano czyszczenie starej lokalizacji `Extensions/PanelAIO` oraz plików `pyc/pyo`,
+- zachowano funkcję `oscam.dvbapi - aktualizacja Poland`,
+- zachowano poprawki Backup/Restore list kanałów z 12.0.3.
 
 ## Instalacja z IPK
 
 ```sh
-opkg remove enigma2-plugin-extensions-panelaio
-opkg install /tmp/enigma2-plugin-extensions-panelaio_12.0.3_all.ipk
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_12.0.4_all.ipk
 reboot
 ```
 
-## Aktualizacja z GitHuba
+## Awaryjne usunięcie starej wersji
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
+init 4
+opkg remove enigma2-plugin-extensions-panelaio 2>/dev/null
+rm -rf /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO
+rm -rf /usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
+find /usr/lib/enigma2/python/Plugins -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null
+find /usr/lib/enigma2/python/Plugins -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null
+sync
+init 3
 ```
 
-## Struktura repozytorium
+## Pliki
 
-- `plugin.py` — lekki i bezpieczny entry point ładowany przy starcie Enigma2,
-- `legacy_plugin.py` — pełna logika AIO Panel ładowana dopiero po otwarciu wtyczki,
+- `plugin.py` — lekki entry point bez zadań startowych,
+- `legacy_plugin.py` — pełna logika AIO Panel ładowana dopiero po otwarciu,
 - `oscam.dvbapi.poland` — lokalny wzorzec dla funkcji aktualizacji Poland,
-- `core/`, `ui/`, `data/` — moduły architektury AIO,
-- `installer.sh` — aktualizacja z GitHuba.
+- `installer.sh` — bezpieczny instalator GitHub bez wymuszonego rebootu.

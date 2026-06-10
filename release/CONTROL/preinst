@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# AIO Panel 12.0.4 - clean stale copies before unpacking new package.
+rm -rf /usr/lib/enigma2/python/Plugins/Extensions/PanelAIO 2>/dev/null || true
+find /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
+find /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null || true
+exit 0

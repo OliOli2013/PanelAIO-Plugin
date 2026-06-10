@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 """AIO Panel entry point.
 
-v12.0.3 keeps the heavy runtime layer lazy-loaded and adds safe maintenance fixes.  Enigma2 imports plugin.py
+v12.0.4 keeps the heavy runtime layer lazy-loaded and disables startup-side tasks.  Enigma2 imports plugin.py
 while building the plugin list and during GUI startup; loading the whole PanelAIO
 runtime at that moment is risky on some OpenATV 8 / beta images.  The dashboard
 runtime is imported only when the user opens AIO Panel, while the menu entry and
@@ -29,7 +29,7 @@ except Exception:
     eTimer = None
 
 PLUGIN_NAME = 'AIO Panel'
-DEFAULT_VERSION = '12.0.3'
+DEFAULT_VERSION = '12.0.4'
 MENU_VISIBILITY_FALLBACK_FILE = '/etc/enigma2/.panelaio_show_in_menu'
 
 _auto_ram_timer = None
@@ -178,9 +178,8 @@ def _apply_auto_ram_from_config():
 
 
 def sessionstart(reason, session=None, **kwargs):
-    # Keep GUI startup safe: do not import the full legacy runtime here.
-    if reason == 0:
-        _apply_auto_ram_from_config()
+    # v12.0.4: absolute safe startup. Do not run timers, shell commands or runtime imports during boot.
+    return None
 
 
 def menu(menuid, **kwargs):
@@ -210,5 +209,4 @@ def Plugins(**kwargs):
             fnc=main
         ),
         PluginDescriptor(where=PluginDescriptor.WHERE_MENU, fnc=menu),
-        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart),
     ]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 12.0.3
+Wersja 12.0.4
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.3")
+VER = _read_local_version("12.0.4")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -658,7 +658,7 @@ Your version: {current_ver}
 
 Changelog:
 {changelog}
-Do you want to install it now?\n\nA full receiver reboot is recommended after install/update!""",
+Do you want to install it now?\n\nA manual reboot is recommended after checking that the system is stable.""",
         "already_latest": "You are using the latest version of the plugin ({ver}).",
         "update_check_error": "Could not check for updates.\nPlease check your internet connection.",
         "update_generic_error": "An error occurred while checking for updates.",
@@ -1244,7 +1244,7 @@ def _resolve_custom_remote_data(entry):
 
     if not install_cmd and download_url:
         tmp_ipk = ensure_unicode(entry.get("tmp_ipk", "")).strip() or "/tmp/custom_update.ipk"
-        install_cmd = "wget -O {tmp} {url} && opkg install {tmp} && killall -9 enigma2".format(
+        install_cmd = "wget -O {tmp} {url} && opkg install {tmp} && echo 'AIO Panel: restart wykonaj ręcznie po sprawdzeniu systemu.'".format(
             tmp=tmp_ipk,
             url=download_url
         )
@@ -1351,7 +1351,7 @@ def _get_aio_tips(lang="PL"):
         "Przed podmianą list kanałów zrób szybki backup – przywrócenie trwa chwilę i oszczędza nerwów.",
         "Zakładka Informacje o Systemie to dobry pierwszy krok przy diagnozie: od razu widać uptime, RAM i aktywne IP.",
         "Lokalny changelog działa także bez internetu – przydatne, gdy GitHub chwilowo nie odpowiada na starszych obrazach.",
-        "Po większej aktualizacji AIO Panel zaakceptuj pełny restart tunera – zmniejsza to ryzyko zawieszenia na ekranie startowym.",
+        "Po większej aktualizacji AIO Panel wykonaj restart ręcznie dopiero wtedy, gdy system działa stabilnie.",
         "W wersji 12.0 możesz nadal edytować Tip dnia w pliku aio_tips.txt bez ingerencji w plugin.py – wystarczy dopisać nowe linie w sekcji [PL]."
     ]
     tips_en = [
@@ -1363,7 +1363,7 @@ def _get_aio_tips(lang="PL"):
         "Create a quick backup before replacing channel lists – restore takes only a moment and avoids frustration.",
         "System Information is a good first stop for troubleshooting: uptime, RAM and active IPs are visible immediately.",
         "The local changelog works even without internet access, which helps on older images when GitHub is unreachable.",
-        "After a larger AIO Panel update, accept the full receiver reboot – it reduces the risk of getting stuck on the startup screen.",
+        "After a larger AIO Panel update, reboot manually only after checking that the system is stable.",
         "In version 12.0 you can still edit the daily tip in aio_tips.txt without touching plugin.py – just add new lines under [EN]."
     ]
     return tips_pl if lang == "PL" else tips_en
@@ -1555,8 +1555,8 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("📺 Simple IPTV EPG - Instalator", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
-    ("📻 NeoRadio Online - Instalator", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && killall -9 enigma2"),
-    ("📺 Bouquet Maker Xtream - Instalator", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && killall -9 enigma2"),
+    ("📻 NeoRadio Online - Instalator", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && echo 'AIO Panel: restart wykonaj ręcznie.'"),
+    ("📺 Bouquet Maker Xtream - Instalator", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && echo 'AIO Panel: restart wykonaj ręcznie.'"),
     ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -1595,8 +1595,8 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
     ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
     ("📺 Simple IPTV EPG - Installer", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
-    ("📻 NeoRadio Online - Installer", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && killall -9 enigma2"),
-    ("📺 Bouquet Maker Xtream - Installer", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && killall -9 enigma2"),
+    ("📻 NeoRadio Online - Installer", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && echo 'AIO Panel: restart wykonaj ręcznie.'"),
+    ("📺 Bouquet Maker Xtream - Installer", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && echo 'AIO Panel: restart wykonaj ręcznie.'"),
     ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
     ("🔄 MyUpdater v5.1 - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
     ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
@@ -2208,27 +2208,20 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona!\n\nZa chwilę nastąpi restart całego systemu tunera...\n\n"
-            "Installation completed!\n\nThe receiver will reboot now..."
+            "Instalacja zakończona.\n\nAIO Panel 12.0.4 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 12.0.4 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
-        # [FIX] Czasami GUI nie zamyka się poprawnie przy dużym obciążeniu po instalacji.
-        # Wydłużamy czas do 4s i dodajemy bezpiecznik w do_restart_and_close
-        reactor.callLater(4, self.do_restart_and_close)
+        reactor.callLater(6, self.close)
 
     def do_restart_and_close(self):
+        # Pozostawione dla kompatybilności starszych wywołań, ale bez wymuszonego restartu.
         try:
-            # Próba "ładnego" restartu
-            self.session.open(TryQuitMainloop, 2 if self.reboot_mode == "full" else 3)
-            
-            # [FIX] Zabezpieczenie na wypadek zawieszenia się GUI po instalacji FULL (np. picony)
-            # Jeśli TryQuitMainloop nie zadziała w ciągu 3 sekund, wymuś reboot z poziomu systemu.
-            def force_reboot_if_hung():
-                print("[AIO Panel] Wymuszanie restartu (fallback)...")
-                os.system("reboot || killall -9 enigma2") if self.reboot_mode == "full" else os.system("killall -9 enigma2")
-            
-            reactor.callLater(3, force_reboot_if_hung)
-            
-        finally:
+            self["message"].setText("Restart automatyczny został pominięty. Wykonaj restart ręcznie.")
+        except Exception:
+            pass
+        try:
+            reactor.callLater(2, self.close)
+        except Exception:
             self.close()
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
@@ -5833,9 +5826,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nDla pewnego startu wtyczek i usług zalecany jest teraz pełny restart tunera.\nCzy wykonać go teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 12.0.4 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nFor a clean plugin and service startup, a full receiver reboot is recommended now.\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 12.0.4 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -5845,7 +5838,7 @@ AIO_RESTORE_EOF
                     MessageBox,
                     msg,
                     MessageBox.TYPE_YESNO,
-                    default=True
+                    default=False
                 )
             except Exception as e:
                 print("[AIO Panel] Reboot prompt open error:", e)
@@ -5855,8 +5848,63 @@ AIO_RESTORE_EOF
         else:
             _open_reboot_prompt()
 
+    def _is_py2_incompatible_install(self, title, cmdlist):
+        try:
+            combined = (title + " " + " ".join(cmdlist)).lower()
+        except Exception:
+            combined = title.lower()
+        py3_markers = [
+            "python3", "py3", "_py3", "python3/", "refs/heads/python3",
+            "e2kodi", "youtube_py3", "enigma2-plugin-youtube"
+        ]
+        for marker in py3_markers:
+            if marker in combined:
+                return True
+        return False
+
+    def _sanitize_install_command(self, cmd):
+        # Nie pozwalamy, aby pozycje z menu same zabijały GUI. Restart ma być świadomą decyzją użytkownika.
+        try:
+            replacements = [
+                "&& killall -9 enigma2", "; echo 'AIO Panel: restart wykonaj ręcznie.'", "killall -9 enigma2",
+                "&& reboot", "; reboot", " reboot", "&& init 6", "; init 6", " init 6", "&& killall enigma2", "; killall enigma2", "killall enigma2"
+            ]
+            safe = cmd
+            for item in replacements:
+                safe = safe.replace(item, " && echo 'AIO Panel: automatyczny restart pominięty, restart wykonaj ręcznie.'")
+            return safe
+        except Exception:
+            return cmd
+
+    def _open_console_install_action_confirmed(self, title, cmdlist):
+        safe_cmdlist = [self._sanitize_install_command(c) for c in cmdlist]
+        console_screen_open(self.sess, title, safe_cmdlist, callback=self._ask_reboot_after_install, close_on_finish=False)
+
     def _open_console_install_action(self, title, cmdlist):
-        console_screen_open(self.sess, title, cmdlist, callback=self._ask_reboot_after_install, close_on_finish=False)
+        if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
+            msg = (
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 12.0.4, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                if self.lang == 'PL' else
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 12.0.4 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+            )
+            show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
+            return
+
+        msg = (
+            "Uruchomić zewnętrzny instalator?\n\nAIO Panel nie wymusi restartu GUI po zakończeniu. Jeżeli instalator danej wtyczki jest wadliwy albo niezgodny z obrazem/Pythonem, system może zgłaszać błędy dopiero po restarcie.\n\nFunkcja: %s" % title
+            if self.lang == 'PL' else
+            "Run external installer?\n\nAIO Panel will not force a GUI restart after finishing. If the external plugin installer is faulty or incompatible with the image/Python version, errors may appear after reboot.\n\nFunction: %s" % title
+        )
+        try:
+            self.sess.openWithCallback(
+                lambda ret: self._open_console_install_action_confirmed(title, cmdlist) if ret else None,
+                MessageBox,
+                msg,
+                MessageBox.TYPE_YESNO,
+                default=False
+            )
+        except Exception:
+            self._open_console_install_action_confirmed(title, cmdlist)
 
     def restart_gui(self): self.sess.open(TryQuitMainloop, 3)
 
@@ -6337,12 +6385,8 @@ def main(session, **kwargs):
 
 
 def sessionstart(reason, session=None, **kwargs):
-    # reason == 0: start, reason == 1: shutdown
-    if reason == 0:
-        try:
-            _apply_auto_ram_from_config()
-        except Exception as e:
-            print("[AIO Panel] sessionstart error:", e)
+    # v12.0.4: no startup task in legacy runtime either.
+    return None
 def menu(menuid, **kwargs):
     # Register in:
     # - Main Menu (MENU button): menuid == "mainmenu"
@@ -6371,5 +6415,4 @@ def Plugins(**kwargs):
         ),
         # Menu -> Setup -> System
         PluginDescriptor(where=PluginDescriptor.WHERE_MENU, fnc=menu),
-        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart),
     ]

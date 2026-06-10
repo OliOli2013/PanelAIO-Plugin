@@ -1,8 +1,9 @@
-AIO Panel 12.0.3
+AIO Panel 12.0.4
 
-Zakres aktualizacji:
-- Softcamy: dodano oscam.dvbapi - aktualizacja Poland na bazie pliku dołączonego do paczki.
-- Backup Listy Kanałów: zapis pełnej kopii list z datą oraz pliku ostatniej kopii.
-- Restore Listy Kanałów: przywracanie wykonywane przez oddzielny skrypt, aby operacja nie została przerwana po zatrzymaniu GUI.
-
-Pozostałe funkcje wtyczki pozostawiono bez zmian.
+Zakres aktualizacji stabilizacyjnej:
+- brak zadań startowych przy ładowaniu GUI Enigma2,
+- blokada oczywistych instalatorów Python 3 na Pythonie 2,
+- zewnętrzne instalatory wymagają potwierdzenia i nie wymuszają automatycznego restartu,
+- instalator GitHub nie wykonuje automatycznego rebootu,
+- czyszczenie starej lokalizacji i starych plików pyc/pyo,
+- zachowanie poprawek oscam.dvbapi Poland oraz Backup/Restore.
