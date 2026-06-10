@@ -1,8 +1,8 @@
-# AIO Panel 12.0.5
+# AIO Panel 12.0.6
 
-AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.5 jest aktualizacją stabilizacyjną po zgłoszeniach użytkowników dotyczących restartów, bootloopów oraz problemów na obrazach Python 2.
+AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.6 jest aktualizacją stabilizacyjną po zgłoszeniach użytkowników dotyczących restartów, bootloopów oraz problemów na obrazach Python 2.
 
-## Najważniejsze zmiany 12.0.5
+## Najważniejsze zmiany 12.0.6
 
 - wyłączono zadania startowe wykonywane przy uruchamianiu GUI,
 - zablokowano oczywiste instalatory Python 3 na obrazach Python 2,
@@ -16,7 +16,7 @@ AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.5 jest aktualizacją st
 ## Instalacja z IPK
 
 ```sh
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_12.0.5_all.ipk
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_12.0.6_all.ipk
 reboot
 ```
 

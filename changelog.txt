@@ -1,3 +1,12 @@
+[12.0.6]
+AIO Panel 12.0.6
+- poprawiono _run_shell_capture: stabilna obsługa timeoutu na Python 3 oraz bezpieczny Timer na Python 2,
+- poprawiono pobieranie urlopen na Python 3 przy problemach z certyfikatami CA,
+- zmieniono nazwę klasy głównego ekranu z Panel na PanelAIO,
+- doprecyzowano _desktop_size(),
+- poprawiono _read_first tak, aby zamykał deskryptor pliku przez with,
+- zachowano poprawkę instalatora unzip z 12.0.5.
+
 [12.0.5]
 AIO Panel 12.0.5
 - poprawiono instalator z GitHuba na starszych obrazach Python 2 / BusyBox: katalog /tmp/panelaio_github_update/extract jest tworzony przed unzip,

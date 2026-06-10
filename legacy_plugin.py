@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 12.0.4
+Wersja 12.0.6
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -21,7 +21,7 @@ import re
 import json
 import time
 import io
-from threading import Thread
+from threading import Thread, Timer
 from twisted.internet import reactor
 
 # Wykrywanie wersji Pythona
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.4")
+VER = _read_local_version("12.0.6")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -395,8 +395,10 @@ LEGEND_INFO = " "
 def _desktop_size():
     try:
         if getDesktop is not None:
-            sz = getDesktop(0).size()
-            return int(sz.width()), int(sz.height())
+            desktop = getDesktop(0)
+            if desktop is not None:
+                sz = desktop.size()
+                return int(sz.width()), int(sz.height())
     except Exception:
         pass
     return 1280, 720
@@ -788,7 +790,17 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
     for _idx in range(max(1, int(tries))):
         try:
             request = Request(url, headers={'User-Agent': 'Enigma2'})
-            response = urlopen(request, timeout=timeout)
+            response = None
+            if IS_PY3 and allow_insecure_fallback:
+                try:
+                    import ssl
+                    ssl_context = ssl._create_unverified_context()
+                except Exception:
+                    ssl_context = None
+                if ssl_context is not None:
+                    response = urlopen(request, timeout=timeout, context=ssl_context)
+            if response is None:
+                response = urlopen(request, timeout=timeout)
             try:
                 payload = response.read()
             finally:
@@ -891,13 +903,67 @@ def _decode_bytes(payload):
     except Exception:
         return ""
 
-def _run_shell_capture(cmd):
+def _kill_process_safe(process):
+    try:
+        process.kill()
+        return
+    except Exception:
+        pass
+    try:
+        process.terminate()
+        return
+    except Exception:
+        pass
+    try:
+        os.kill(process.pid, 9)
+    except Exception:
+        pass
+
+def _run_shell_capture(cmd, timeout=30):
+    process = None
     try:
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
+        if IS_PY3:
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except getattr(subprocess, 'TimeoutExpired', Exception):
+                _kill_process_safe(process)
+                try:
+                    stdout, stderr = process.communicate()
+                except Exception:
+                    stdout, stderr = b'', b''
+                return 255, _decode_bytes(stdout), 'Timeout'
+        else:
+            timed_out = [False]
+            timer = None
+            try:
+                if timeout and int(timeout) > 0:
+                    def _timeout_kill():
+                        timed_out[0] = True
+                        _kill_process_safe(process)
+                    timer = Timer(float(timeout), _timeout_kill)
+                    timer.daemon = True
+                    timer.start()
+            except Exception:
+                timer = None
+            try:
+                stdout, stderr = process.communicate()
+            finally:
+                try:
+                    if timer is not None:
+                        timer.cancel()
+                except Exception:
+                    pass
+            if timed_out[0]:
+                return 255, _decode_bytes(stdout), 'Timeout'
         return process.returncode, _decode_bytes(stdout), _decode_bytes(stderr)
     except Exception as e:
-        return 255, "", ensure_unicode(e)
+        try:
+            if process is not None:
+                _kill_process_safe(process)
+        except Exception:
+            pass
+        return 255, '', ensure_unicode(e)
 
 def _safe_shell_arg(value):
     txt = ensure_unicode(value).replace("'", "'\''")
@@ -2208,8 +2274,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 12.0.4 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 12.0.4 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 12.0.6 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 12.0.6 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -2362,7 +2428,7 @@ class AIOLoadingScreen(Screen):
             "s4a_lists_full": [],
             "best_oscam_version": "Auto"
         }
-        self.session.open(Panel, data)
+        self.session.open(PanelAIO, data)
         self.close()
 
     def _loading_timeout_fallback(self):
@@ -2631,7 +2697,7 @@ class AIOTipPopupScreen(Screen):
             pass
 
 
-# === KLASA Panel (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
+# === KLASA PanelAIO (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
 
 # === NOWE EKRANY v5.0 ===
 
@@ -3179,7 +3245,8 @@ class SystemInfoScreen(Screen):
 
     def _read_first(self, path):
         try:
-            return open(path, "r").read().strip()
+            with open(path, "r") as f:
+                return f.read().strip()
         except Exception:
             return ""
 
@@ -3801,7 +3868,7 @@ class SuperWizardChoiceScreen(Screen):
 
 
 
-class Panel(Screen):
+class PanelAIO(Screen):
     # Modern Dashboard UI v9.5 (adaptive HD/FHD layout)
     skin = _panel_main_skin()
 
@@ -5826,9 +5893,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 12.0.4 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 12.0.6 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 12.0.4 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 12.0.6 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -5883,9 +5950,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 12.0.4, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 12.0.6, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 12.0.4 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 12.0.6 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
