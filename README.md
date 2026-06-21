@@ -1,41 +1,22 @@
-# AIO Panel 12.0.5
+# AIO Panel 13.0.0 Final
 
-AIO Panel dla Enigma2 / Python 2 i Python 3. Wersja 12.0.5 jest aktualizacją stabilizacyjną po zgłoszeniach użytkowników dotyczących restartów, bootloopów oraz problemów na obrazach Python 2.
+AIO Panel dla Enigma2 / Python 2 i Python 3.
 
-## Najważniejsze zmiany 12.0.5
+## Najważniejsze zmiany 13.0.0 Final
 
-- wyłączono zadania startowe wykonywane przy uruchamianiu GUI,
-- zablokowano oczywiste instalatory Python 3 na obrazach Python 2,
-- dodano potwierdzenie przed uruchamianiem zewnętrznych instalatorów, domyślnie ustawione na NIE,
-- AIO Panel nie wymusza już automatycznego restartu GUI/odbiornika po instalatorach z menu,
-- instalator GitHub nie wykonuje już automatycznego rebootu po aktualizacji,
-- dodano czyszczenie starej lokalizacji `Extensions/PanelAIO` oraz plików `pyc/pyo`,
-- zachowano funkcję `oscam.dvbapi - aktualizacja Poland`,
-- zachowano poprawki Backup/Restore list kanałów z 12.0.3.
+- naprawa problemu ze skinem Algare FHD i podobnymi skinami: AIO nie używa już ryzykownego `MessageBox(enable_input=False)` przy zadaniach w tle,
+- bezpieczny fallback dla okien MessageBox — jeśli skin nie potrafi narysować okna, wtyczka nie powinna wywalić Enigma2,
+- poprawione funkcje Oscam: `oscam.dvbapi Poland`, czyszczenie `oscam.dvbapi`, `oscam.srvid/srvid2`, `SoftCam.Key` oraz czyszczenie hasła,
+- wykrywanie realnego katalogu aktywnego Oscama z procesu `/proc/<pid>/cmdline` i parametru `-c`,
+- zabezpieczenie dla Oscam jej@n / S4Updater — AIO przerywa operację, jeśli nie potrafi jednoznacznie wykryć katalogu konfiguracji,
+- kopie bezpieczeństwa przed podmianą plików Oscam,
+- dodany instalator `Oscam Levi45` w zakładce Softcamy,
+- menu pokazuje prostą nazwę `Oscam Levi45` oraz wykryty numer lokalnej binarki Oscam.
 
-## Instalacja z IPK
-
-```sh
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_12.0.5_all.ipk
-reboot
-```
-
-## Awaryjne usunięcie starej wersji
+## Instalacja IPK
 
 ```sh
-init 4
-opkg remove enigma2-plugin-extensions-panelaio 2>/dev/null
-rm -rf /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO
-rm -rf /usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
-find /usr/lib/enigma2/python/Plugins -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null
-find /usr/lib/enigma2/python/Plugins -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null
-sync
-init 3
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.0_all.ipk
 ```
 
-## Pliki
-
-- `plugin.py` — lekki entry point bez zadań startowych,
-- `legacy_plugin.py` — pełna logika AIO Panel ładowana dopiero po otwarciu,
-- `oscam.dvbapi.poland` — lokalny wzorzec dla funkcji aktualizacji Poland,
-- `installer.sh` — bezpieczny instalator GitHub bez wymuszonego rebootu.
+Po instalacji wykonaj ręcznie restart GUI lub pełny restart tunera.

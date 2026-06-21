@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 12.0.4
+Wersja 13.0.0 Final
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -21,7 +21,7 @@ import re
 import json
 import time
 import io
-from threading import Thread
+from threading import Thread, Timer
 from twisted.internet import reactor
 
 # Wykrywanie wersji Pythona
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("12.0.4")
+VER = _read_local_version("13.0.0")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -395,8 +395,10 @@ LEGEND_INFO = " "
 def _desktop_size():
     try:
         if getDesktop is not None:
-            sz = getDesktop(0).size()
-            return int(sz.width()), int(sz.height())
+            desktop = getDesktop(0)
+            if desktop is not None:
+                sz = desktop.size()
+                return int(sz.width()), int(sz.height())
     except Exception:
         pass
     return 1280, 720
@@ -691,36 +693,81 @@ Do you want to install it now?\n\nA manual reboot is recommended after checking 
 }
 
 # === POMOCNICZE (GLOBALNE) ===
+def _safe_messagebox_open_now(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None, default=None):
+    """Safe MessageBox opener for skins with broken/strict MessageBox skin applets.
+
+    Some FHD skins (reported: Algare FHD) can crash Enigma2 while applying the
+    system MessageBox skin, especially with uncommon kwargs such as
+    enable_input=False. AIO must never crash the GUI just because a wait/info
+    window cannot be skinned.
+    """
+    try:
+        kwargs = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        if default is not None:
+            kwargs["default"] = default
+        if on_close:
+            return session.openWithCallback(on_close, MessageBox, message, message_type, **kwargs)
+        return session.open(MessageBox, message, message_type, **kwargs)
+    except Exception as e:
+        print("[AIO Panel] MessageBox blocked by skin compatibility guard:", e)
+        try:
+            if on_close:
+                on_close(False)
+        except Exception:
+            pass
+        return None
+
+
 def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, timeout=10, on_close=None):
-    if on_close:
-        reactor.callLater(0.2, lambda: session.openWithCallback(on_close, MessageBox, message, message_type, timeout=timeout))
+    def _open_safe():
+        _safe_messagebox_open_now(session, message, message_type, timeout=timeout, on_close=on_close)
+    if reactor.running:
+        reactor.callLater(0.2, _open_safe)
     else:
-        reactor.callLater(0.2, lambda: session.open(MessageBox, message, message_type, timeout=timeout))
+        _open_safe()
 
 # --- FUNKCJA URUCHAMIANIA W TLE (Dla zadań wewnętrznych) ---
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
-    Otwiera okno "Proszę czekać..." i uruchamia polecenia shella w osobnym wątku.
+    Uruchamia polecenia shella w osobnym wątku.
+    v13.0.0 Final: nie używa już MessageBox(enable_input=False), bo ta kombinacja
+    powodowała crash na niektórych skinach FHD (np. Algare FHD).
     """
-    wait_message = session.open(MessageBox, "Trwa wykonywanie: {}\n\nProszę czekać...".format(title), MessageBox.TYPE_INFO, enable_input=False)
-    
+    wait_message = None
+    try:
+        wait_message = _safe_messagebox_open_now(
+            session,
+            "Trwa wykonywanie: {}\n\nProszę czekać...".format(title),
+            MessageBox.TYPE_INFO,
+            timeout=3
+        )
+    except Exception as e:
+        print("[AIO Panel] Wait MessageBox skipped:", e)
+        wait_message = None
+
     def command_thread():
         try:
             for cmd in cmd_list:
                 print("[AIO Panel] Uruchamianie w tle [{}]: {}".format(title, cmd))
                 process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 stdout, stderr = process.communicate()
-                
+
                 if process.returncode != 0:
                     print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
-                
+
         except Exception as e:
             print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
         finally:
             reactor.callFromThread(on_finish_thread)
 
     def on_finish_thread():
-        wait_message.close()
+        if wait_message is not None:
+            try:
+                wait_message.close()
+            except Exception as e:
+                print("[AIO Panel] Wait MessageBox close skipped:", e)
         if callback_on_finish:
             try:
                 callback_on_finish()
@@ -788,7 +835,17 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
     for _idx in range(max(1, int(tries))):
         try:
             request = Request(url, headers={'User-Agent': 'Enigma2'})
-            response = urlopen(request, timeout=timeout)
+            response = None
+            if IS_PY3 and allow_insecure_fallback:
+                try:
+                    import ssl
+                    ssl_context = ssl._create_unverified_context()
+                except Exception:
+                    ssl_context = None
+                if ssl_context is not None:
+                    response = urlopen(request, timeout=timeout, context=ssl_context)
+            if response is None:
+                response = urlopen(request, timeout=timeout)
             try:
                 payload = response.read()
             finally:
@@ -891,13 +948,67 @@ def _decode_bytes(payload):
     except Exception:
         return ""
 
-def _run_shell_capture(cmd):
+def _kill_process_safe(process):
+    try:
+        process.kill()
+        return
+    except Exception:
+        pass
+    try:
+        process.terminate()
+        return
+    except Exception:
+        pass
+    try:
+        os.kill(process.pid, 9)
+    except Exception:
+        pass
+
+def _run_shell_capture(cmd, timeout=30):
+    process = None
     try:
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
+        if IS_PY3:
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except getattr(subprocess, 'TimeoutExpired', Exception):
+                _kill_process_safe(process)
+                try:
+                    stdout, stderr = process.communicate()
+                except Exception:
+                    stdout, stderr = b'', b''
+                return 255, _decode_bytes(stdout), 'Timeout'
+        else:
+            timed_out = [False]
+            timer = None
+            try:
+                if timeout and int(timeout) > 0:
+                    def _timeout_kill():
+                        timed_out[0] = True
+                        _kill_process_safe(process)
+                    timer = Timer(float(timeout), _timeout_kill)
+                    timer.daemon = True
+                    timer.start()
+            except Exception:
+                timer = None
+            try:
+                stdout, stderr = process.communicate()
+            finally:
+                try:
+                    if timer is not None:
+                        timer.cancel()
+                except Exception:
+                    pass
+            if timed_out[0]:
+                return 255, _decode_bytes(stdout), 'Timeout'
         return process.returncode, _decode_bytes(stdout), _decode_bytes(stderr)
     except Exception as e:
-        return 255, "", ensure_unicode(e)
+        try:
+            if process is not None:
+                _kill_process_safe(process)
+        except Exception:
+            pass
+        return 255, '', ensure_unicode(e)
 
 def _safe_shell_arg(value):
     txt = ensure_unicode(value).replace("'", "'\''")
@@ -1544,6 +1655,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Instalator", "CMD:INSTALL_SOFTCAM_SCRIPT"),
     ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - najnowszy)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
@@ -1584,6 +1696,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Installer", "CMD:INSTALL_SOFTCAM_SCRIPT"),
     ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - latest)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
@@ -2027,6 +2140,91 @@ def _get_best_oscam_version_info_sync():
     except Exception:
         return "Error"
 
+
+def _get_local_oscam_version_info_sync():
+    """Return a short local Oscam version label, e.g. r11866, without slow network calls."""
+    try:
+        candidates = [
+            "/usr/softcams/oscam", "/usr/softcams/oscam-emu", "/usr/bin/oscam",
+            "/usr/bin/oscam-emu", "/usr/local/bin/oscam"
+        ]
+        for path in candidates:
+            if not os.path.exists(path):
+                continue
+            cmd = "%s -V 2>&1 | head -n 8" % _safe_shell_arg(path)
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            out = stdout or stderr or b""
+            if hasattr(out, 'decode'):
+                out = out.decode('utf-8', 'ignore')
+            m = re.search(r'(?:r|svn|build[^0-9]{0,8})([0-9]{4,6})', out, re.I)
+            if m:
+                return "r" + m.group(1)
+            m = re.search(r'([0-9]{5})', out)
+            if m:
+                return "r" + m.group(1)
+        return "Online"
+    except Exception:
+        return "Online"
+
+
+def _oscam_detect_shell_functions(extra_keys=False):
+    """POSIX shell helpers used by Oscam data functions."""
+    return r"""
+aio_oscam_config_dirs(){
+    OUT="/tmp/aio_oscam_dirs_$$"
+    : > "$OUT"
+    ACTIVE=0
+    for PID in $(pidof oscam 2>/dev/null); do
+        [ -r "/proc/$PID/cmdline" ] || continue
+        CMD=$(tr '\000' ' ' < "/proc/$PID/cmdline" 2>/dev/null)
+        PREV=""
+        for A in $CMD; do
+            if [ "$PREV" = "-c" ]; then
+                [ -n "$A" ] && echo "$A" >> "$OUT" && ACTIVE=1
+                PREV=""
+                continue
+            fi
+            case "$A" in
+                -c) PREV="-c" ;;
+                -c*) V="${A#-c}"; [ -n "$V" ] && echo "$V" >> "$OUT" && ACTIVE=1 ;;
+            esac
+        done
+    done
+    if [ "$ACTIVE" -eq 0 ]; then
+        for D in /etc/tuxbox/config /etc/tuxbox/config/oscam /etc/tuxbox/config/oscam-emu /var/tuxbox/config/oscam /usr/keys /var/keys; do
+            [ -f "$D/oscam.conf" ] && echo "$D" >> "$OUT"
+        done
+        find /etc/tuxbox/config -maxdepth 4 -type f -name oscam.conf -exec dirname {} \; >> "$OUT" 2>/dev/null || true
+    fi
+    sort -u "$OUT" 2>/dev/null | while IFS= read -r D; do
+        [ -n "$D" ] && [ -d "$D" ] && echo "$D"
+    done
+    rm -f "$OUT" 2>/dev/null || true
+}
+
+aio_require_oscam_dirs(){
+    DIRS=$(aio_oscam_config_dirs)
+    if [ -z "$DIRS" ]; then
+        echo "BŁĄD: Nie udało się jednoznacznie wykryć katalogu konfiguracji aktywnego OSCama."
+        echo "AIO Panel przerwał operację, żeby nie uszkodzić konfiguracji."
+        echo "Uruchom OSCam i sprawdź parametr -c w procesie: cat /proc/$(pidof oscam | awk '{print $1}')/cmdline | tr '\\0' ' '"
+        exit 1
+    fi
+    echo "Wykryte katalogi konfiguracji OSCam:"
+    echo "$DIRS" | while IFS= read -r D; do echo " - $D"; done
+}
+
+aio_soft_restart_oscam(){
+    echo "Odświeżam Oscam/Softcam bez wymuszania restartu GUI..."
+    killall -HUP oscam 2>/dev/null || true
+    if [ -x /etc/init.d/softcam ]; then /etc/init.d/softcam restart 2>/dev/null || true; fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
+    fi
+}
+"""
+
 # === KLASA WizardProgressScreen (GLOBALNA) ===
 class WizardProgressScreen(Screen):
     skin = _wizard_progress_skin()
@@ -2208,8 +2406,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 12.0.4 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 12.0.4 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 13.0.0 Final nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 13.0.0 Final does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -2325,7 +2523,7 @@ class AIOLoadingScreen(Screen):
         thread.start()
 
     def _background_data_loader(self):
-        repo_lists, s4a_lists_full, best_oscam_version = [], [], "N/A"
+        repo_lists, s4a_lists_full, best_oscam_version, local_oscam_version = [], [], "N/A", "Online"
         try:
             repo_lists = _get_lists_from_repo_sync()
         except Exception as e:
@@ -2340,11 +2538,17 @@ class AIOLoadingScreen(Screen):
         except Exception as e:
             print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
             best_oscam_version = "Error"
-        
+        try:
+            local_oscam_version = _get_local_oscam_version_info_sync()
+        except Exception as e:
+            print("[AIO Panel] Błąd sprawdzania lokalnej wersji Oscam:", e)
+            local_oscam_version = "Online"
+
         self.fetched_data_cache = {
             "repo_lists": repo_lists,
             "s4a_lists_full": s4a_lists_full,
-            "best_oscam_version": best_oscam_version
+            "best_oscam_version": best_oscam_version,
+            "local_oscam_version": local_oscam_version
         }
         reactor.callFromThread(self._on_data_loaded)
 
@@ -2360,9 +2564,10 @@ class AIOLoadingScreen(Screen):
         data = fetched_data or self.fetched_data_cache or {
             "repo_lists": [],
             "s4a_lists_full": [],
-            "best_oscam_version": "Auto"
+            "best_oscam_version": "Auto",
+            "local_oscam_version": "Online"
         }
-        self.session.open(Panel, data)
+        self.session.open(PanelAIO, data)
         self.close()
 
     def _loading_timeout_fallback(self):
@@ -2372,7 +2577,8 @@ class AIOLoadingScreen(Screen):
         self._open_panel_safe({
             "repo_lists": [],
             "s4a_lists_full": [],
-            "best_oscam_version": "Auto"
+            "best_oscam_version": "Auto",
+            "local_oscam_version": "Online"
         })
 
     def _on_data_loaded(self):
@@ -2631,7 +2837,7 @@ class AIOTipPopupScreen(Screen):
             pass
 
 
-# === KLASA Panel (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
+# === KLASA PanelAIO (GŁÓWNE OKNO) - WERSJA Z ZAKŁADKAMI v2 (Sterowanie L/R) ===
 
 # === NOWE EKRANY v5.0 ===
 
@@ -3179,7 +3385,8 @@ class SystemInfoScreen(Screen):
 
     def _read_first(self, path):
         try:
-            return open(path, "r").read().strip()
+            with open(path, "r") as f:
+                return f.read().strip()
         except Exception:
             return ""
 
@@ -3614,6 +3821,7 @@ FUNCTION_DESCRIPTIONS = {
         "⚙️ oscam.dvbapi - aktualizacja Poland": "Podmienia oscam.dvbapi na gotową konfigurację Poland dołączoną do AIO Panel.\nPrzed podmianą tworzy kopię starego pliku i próbuje odświeżyć usługę Softcam/Oscam.",
         "📥 Softcam - Instalator": "Instaluje Softcam za pomocą skryptu (wget | bash).\nPo instalacji możesz doinstalować/wybrać emulator oraz przejść do instalacji Oscam z feed.",
         "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu, weryfikuje obecność pakietu po instalacji i próbuje odświeżyć Softcam.\nPo zakończeniu zalecany jest pełny restart tunera.",
+        "📥 Oscam Levi45": "Instaluje Oscam Levi45 z oficjalnego instalatora Levi45Emulator.\nAIO pokazuje tylko nazwę Oscam Levi45 oraz wykryty numer lokalnej binarki, bez technicznej komendy w menu.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
         "📥 NCam (Feed - najnowszy)": "Instaluje najnowszy NCam z feedu Twojego systemu (opkg).\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
         "⚙️ ServiceApp - Instalator": "Instaluje ServiceApp (alternatywny odtwarzacz) dla lepszej obsługi streamów IPTV.\nMoże wymagać restartu Enigma2 po instalacji.",
@@ -3801,7 +4009,7 @@ class SuperWizardChoiceScreen(Screen):
 
 
 
-class Panel(Screen):
+class PanelAIO(Screen):
     # Modern Dashboard UI v9.5 (adaptive HD/FHD layout)
     skin = _panel_main_skin()
 
@@ -4035,6 +4243,7 @@ class Panel(Screen):
             repo_lists = self.fetched_data_cache.get("repo_lists", [])
             s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
             best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
+            local_oscam_version = self.fetched_data_cache.get("local_oscam_version", "Online")
 
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
@@ -4068,7 +4277,7 @@ class Panel(Screen):
 
             # Filtrowanie dla Hyperion/VTi
             if self.image_type in ["hyperion", "vti"]:
-                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:UPDATE_DVBAPI_POLAND", "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_BEST_OSCAM"]
+                emu_actions_to_block = ["CMD:RESTART_OSCAM", "CMD:CLEAR_OSCAM_PASS", "CMD:MANAGE_DVBAPI", "CMD:UPDATE_DVBAPI_POLAND", "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_BEST_OSCAM", "CMD:INSTALL_LEVI45_OSCAM"]
                 softcam_menu_filtered = []
                 for (name, action) in softcam_menu:
                     if action not in emu_actions_to_block: softcam_menu_filtered.append((name, action))
@@ -4083,6 +4292,9 @@ class Panel(Screen):
                 if action == "CMD:INSTALL_BEST_OSCAM":
                     oscam_text = "📥 Oscam Feed - {}" if lang == 'PL' else "📥 Oscam Feed - {}"
                     softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+                elif action == "CMD:INSTALL_LEVI45_OSCAM":
+                    levi_ver = local_oscam_version or "Online"
+                    softcam_menu[i] = ("📥 Oscam Levi45 - {}".format(levi_ver), action)
             
             for i, (name, action) in enumerate(tools_menu):
                 if action == "CMD:SUPER_SETUP_WIZARD":
@@ -4734,6 +4946,7 @@ class Panel(Screen):
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
             elif key == "IPTV_DEPS": self.install_iptv_deps()
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
+            elif key == "INSTALL_LEVI45_OSCAM": self.install_levi45_oscam()
             elif key == "INSTALL_SOFTCAM_SCRIPT": self.install_softcam_script()
             elif key == "INSTALL_NCAM_FEED": self.install_ncam_feed()
             elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
@@ -4934,23 +5147,18 @@ class Panel(Screen):
 
         cmd = r"""            set -e
 
-            BASE="{dst}"
-
-            TARGET_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u)
-            if [ -z "$TARGET_DIRS" ]; then
-                TARGET_DIRS="$BASE"
-            else
-                echo "$TARGET_DIRS" | grep -qx "$BASE" || TARGET_DIRS="$BASE $TARGET_DIRS"
-            fi
+            {helpers}
+            aio_require_oscam_dirs
 
             WORK="/tmp/aio_srvid_work"
+            STAMP=$(date +%Y%m%d_%H%M%S)
             mkdir -p "$WORK"
 
             echo "Tworzenie kopii w katalogach docelowych..."
-            for D in $TARGET_DIRS; do
+            echo "$DIRS" | while IFS= read -r D; do
                 [ -d "$D" ] || continue
-                [ -f "$D/oscam.srvid" ]  && cp -f "$D/oscam.srvid"  "$D/oscam.srvid.bak"  || true
-                [ -f "$D/oscam.srvid2" ] && cp -f "$D/oscam.srvid2" "$D/oscam.srvid2.bak" || true
+                [ -f "$D/oscam.srvid" ]  && cp -a "$D/oscam.srvid"  "$D/oscam.srvid.aio-bak-$STAMP"  || true
+                [ -f "$D/oscam.srvid2" ] && cp -a "$D/oscam.srvid2" "$D/oscam.srvid2.aio-bak-$STAMP" || true
             done
 
             is_valid_srvid() {{
@@ -5060,45 +5268,42 @@ class Panel(Screen):
             fi
 
             echo "Instalacja plików do katalogów:"
-            for D in $TARGET_DIRS; do
+            echo "$DIRS" | while IFS= read -r D; do
                 [ -d "$D" ] || continue
                 echo " - $D"
                 cp -f "$WORK/oscam.srvid.tmp"  "$D/oscam.srvid"
                 cp -f "$WORK/oscam.srvid2.tmp" "$D/oscam.srvid2"
+                chmod 644 "$D/oscam.srvid" "$D/oscam.srvid2" 2>/dev/null || true
             done
 
             rm -f "$WORK/oscam.srvid.tmp" "$WORK/oscam.srvid2.tmp" 2>/dev/null || true
 
-            echo "Zakończono. Restart softcam (jeśli uruchomiony)..."
-            killall -HUP oscam 2>/dev/null || true
-            /etc/init.d/softcam restart 2>/dev/null || true
+            echo "Zakończono. Odświeżam softcam (jeśli uruchomiony)..."
+            aio_soft_restart_oscam
             sleep 2""".format(
-            dst=dst_dir,
+            helpers=_oscam_detect_shell_functions(),
             srvid_urls=" ".join(['"%s"' % u for u in srvid_urls]),
             srvid2_urls=" ".join(['"%s"' % u for u in srvid2_urls]),
         )
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
     def install_softcam_key_online(self):
-        title = "Aktualizacja SoftCam.Key (Online)"
+        title = "Aktualizacja SoftCam.Key (Online)" if self.lang == 'PL' else "Update SoftCam.Key (Online)"
         url = "https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key"
         url_alt = "https://raw.githubusercontent.com/PAKO34/softcam.key/master/softcam.key"
-        
         cmd = r'''
             URL="{url}"
             URL_ALT="{url_alt}"
-
-            BASE="/etc/tuxbox/config"
-            CONF_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u)
-            if [ -z "$CONF_DIRS" ]; then
-                CONF_DIRS="$BASE"
-            else
-                echo "$CONF_DIRS" | grep -qx "$BASE" || CONF_DIRS="$BASE $CONF_DIRS"
-            fi
-
-            # Docelowo: wszystkie katalogi z oscam.conf + standardowy katalog /usr/keys
-            TARGETS="$CONF_DIRS /usr/keys"
-            FOUND=0
-
+            STAMP=$(date +%Y%m%d_%H%M%S)
+            {helpers}
+            aio_require_oscam_dirs
+            TARGETS_FILE="/tmp/aio_softcamkey_targets_$$"
+            : > "$TARGETS_FILE"
+            echo "$DIRS" >> "$TARGETS_FILE"
+            for D in /usr/keys /var/keys /etc/tuxbox/config; do
+                [ -d "$D" ] && echo "$D" >> "$TARGETS_FILE"
+            done
+            TARGETS=$(sort -u "$TARGETS_FILE")
+            rm -f "$TARGETS_FILE" 2>/dev/null || true
             echo "Pobieranie SoftCam.Key z repozytorium MOHAMED19OS (SoftCam_Emu)..."
             if ! wget --no-check-certificate -U "Enigma2" -qO /tmp/SoftCam.Key.dl "$URL"; then
                 echo "Główne źródło niedostępne, próbuję alternatywnego źródła..."
@@ -5108,34 +5313,23 @@ class Panel(Screen):
                     exit 1
                 fi
             fi
-
-            if [ -s "/tmp/SoftCam.Key.dl" ]; then
-                echo "Pobrano pomyślnie."
-                for T in $TARGETS; do
-                    [ -d "$T" ] || mkdir -p "$T"
-                    if [ -d "$T" ]; then
-                        echo "Instalacja w: $T"
-                        [ -f "$T/SoftCam.Key" ] && cp -f "$T/SoftCam.Key" "$T/SoftCam.Key.bak"
-                        cp -f /tmp/SoftCam.Key.dl "$T/SoftCam.Key"
-                        FOUND=1
-                    fi
-                done
-                rm -f /tmp/SoftCam.Key.dl
-
-                if [ $FOUND -eq 1 ]; then
-                    echo "Klucze zaktualizowane."
-                    echo "Restartowanie emulatorów..."
-                    killall -9 oscam 2>/dev/null
-                    /etc/init.d/softcam restart 2>/dev/null || systemctl restart oscam 2>/dev/null
-                else
-                    echo "Ostrzeżenie: Nie znaleziono katalogów docelowych (config/keys)."
-                fi
-            else
-                echo "BŁĄD: Nie udało się pobrać pliku SoftCam.Key."
-                exit 1
-            fi
+            [ -s "/tmp/SoftCam.Key.dl" ] || {{ echo "BŁĄD: Pobrany SoftCam.Key jest pusty."; exit 1; }}
+            head -n 5 /tmp/SoftCam.Key.dl | grep -qiE '^\s*<|<!doctype|<html' && {{ echo "BŁĄD: Pobrano HTML zamiast SoftCam.Key."; exit 1; }}
+            echo "$TARGETS" | while IFS= read -r T; do
+                [ -n "$T" ] || continue
+                [ -d "$T" ] || mkdir -p "$T" 2>/dev/null || true
+                [ -d "$T" ] || continue
+                echo "Instalacja w: $T"
+                [ -f "$T/SoftCam.Key" ] && cp -a "$T/SoftCam.Key" "$T/SoftCam.Key.aio-bak-$STAMP" 2>/dev/null || true
+                cp -f /tmp/SoftCam.Key.dl "$T/SoftCam.Key"
+                chmod 644 "$T/SoftCam.Key" 2>/dev/null || true
+            done
+            rm -f /tmp/SoftCam.Key.dl
+            echo "Klucze zaktualizowane."
+            sync
+            aio_soft_restart_oscam
             sleep 3
-        '''.format(url=url, url_alt=url_alt)
+        '''.format(url=url, url_alt=url_alt, helpers=_oscam_detect_shell_functions(extra_keys=True))
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
 
@@ -5826,9 +6020,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 12.0.4 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.0 Final nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 12.0.4 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.0 Final does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -5883,9 +6077,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 12.0.4, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.0 Final, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 12.0.4 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.0 Final because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -5940,7 +6134,22 @@ AIO_RESTORE_EOF
             show_message_compat(self.sess, msg, timeout=4)
 
         reactor.callLater(0.4, _pass_one)
-    def clear_oscam_password(self): run_command_in_background(self.sess, "Kasowanie hasła", ["sed -i '/httppwd/d' /etc/tuxbox/config/oscam.conf"])
+    def clear_oscam_password(self):
+        title = "Kasowanie hasła Oscam" if self.lang == 'PL' else "Clear Oscam Password"
+        cmd = r'''
+            {helpers}
+            aio_require_oscam_dirs
+            STAMP=$(date +%Y%m%d_%H%M%S)
+            echo "$DIRS" | while IFS= read -r D; do
+                [ -f "$D/oscam.conf" ] || continue
+                cp -a "$D/oscam.conf" "$D/oscam.conf.aio-bak-$STAMP" 2>/dev/null || true
+                sed -i '/^[[:space:]]*httppwd[[:space:]]*=/d' "$D/oscam.conf"
+                echo "Wyczyszczono hasło w: $D/oscam.conf"
+            done
+            sync
+            aio_soft_restart_oscam
+        '''.format(helpers=_oscam_detect_shell_functions())
+        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
     def manage_dvbapi(self):
         opt = [("Kasuj zawartość", "clear")] if self.lang == 'PL' else [("Clear file", "clear")]
         self.sess.openWithCallback(self._manage_dvbapi_selected, ChoiceBox, title="oscam.dvbapi", list=opt)
@@ -5949,24 +6158,21 @@ AIO_RESTORE_EOF
         if not choice:
             return
         if choice[1] == "clear":
-            cmd = r"""
-                BASE="/etc/tuxbox/config"
-                TARGET_DIRS=$(find "$BASE" -type f -name oscam.conf -exec dirname {} \; 2>/dev/null | sort -u)
-                if [ -z "$TARGET_DIRS" ]; then
-                    TARGET_DIRS="$BASE"
-                else
-                    echo "$TARGET_DIRS" | grep -qx "$BASE" || TARGET_DIRS="$BASE $TARGET_DIRS"
-                fi
-
-                for D in $TARGET_DIRS; do
-                    [ -d "$D" ] || mkdir -p "$D"
+            cmd = r'''
+                {helpers}
+                aio_require_oscam_dirs
+                STAMP=$(date +%Y%m%d_%H%M%S)
+                echo "$DIRS" | while IFS= read -r D; do
+                    [ -d "$D" ] || continue
+                    [ -f "$D/oscam.dvbapi" ] && cp -a "$D/oscam.dvbapi" "$D/oscam.dvbapi.aio-bak-$STAMP" 2>/dev/null || true
                     : > "$D/oscam.dvbapi"
-                    # kompatybilność (stare/literówka): jeśli istnieje, wyczyść też oscam.dvbap
                     [ -f "$D/oscam.dvbap" ] && : > "$D/oscam.dvbap" || true
+                    chmod 644 "$D/oscam.dvbapi" 2>/dev/null || true
+                    echo "Wyczyszczono: $D/oscam.dvbapi"
                 done
                 sync
-                sleep 1
-            """
+                aio_soft_restart_oscam
+            '''.format(helpers=_oscam_detect_shell_functions())
             run_command_in_background(
                 self.sess,
                 "Kasowanie oscam.dvbapi" if self.lang == 'PL' else "Clearing oscam.dvbapi",
@@ -5982,45 +6188,35 @@ AIO_RESTORE_EOF
         cmd = r'''
             set -u
             SRC="{src}"
-            BASE="/etc/tuxbox/config"
-            TARGETS="/tmp/aio_dvbapi_targets_$$.txt"
             STAMP=$(date +%Y%m%d_%H%M%S)
-            echo "=== AIO Panel: oscam.dvbapi Poland ==="
+            {helpers}
+            echo "=== AIO Panel 13.0.0 Final: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
-            mkdir -p "$BASE" 2>/dev/null || true
-            find "$BASE" -type f -name oscam.conf -exec dirname {{}} \; 2>/dev/null | sort -u > "$TARGETS"
-            if ! grep -qx "$BASE" "$TARGETS" 2>/dev/null; then
-                echo "$BASE" >> "$TARGETS"
-            fi
-            if [ ! -s "$TARGETS" ]; then
-                echo "$BASE" > "$TARGETS"
-            fi
-            COUNT=0
-            while IFS= read -r D; do
+            aio_require_oscam_dirs
+            echo "$DIRS" | while IFS= read -r D; do
                 [ -n "$D" ] || continue
-                mkdir -p "$D" 2>/dev/null || true
+                [ -d "$D" ] || continue
                 if [ -f "$D/oscam.dvbapi" ]; then
                     cp -a "$D/oscam.dvbapi" "$D/oscam.dvbapi.aio-bak-$STAMP" 2>/dev/null || true
                 fi
                 cp -f "$SRC" "$D/oscam.dvbapi"
                 chmod 644 "$D/oscam.dvbapi" 2>/dev/null || true
                 echo "Zaktualizowano: $D/oscam.dvbapi"
-                COUNT=$((COUNT + 1))
-            done < "$TARGETS"
-            rm -f "$TARGETS"
+            done
             sync
-            echo "Zaktualizowanych lokalizacji: $COUNT"
-            echo "Odświeżam Softcam/Oscam..."
-            if [ -x /etc/init.d/softcam ]; then /etc/init.d/softcam restart 2>/dev/null || true; fi
-            if command -v systemctl >/dev/null 2>&1; then
-                systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
-            fi
-            killall -HUP oscam 2>/dev/null || true
+            aio_soft_restart_oscam
             echo "Gotowe."
-        '''.format(src=src)
+        '''.format(src=src, helpers=_oscam_detect_shell_functions())
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
-    def set_system_password(self): self.sess.openWithCallback(lambda p: run_command_in_background(self.sess, "Hasło", ["(echo {0}; echo {0}) | passwd".format(p)]) if p else None, InputBox, title="Nowe hasło root")
+    def set_system_password(self):
+        def _set_password_callback(p):
+            if not p:
+                return
+            safe_p = _safe_shell_arg(p)
+            cmd = "(printf '%s\n' {0}; printf '%s\n' {0}) | passwd".format(safe_p)
+            run_command_in_background(self.sess, "Hasło", [cmd])
+        self.sess.openWithCallback(_set_password_callback, InputBox, title="Nowe hasło root")
     def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
     def show_uninstall_manager(self):
         self.sess.open(UninstallManagerScreen, self.lang)
@@ -6084,6 +6280,26 @@ AIO_RESTORE_EOF
     def install_softcam_script(self):
         title = "Softcam - Instalator" if self.lang == 'PL' else "Softcam - Installer"
         cmd = "opkg update || true; opkg install wget ca-certificates || true; wget -O - -q http://updates.mynonpublic.com/oea/feed | bash || true; mkdir -p /usr/softcams 2>/dev/null || true; chmod 755 /etc/init.d/softcam 2>/dev/null || true; sync"
+        self._open_console_install_action(title, [cmd])
+
+    def install_levi45_oscam(self):
+        title = "Oscam Levi45" if self.lang == 'PL' else "Oscam Levi45"
+        cmd = r'''
+            echo "=== Oscam Levi45 Installer ==="
+            opkg update || true
+            opkg install wget ca-certificates ca-bundle openssl libcrypto3 libssl3 2>/dev/null || true
+            wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
+            echo ""
+            echo "=== Wykryta wersja Oscam po instalacji ==="
+            for B in /usr/softcams/oscam /usr/bin/oscam /usr/bin/oscam-emu /usr/softcams/oscam-emu; do
+                [ -x "$B" ] || continue
+                echo "Binarka: $B"
+                "$B" -V 2>&1 | head -n 12 || true
+                break
+            done
+            echo "AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga."
+            sync
+        '''
         self._open_console_install_action(title, [cmd])
 
     def install_ncam_feed(self):

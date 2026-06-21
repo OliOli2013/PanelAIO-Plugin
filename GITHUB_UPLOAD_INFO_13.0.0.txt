@@ -1,0 +1,8 @@
+AIO Panel 13.0.0 Final - pliki do GitHuba
+
+Podmień cały katalog PanelAIO z tej paczki albo przynajmniej pliki wymienione w changed_files_list.txt.
+
+Najważniejsze:
+- poprawka skina Algare FHD / MessageBox,
+- poprawka ścieżek konfiguracji Oscam jej@n / S4Updater,
+- dodany Oscam Levi45.
