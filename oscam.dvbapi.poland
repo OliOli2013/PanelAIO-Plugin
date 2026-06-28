@@ -1,9 +1,39 @@
-P: 1884 1
-P: 1861 1
-P: 186C 1
-P: 183E 1
-P: 1856 1
-P: 0100 1
-I: 1803
-I: 0B01
-P: ::
+############################################################
+# oscam.dvbapi - POLSKIE PLATFORMY
+# Priorytet tylko dla polskich platform cyfrowych
+# Zagraniczne platformy działają bez wpisu - automatycznie z PMT
+############################################################
+
+############################
+# CANAL+ Polska / dawne nc+
+############################
+
+P: 1884
+P: 1813
+P: 0100:000068
+P: 0B01
+
+############################
+# Polsat Box / Cyfrowy Polsat
+############################
+
+P: 1803
+P: 1861
+P: 186C
+P: 1870
+P: 06ED
+
+############################
+# Orange Polska
+############################
+
+P: 0500:032A00
+
+############################################################
+# WAŻNE:
+# Nie dodawać na końcu:
+# I: 0
+#
+# Brak I: 0 oznacza, że inne platformy zagraniczne
+# nie są blokowane i OSCam może je obsłużyć automatycznie.
+############################################################
