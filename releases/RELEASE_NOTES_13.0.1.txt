@@ -1,0 +1,15 @@
+AIO Panel 13.0.1
+
+Zmiany:
+- Zmieniono polecenie instalatora Fury FHD:
+  wget -q "--no-check-certificate" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh
+- Usunięto z menu pozycję: Czyszczenie niedziałających wtyczek.
+- Zaktualizowano lokalny plik oscam.dvbapi.poland.
+- PP Channel Sync używa polecenia:
+  wget -q -O - https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh | /bin/sh
+- Pozostałe funkcje bez zmian względem AIO Panel 13.0.0.
+
+Instalacja:
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.1_all.ipk
+
+Po instalacji wykonaj ręczny restart GUI.

@@ -1,3 +1,11 @@
+[13.0.1]
+AIO Panel 13.0.1
+- Zmieniono polecenie instalatora skina Fury FHD na nowe źródło islam-2412/IPKS.
+- Usunięto z menu pozycję „Czyszczenie niedziałających wtyczek”.
+- Zaktualizowano plik oscam.dvbapi.poland używany przez funkcję „oscam.dvbapi - aktualizacja Poland”.
+- Zmieniono instalator PP Channel Sync na oficjalne polecenie z repozytorium OliOli2013/PPChannelSync-Plugin.
+- Pozostałe funkcje pozostają bez zmian względem wersji 13.0.0.
+
 [13.0.0]
 AIO Panel 13.0.0 Final
 - Naprawiono crash na skinach FHD, zgłoszony m.in. dla Algare FHD, podczas otwierania okna oczekiwania w run_command_in_background.
@@ -9,68 +17,3 @@ AIO Panel 13.0.0 Final
 - Jeżeli katalog konfiguracji Oscam nie zostanie wykryty jednoznacznie, operacja zostaje przerwana.
 - Dodano instalator Oscam Levi45 z oficjalnego polecenia Levi45Emulator.
 - Menu pokazuje uproszczoną nazwę Oscam Levi45 i wykryty numer Oscama.
-
-[12.0.6]
-AIO Panel 12.0.6
-- poprawiono _run_shell_capture: stabilna obsługa timeoutu na Python 3 oraz bezpieczny Timer na Python 2,
-- poprawiono pobieranie urlopen na Python 3 przy problemach z certyfikatami CA,
-- zmieniono nazwę klasy głównego ekranu z Panel na PanelAIO,
-- doprecyzowano _desktop_size(),
-- poprawiono _read_first tak, aby zamykał deskryptor pliku przez with,
-- zachowano poprawkę instalatora unzip z 12.0.5.
-
-[12.0.5]
-AIO Panel 12.0.5
-- poprawiono instalator z GitHuba na starszych obrazach Python 2 / BusyBox: katalog /tmp/panelaio_github_update/extract jest tworzony przed unzip,
-- dodano kontrolę pustego/uszkodzonego ZIP przed rozpakowaniem,
-- dodano czytelny błąd, gdy unzip nie jest dostępny, oraz próbę doinstalowania unzip przez opkg,
-- instalator dalej nie wymusza restartu tunera,
-- zachowano poprawki 12.0.4: bezpieczny start GUI, oscam.dvbapi Poland, Backup/Restore list kanałów.
-
-[12.0.4]
-AIO Panel 12.0.4
-- wyłączyłem zadania startowe przy uruchamianiu GUI Enigma2 — mniejsze ryzyko bootloopa,
-- usunąłem WHERE_SESSIONSTART z lekkiego plugin.py,
-- dodałem blokadę oczywistych instalatorów Python 3 na obrazach Python 2,
-- dodałem potwierdzenie przed uruchomieniem zewnętrznych instalatorów — domyślnie NIE,
-- AIO Panel nie wymusza już automatycznego restartu po instalatorach z menu,
-- Super Konfigurator nie wymusza już pełnego restartu po zakończeniu,
-- installer.sh z GitHuba nie robi już automatycznego rebootu,
-- dodałem czyszczenie starej lokalizacji:/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
-- dodałem czyszczenie starych pyc/pyo,
-- zostawiłem funkcję oscam.dvbapi - aktualizacja Poland,
-- zostawiłem poprawki Backup/Restore list kanałów.
-
-[12.0.2]
-AIO Panel 12.0.2
-- naprawiono ryzyko bootloopa po restarcie GUI na części systemów, zwłaszcza OpenATV 8 / beta,
-- plugin.py nie importuje już ciężkiego runtime legacy_plugin.py podczas startu Enigma2,
-- pełna logika wtyczki ładuje się dopiero po wejściu do AIO Panel,
-- sessionstart został ograniczony do bezpiecznej obsługi Auto RAM Cleaner bez ładowania całego panelu,
-- zachowano wszystkie poprawki i funkcje dodane w wersji 12.0.1.
-
-[12.0.1]
-AIO Panel 12.0.1
-
-- usunięto dublowanie list Bzyk83, JakiTaki,
-- listy tych autorów są pobierane tylko z jednego repozytorium,
-- ukryto listy kanałów starsze niż 2026,
-- zachowano sortowanie list od najnowszej do najstarszej,
-- dodano instalator Bouquet Maker Xtream,
-- poprawiono działanie Backup List Kanałów,
-- poprawiono działanie Restore Listy Kanałów,
-- backup obejmuje teraz pełne pliki list: lamedb, lamedb5, bouquets.tv, bouquets.radio, userbouquet.*,
-- Restore czyści stare listy i przywraca pełną kopię,
-- dodano informację o dostępnej aktualizacji AIO Panel na dole ekranu,
-- dodano podgląd listy zmian przed aktualizacją,
-- dodano wybór TAK/NIE przy aktualizacji, bez wymuszania instalacji,
-- dodano funkcję Czyszczenie niedziałających wtyczek,
-- czyszczenie usuwa uszkodzone wtyczki z systemu,
-- poprawiono widoczność wtyczki na skinach Infinity Neo i MyMetrix-neo,
-- poprawiono czytelność zaznaczonej funkcji w menu,
-- poprawiono kolory, tła i warstwy ekranu wtyczki,
-- uzupełniono opisy funkcji po polsku i angielsku,
-- uzupełniono dolne informacje, co robi dana funkcja,
-- usunięto instalator TvMad Pro E2 ze względów bezpieczeństwa,
-- dodano automatyczne przeładowanie list kanałów po instalacji bez wymuszania restartu GUI,
-- zaktualizowano version.txt, changelog.txt, README.md, installer.sh, menu i kontrolę IPK.

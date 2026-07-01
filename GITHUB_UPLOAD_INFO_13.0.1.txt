@@ -1,0 +1,17 @@
+AIO Panel 13.0.1 - pełna zawartość do GitHuba
+
+Repozytorium:
+https://github.com/OliOli2013/PanelAIO-Plugin
+
+Zmiany:
+- Fury FHD: nowe polecenie instalatora.
+- Usunięto z menu „Czyszczenie niedziałających wtyczek”.
+- Podmieniono oscam.dvbapi.poland.
+- PP Channel Sync: instalator z repozytorium OliOli2013/PPChannelSync-Plugin.
+- Pozostałe funkcje bez zmian.
+
+Plik IPK:
+enigma2-plugin-extensions-panelaio_13.0.1_all.ipk
+
+Release tag:
+v13.0.1

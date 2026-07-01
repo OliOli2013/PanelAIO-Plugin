@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 13.0.0 Final
+Wersja 13.0.1
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("13.0.0")
+VER = _read_local_version("13.0.1")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -732,7 +732,7 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
     Uruchamia polecenia shella w osobnym wątku.
-    v13.0.0 Final: nie używa już MessageBox(enable_input=False), bo ta kombinacja
+    v13.0.1: nie używa już MessageBox(enable_input=False), bo ta kombinacja
     powodowała crash na niektórych skinach FHD (np. Algare FHD).
     """
     wait_message = None
@@ -1796,7 +1796,6 @@ DIAGNOSTICS_PL = [
     ("⏱️ Auto RAM Cleaner (Konfiguruj)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Wyczyść Pamięć Tymczasową", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
-    ("🧹 Czyszczenie niedziałających wtyczek", "CMD:BROKEN_PLUGIN_CLEANER"),
     ("🧹 Wyczyść Pamięć RAM", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Kasuj hasło FTP", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Ustaw Hasło FTP", "CMD:SET_SYSTEM_PASSWORD"),
@@ -1819,7 +1818,6 @@ DIAGNOSTICS_EN = [
     ("⏱️ Auto RAM Cleaner (Setup)", "CMD:SETUP_AUTO_RAM"),
     ("🧹 Clear Temporary Cache", "CMD:CLEAR_TMP_CACHE"),
     ("🧹 Smart Cleanup (TMP/LOG/CACHE)", "CMD:SMART_CLEANUP"),
-    ("🧹 Clean broken plugins", "CMD:BROKEN_PLUGIN_CLEANER"),
     ("🧹 Clear RAM Cache", "CMD:CLEAR_RAM_CACHE"),
     ("🔑 Clear FTP Password", "CMD:CLEAR_FTP_PASS"),
     ("🔑 Set FTP Password", "CMD:SET_SYSTEM_PASSWORD"),
@@ -1829,7 +1827,7 @@ DIAGNOSTICS_EN = [
 # === SKINS / SKÓRKI ===
 SKINS_PL = [
     ("🎨 Algare FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
-    ("🎨 Fury FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
+    ("🎨 Fury FHD - Instalator", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
     ("🎨 Luka FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
     ("🎨 Maxy FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
     ("🎨 XDreamy - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
@@ -1837,7 +1835,7 @@ SKINS_PL = [
 
 SKINS_EN = [
     ("🎨 Algare FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
-    ("🎨 Fury FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
+    ("🎨 Fury FHD - Installer", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
     ("🎨 Luka FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
     ("🎨 Maxy FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
     ("🎨 XDreamy - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
@@ -2408,8 +2406,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 13.0.0 Final nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 13.0.0 Final does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 13.0.1 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 13.0.1 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -3878,7 +3876,6 @@ FUNCTION_DESCRIPTIONS = {
         "⏱️ Auto RAM Cleaner (Konfiguruj)": "Automatyczne czyszczenie pamięci RAM",
         "🧹 Wyczyść Pamięć Tymczasową": "Usunięcie plików tymczasowych z /tmp",
         "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Bezpieczne czyszczenie zbędnych archiwów, crashlogów i logów tymczasowych oraz odświeżenie cache RAM.\nPomaga odzyskać miejsce bez naruszania ustawień użytkownika.",
-        "🧹 Czyszczenie niedziałających wtyczek": "Czyści cache Pythona i sprawdza plugin.py w Extensions/SystemPlugins.\nWtyczki z błędem kompilacji są teraz usuwane całkowicie z systemu.",
         "🧹 Wyczyść Pamięć RAM": "Ręczne czyszczenie pamięci RAM",
         "🔑 Kasuj hasło FTP": "Usuwa hasło użytkownika root (FTP/SSH).\nPo wykonaniu logowanie odbywa się bez hasła (jeśli obraz na to pozwala).",
         "🔑 Ustaw Hasło FTP": "Ustawia nowe hasło dla użytkownika root (FTP/SSH).\nZwiększa bezpieczeństwo dostępu do tunera z sieci.",
@@ -3952,7 +3949,6 @@ FUNCTION_DESCRIPTIONS = {
         "⏱️ Auto RAM Cleaner (Setup)": "Automatic RAM cleaning",
         "🧹 Clear Temporary Cache": "Remove temporary files from /tmp",
         "🧹 Smart Cleanup (TMP/LOG/CACHE)": "Safely removes leftover archives, crashlogs and temporary logs, then refreshes RAM cache.\nHelps recover space without touching user settings.",
-        "🧹 Clean broken plugins": "Clears Python cache and checks plugin.py files in Extensions/SystemPlugins.\nPlugins with compile errors are now permanently removed from the system.",
         "🧹 Clear RAM Cache": "Manual RAM cache clearing",
         "🔑 Clear FTP Password": "Removes the root password (FTP/SSH).\nAfterwards, login may be passwordless (depends on image security settings).",
         "🔑 Set FTP Password": "Sets a new password for the root user (FTP/SSH).\nImproves security for network access to the receiver.",
@@ -5798,7 +5794,7 @@ class PanelAIO(Screen):
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def clean_broken_plugins(self):
-        title = "Czyszczenie niedziałających wtyczek" if self.lang == 'PL' else "Clean broken plugins"
+        title = "AIO Cleaner"
         cmd = r'''
             echo "=== AIO Broken Plugin Cleaner ==="
             echo "Start: $(date)"
@@ -6022,9 +6018,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.0 Final nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.1 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.0 Final does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.1 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -6079,9 +6075,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.0 Final, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.1, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.0 Final because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.1 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -6192,7 +6188,7 @@ AIO_RESTORE_EOF
             SRC="{src}"
             STAMP=$(date +%Y%m%d_%H%M%S)
             {helpers}
-            echo "=== AIO Panel 13.0.0 Final: oscam.dvbapi Poland ==="
+            echo "=== AIO Panel 13.0.1: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
             aio_require_oscam_dirs
             echo "$DIRS" | while IFS= read -r D; do

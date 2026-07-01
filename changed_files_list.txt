@@ -1,14 +1,11 @@
-13.0.0 Final changed files:
+13.0.1 changed files:
 - legacy_plugin.py
 - plugin.py
 - version.txt
+- oscam.dvbapi.poland
+- data/menus.py
 - README.md
 - changelog.txt
-- control/control
-- GITHUB_UPLOAD_INFO_13.0.0.txt
-
-Main fixes:
-- Algare FHD / MessageBox skin compatibility guard
-- Oscam config path detection from active process -c parameter
-- Oscam jej@n / S4Updater safer file updates
-- Oscam Levi45 installer added to Softcamy
+- RELEASES.md
+- RELEASE_NOTES_13.0.1.txt
+- GITHUB_UPLOAD_INFO_13.0.1.txt

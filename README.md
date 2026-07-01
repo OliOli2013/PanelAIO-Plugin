@@ -1,22 +1,40 @@
-# AIO Panel 13.0.0 Final
+# AIO Panel 13.0.1
 
-AIO Panel dla Enigma2 / Python 2 i Python 3.
+AIO Panel dla Enigma2 — pakiet funkcji do list kanałów, softcamów, wtyczek online, konfiguracji, narzędzi systemowych, skinów, backupu i diagnostyki.
 
-## Najważniejsze zmiany 13.0.0 Final
+## Zmiany w wersji 13.0.1
 
-- naprawa problemu ze skinem Algare FHD i podobnymi skinami: AIO nie używa już ryzykownego `MessageBox(enable_input=False)` przy zadaniach w tle,
-- bezpieczny fallback dla okien MessageBox — jeśli skin nie potrafi narysować okna, wtyczka nie powinna wywalić Enigma2,
-- poprawione funkcje Oscam: `oscam.dvbapi Poland`, czyszczenie `oscam.dvbapi`, `oscam.srvid/srvid2`, `SoftCam.Key` oraz czyszczenie hasła,
-- wykrywanie realnego katalogu aktywnego Oscama z procesu `/proc/<pid>/cmdline` i parametru `-c`,
-- zabezpieczenie dla Oscam jej@n / S4Updater — AIO przerywa operację, jeśli nie potrafi jednoznacznie wykryć katalogu konfiguracji,
-- kopie bezpieczeństwa przed podmianą plików Oscam,
-- dodany instalator `Oscam Levi45` w zakładce Softcamy,
-- menu pokazuje prostą nazwę `Oscam Levi45` oraz wykryty numer lokalnej binarki Oscam.
+- Zmieniono instalator skina **Fury FHD** na nowe polecenie:
+
+```sh
+wget -q "--no-check-certificate" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh
+```
+
+- Usunięto z menu pozycję **Czyszczenie niedziałających wtyczek**.
+- Zaktualizowano lokalny plik **oscam.dvbapi.poland** używany przez funkcję **oscam.dvbapi - aktualizacja Poland**.
+- Ustawiono instalator **PP Channel Sync** na polecenie:
+
+```sh
+wget -q -O - https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh | /bin/sh
+```
+
+- Pozostałe funkcje zostały zachowane bez zmian względem wersji 13.0.0.
 
 ## Instalacja IPK
 
+Wgraj paczkę do katalogu `/tmp`, a następnie wykonaj:
+
 ```sh
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.0_all.ipk
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.1_all.ipk
 ```
 
-Po instalacji wykonaj ręcznie restart GUI lub pełny restart tunera.
+Po instalacji wykonaj ręczny restart GUI.
+
+## Repozytorium
+
+```text
+https://github.com/OliOli2013/PanelAIO-Plugin
+```
+
+Autor: Paweł Pawełek  
+Kontakt: aio-iptv@wp.pl

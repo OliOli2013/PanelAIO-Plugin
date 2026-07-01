@@ -1,0 +1,20 @@
+AIO Panel 13.0.1 - pełna zawartość repozytorium do wrzucenia przez GitKraken
+
+1. Otwórz lokalne repozytorium PanelAIO-Plugin w GitKraken.
+2. Podmień zawartość repozytorium plikami z tego katalogu.
+3. Sprawdź zmiany:
+   - legacy_plugin.py
+   - plugin.py
+   - version.txt
+   - oscam.dvbapi.poland
+   - data/menus.py
+   - README.md
+   - changelog.txt
+   - RELEASES.md
+   - releases/enigma2-plugin-extensions-panelaio_13.0.1_all.ipk
+4. Commit: AIO Panel 13.0.1
+5. Push do gałęzi main.
+6. W GitHub Releases dodaj plik IPK z katalogu releases/.
+
+Tag release: v13.0.1
+Tytuł release: AIO Panel 13.0.1
