@@ -1,13 +1,5 @@
 [13.0.2]
 AIO Panel 13.0.2
-- Paczka bazuje bezpośrednio na działającej poprawce 13.0.4.
-- Zachowano naprawioną instalację list kanałów.
-- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
-- Dodano odświeżenie przez eDVBDB, aktywny servicelist oraz lokalne servicelistreload przez wget/curl.
-- Numer wersji pozostaje 13.0.2 dla ciągłości GitHub.
-
-[13.0.2]
-AIO Panel 13.0.2
 - Dodano poprawkę pobierania dla OpenPLi 9.x.
 - Aktualizacja AIO z poziomu wtyczki używa teraz bezpieczniejszego pobierania: wget IPv4, wget z --no-check-certificate oraz curl jako fallback.
 - Instalacja archiwów/list kanałów używa teraz tego samego bezpiecznego mechanizmu pobierania.
