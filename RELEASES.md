@@ -1,21 +1,21 @@
-# Releases
+# AIO Panel 13.0.2
 
-## AIO Panel 13.0.1
+Poprawka zachowująca numer wersji **13.0.2** dla ciągłości GitHub.
 
-### Zmiany
+## Ważne
 
-- Fury FHD: nowe polecenie instalatora.
-- Usunięto „Czyszczenie niedziałających wtyczek” z menu.
-- Zaktualizowano `oscam.dvbapi.poland` dla funkcji „oscam.dvbapi - aktualizacja Poland”.
-- PP Channel Sync: instalator z repozytorium `OliOli2013/PPChannelSync-Plugin`.
-- Pozostałe funkcje bez zmian.
+Ta paczka bazuje bezpośrednio na działającej poprawce 13.0.4.  
+Nie cofnięto mechanizmu instalacji list kanałów.
 
-### Plik release
+## Zmiany
 
-`enigma2-plugin-extensions-panelaio_13.0.1_all.ipk`
+- Zachowano działające pobieranie i instalację list kanałów.
+- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
+- Dodano odświeżenie przez `eDVBDB`, aktywny `servicelist` oraz lokalne `servicelistreload` przez wget/curl.
+- Numer wersji pozostaje 13.0.2.
 
-### Instalacja
+## Instalacja
 
 ```sh
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.1_all.ipk
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.2_all.ipk
 ```

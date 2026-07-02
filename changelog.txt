@@ -1,3 +1,20 @@
+[13.0.2]
+AIO Panel 13.0.2
+- Paczka bazuje bezpośrednio na działającej poprawce 13.0.4.
+- Zachowano naprawioną instalację list kanałów.
+- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
+- Dodano odświeżenie przez eDVBDB, aktywny servicelist oraz lokalne servicelistreload przez wget/curl.
+- Numer wersji pozostaje 13.0.2 dla ciągłości GitHub.
+
+[13.0.2]
+AIO Panel 13.0.2
+- Dodano poprawkę pobierania dla OpenPLi 9.x.
+- Aktualizacja AIO z poziomu wtyczki używa teraz bezpieczniejszego pobierania: wget IPv4, wget z --no-check-certificate oraz curl jako fallback.
+- Instalacja archiwów/list kanałów używa teraz tego samego bezpiecznego mechanizmu pobierania.
+- Dodano kontrolę pustego pliku oraz wykrywanie strony HTML/błędu zamiast właściwego IPK/ZIP/TAR.GZ.
+- Po nieudanym pobraniu operacja jest przerywana i nie przechodzi do instalacji uszkodzonego pliku.
+- Pozostałe funkcje pozostają bez zmian względem 13.0.1.
+
 [13.0.1]
 AIO Panel 13.0.1
 - Zmieniono polecenie instalatora skina Fury FHD na nowe źródło islam-2412/IPKS.

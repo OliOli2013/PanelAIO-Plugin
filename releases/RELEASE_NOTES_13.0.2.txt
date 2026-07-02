@@ -1,5 +1,3 @@
-# AIO Panel 13.0.2
-
 AIO Panel 13.0.2
 
 WAŻNE:

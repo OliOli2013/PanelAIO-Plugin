@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 13.0.1
+Wersja 13.0.2
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("13.0.1")
+VER = _read_local_version("13.0.2")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -732,7 +732,7 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
     Uruchamia polecenia shella w osobnym wątku.
-    v13.0.1: nie używa już MessageBox(enable_input=False), bo ta kombinacja
+    v13.0.2: nie używa już MessageBox(enable_input=False), bo ta kombinacja
     powodowała crash na niektórych skinach FHD (np. Algare FHD).
     """
     wait_message = None
@@ -756,6 +756,13 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
 
                 if process.returncode != 0:
                     print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
+                    try:
+                        with open("/tmp/aio_last_command_error.log", "ab") as _aio_log:
+                            _aio_log.write(("\n=== %s ===\n" % title).encode("utf-8"))
+                            _aio_log.write(stderr or b"")
+                            _aio_log.write(b"\n")
+                    except Exception:
+                        pass
 
         except Exception as e:
             print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
@@ -829,6 +836,172 @@ def _write_text_file(path, data):
     except Exception:
         return False
 
+
+def _payload_looks_like_html_error(payload):
+    try:
+        if payload is None:
+            return False
+        head = payload[:512]
+        if not isinstance(head, str):
+            try:
+                head = head.decode('utf-8', 'ignore')
+            except Exception:
+                head = str(head)
+        head = head.strip().lower()
+        if head.startswith('<!doctype') or head.startswith('<html'):
+            return True
+        if '<html' in head[:256] or '404: not found' in head[:256] or 'accessdenied' in head[:256]:
+            return True
+    except Exception:
+        pass
+    return False
+
+def _file_looks_like_html_error(path):
+    try:
+        if not path or not os.path.exists(path) or os.path.getsize(path) <= 0:
+            return False
+        with open(path, 'rb') as handle:
+            payload = handle.read(512)
+        return _payload_looks_like_html_error(payload)
+    except Exception:
+        return False
+
+def _download_shell_command(url, output_path, expected_type='file'):
+    """OpenPLi-safe shell downloader used by archive/list installation and online installers."""
+    url_q = _safe_shell_arg(url)
+    out_q = _safe_shell_arg(output_path)
+    typ_q = _safe_shell_arg(expected_type or 'file')
+    return r"""
+URL=%s
+OUT=%s
+EXPECTED=%s
+rm -f "$OUT" "$OUT.tmp"
+
+aio_download_file() {
+    U="$1"
+    O="$2"
+    rm -f "$O" "$O.tmp"
+
+    echo "[AIO Panel] Pobieranie: $U"
+
+    if command -v wget >/dev/null 2>&1; then
+        wget -4 -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+        wget -4 --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+        wget --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+    fi
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -L --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+        curl -L -k --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+    fi
+
+    if command -v python3 >/dev/null 2>&1; then
+        AIO_URL="$U" AIO_OUT="$O.tmp" python3 - <<'AIO_PY_DL'
+import os, sys, ssl
+try:
+    import urllib.request as u
+    url = os.environ.get("AIO_URL")
+    out = os.environ.get("AIO_OUT")
+    req = u.Request(url, headers={"User-Agent": "Enigma2"})
+    try:
+        ctx = ssl._create_unverified_context()
+    except Exception:
+        ctx = None
+    if ctx is not None:
+        data = u.urlopen(req, timeout=45, context=ctx).read()
+    else:
+        data = u.urlopen(req, timeout=45).read()
+    if not data:
+        sys.exit(1)
+    f = open(out, "wb")
+    f.write(data)
+    f.close()
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+AIO_PY_DL
+        [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+    fi
+
+    if command -v python >/dev/null 2>&1; then
+        AIO_URL="$U" AIO_OUT="$O.tmp" python - <<'AIO_PY2_DL'
+import os, sys, ssl
+try:
+    import urllib2 as u
+    url = os.environ.get("AIO_URL")
+    out = os.environ.get("AIO_OUT")
+    req = u.Request(url, headers={"User-Agent": "Enigma2"})
+    try:
+        ctx = ssl._create_unverified_context()
+        data = u.urlopen(req, timeout=45, context=ctx).read()
+    except Exception:
+        data = u.urlopen(req, timeout=45).read()
+    if not data:
+        sys.exit(1)
+    f = open(out, "wb")
+    f.write(data)
+    f.close()
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+AIO_PY2_DL
+        [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+    fi
+
+    rm -f "$O.tmp"
+    return 1
+}
+
+aio_download_is_html_error() {
+    H=$(dd if="$1" bs=512 count=1 2>/dev/null | tr 'A-Z' 'a-z')
+    case "$H" in
+        *"<html"*|*"<!doctype"*|*"404: not found"*|*"accessdenied"*|*"rate limit"*)
+            return 0
+        ;;
+    esac
+    return 1
+}
+
+aio_validate_download() {
+    F="$1"
+    T="$2"
+    [ -s "$F" ] || return 1
+    aio_download_is_html_error "$F" && return 1
+
+    case "$T" in
+        ipk)
+            dd if="$F" bs=8 count=1 2>/dev/null | grep -q '^!<arch>' || return 1
+        ;;
+        zip)
+            if command -v unzip >/dev/null 2>&1; then
+                unzip -tqq "$F" >/dev/null 2>&1 || return 1
+            fi
+        ;;
+        tar.gz|tgz)
+            tar -tzf "$F" >/dev/null 2>&1 || return 1
+        ;;
+        script|sh|file)
+            :
+        ;;
+    esac
+    return 0
+}
+
+if ! aio_download_file "$URL" "$OUT"; then
+    echo "[AIO Panel] ERROR: Nie udało się pobrać pliku."
+    echo "[AIO Panel] URL: $URL"
+    rm -f "$OUT" "$OUT.tmp"
+    exit 1
+fi
+
+if ! aio_validate_download "$OUT" "$EXPECTED"; then
+    echo "[AIO Panel] ERROR: Pobrany plik jest pusty, uszkodzony albo jest stroną HTML/błędu."
+    echo "[AIO Panel] URL: $URL"
+    rm -f "$OUT" "$OUT.tmp"
+    exit 1
+fi
+""" % (url_q, out_q, typ_q)
+
 def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallback=True):
     tmp_path = path + '.tmp'
     last_error = None
@@ -853,11 +1026,13 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
                     response.close()
                 except Exception:
                     pass
-            if payload:
+            if payload and not _payload_looks_like_html_error(payload):
                 with open(tmp_path, 'wb') as handle:
                     handle.write(payload)
                 os.rename(tmp_path, path)
                 return True
+            elif payload:
+                last_error = 'HTML/error page returned instead of expected file'
         except Exception as exc:
             last_error = exc
         tool_cmds = []
@@ -875,10 +1050,10 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 _, stderr = process.communicate()
-                if process.returncode == 0 and os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0:
+                if process.returncode == 0 and os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0 and not _file_looks_like_html_error(tmp_path):
                     os.rename(tmp_path, path)
                     return True
-                last_error = stderr
+                last_error = stderr if stderr else 'empty or invalid/HTML download'
             except Exception as exc:
                 last_error = exc
         try:
@@ -1556,7 +1731,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
     prepare_tmp_dir()
     tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
     
-    download_cmd = "wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp_archive_path, url)
+    download_cmd = _download_shell_command(url, tmp_archive_path, archive_type)
     
     if "picon" in title.lower():
         picon_path = (picon_path or "/usr/share/enigma2/picon").strip()
@@ -1564,7 +1739,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
             picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
         full_command = (
-            "{download_cmd} && "
+            "{download_cmd}\n"
             "mkdir -p {picon_path} && "
             "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
             "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
@@ -1577,7 +1752,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
             nested_path=nested_picon_path
         )
     elif archive_type == "ipk":
-        full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
+        full_command = "{}\nopkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
         # Ten blok dotyczy list kanałów (TYPU "LIST")
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
@@ -1585,16 +1760,24 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
              show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
              if callback_on_finish: callback_on_finish()
              return
-        
-        clear_bouquets_cmd = "rm -f /etc/enigma2/bouquets.tv /etc/enigma2/bouquets.radio /etc/enigma2/userbouquet.*.tv /etc/enigma2/userbouquet.*.radio"
-        chmod_cmd = "chmod +x \"{}\"".format(install_script_path)
-        full_command = "{download_cmd} && {clear_cmd} && {chmod_cmd} && bash {script_path} \"{tmp_archive}\" \"{archive_type}\"".format(
+        chmod_cmd = "chmod 755 {}".format(install_script_path)
+        reload_cmd = (
+            "sync; sleep 1; "
+            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1 || true); "
+            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1 || true); "
+            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1 || true); "
+            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1 || true); "
+            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1 || true); "
+            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1 || true); "
+            "echo 'AIO Panel: wykonano próbę przeładowania list kanałów/bukietów.'"
+        )
+        full_command = "{download_cmd}\n{chmod_cmd} && /bin/sh {script_path} \"{tmp_archive}\" \"{archive_type}\" && {reload_cmd}".format(
             download_cmd=download_cmd,
-            clear_cmd=clear_bouquets_cmd,
             chmod_cmd=chmod_cmd,
             script_path=install_script_path,
             tmp_archive=tmp_archive_path,
-            archive_type=archive_type
+            archive_type=archive_type,
+            reload_cmd=reload_cmd
         )
     
     run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
@@ -2406,8 +2589,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 13.0.1 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 13.0.1 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 13.0.2 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 13.0.2 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -4833,16 +5016,39 @@ class PanelAIO(Screen):
             return
 
         installer_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
+        tmp_installer = "/tmp/panelaio_installer.sh"
         cmd = """
-            if command -v wget >/dev/null 2>&1; then
-                wget -qO- "%s" | /bin/sh
-            elif command -v curl >/dev/null 2>&1; then
-                curl -fsSL "%s" | /bin/sh
+            URL=%s
+            OUT=%s
+            rm -f "$OUT" "$OUT.tmp"
+            aio_download_file() {
+                U="$1"; O="$2"; rm -f "$O" "$O.tmp"
+                if command -v wget >/dev/null 2>&1; then
+                    wget -4 -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+                    wget -4 --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+                    wget --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+                fi
+                if command -v curl >/dev/null 2>&1; then
+                    curl -L --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+                    curl -L -k --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
+                fi
+                rm -f "$O.tmp"; return 1
+            }
+            aio_download_is_html_error() {
+                H=$(dd if="$1" bs=512 count=1 2>/dev/null | tr 'A-Z' 'a-z')
+                case "$H" in *"<html"*|*"<!doctype"*|*"404: not found"*|*"accessdenied"*) return 0;; esac
+                return 1
+            }
+            if aio_download_file "$URL" "$OUT" && ! aio_download_is_html_error "$OUT"; then
+                chmod 755 "$OUT"
+                /bin/sh "$OUT"
             else
-                echo "Brak wget/curl - nie można uruchomić aktualizacji z GitHuba."
+                echo "Błąd pobierania aktualizacji AIO Panel z GitHub/OpenPLi."
+                echo "Sprawdź wget/curl/SSL/IPv4 albo zainstaluj IPK ręcznie."
+                rm -f "$OUT" "$OUT.tmp"
                 exit 1
             fi
-        """ % (installer_url, installer_url)
+        """ % (_safe_shell_arg(installer_url), _safe_shell_arg(tmp_installer))
 
         console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 2)), close_on_finish=True)
 
@@ -4940,7 +5146,7 @@ class PanelAIO(Screen):
             if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
             elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
             elif key == "SHOW_PENDING_AIO_UPDATE": self.show_detected_update_prompt()
-            elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["bash " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
+            elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["/bin/sh " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
             elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
             elif key == "IPTV_DEPS": self.install_iptv_deps()
             elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
@@ -5098,7 +5304,7 @@ class PanelAIO(Screen):
 
     def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
         tmp = os.path.join(PLUGIN_TMP_PATH, "temp.m3u")
-        run_command_in_background(self.sess, title, ["wget -T 30 --no-check-certificate -O \"{}\" \"{}\"".format(tmp, url)], 
+        run_command_in_background(self.sess, title, [_download_shell_command(url, tmp, "file")], 
                                   callback_on_finish=lambda: Thread(target=self._parse_m3u_thread, args=(tmp, bouquet_id, bouquet_name)).start())
 
     def _parse_m3u_thread(self, tmp_path, bid, bname):
@@ -6018,9 +6224,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.1 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.2 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.1 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.2 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -6054,6 +6260,103 @@ AIO_RESTORE_EOF
                 return True
         return False
 
+
+    def _aio_tmp_name_for_url(self, url, suffix):
+        try:
+            token = re.sub(r"[^A-Za-z0-9]+", "_", ensure_unicode(url))[-70:].strip("_")
+            if not token:
+                token = "download"
+            return "/tmp/aio_%s%s" % (token, suffix)
+        except Exception:
+            return "/tmp/aio_download%s" % suffix
+
+    def _extract_first_url_from_cmd(self, cmd):
+        try:
+            urls = re.findall(r"https?://[^\s'\"|;)]+", ensure_unicode(cmd))
+            return urls[0] if urls else ""
+        except Exception:
+            return ""
+
+    def _command_has_github_download(self, cmd):
+        try:
+            low = ensure_unicode(cmd).lower()
+            return ("github.com" in low or "raw.githubusercontent.com" in low)
+        except Exception:
+            return False
+
+    def _build_openpli_safe_installer_command(self, title, cmd):
+        """Convert GitHub wget|sh / wget -O file / opkg install URL commands to OpenPLi-safe download-then-run."""
+        try:
+            original = ensure_unicode(cmd)
+            if not self._command_has_github_download(original):
+                return None
+
+            url = self._extract_first_url_from_cmd(original)
+            if not url:
+                return None
+
+            low = original.lower()
+            url_low = url.lower()
+
+            # Direct IPK from GitHub/GitHub Releases.
+            if url_low.endswith(".ipk") or ".ipk" in url_low or re.search(r"opkg\s+install\s+https?://", low):
+                out = self._aio_tmp_name_for_url(url, ".ipk")
+                return (
+                    "set -e\n"
+                    + _download_shell_command(url, out, "ipk")
+                    + "\n"
+                    + "echo '[AIO Panel] Instaluję IPK: %s'\n" % out
+                    + "opkg install --force-reinstall %s || opkg install %s\n" % (_safe_shell_arg(out), _safe_shell_arg(out))
+                    + "sync\n"
+                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
+                )
+
+            # Tarballs from GitHub: safe download, then continue original command after first &&.
+            if url_low.endswith(".tar.gz") or ".tar.gz" in url_low or url_low.endswith(".tgz") or ".tgz" in url_low:
+                out_match = re.search(r"-O\s+(['\"]?)(/tmp/[^'\"\s;&|]+)\1", original)
+                out = out_match.group(2) if out_match else self._aio_tmp_name_for_url(url, ".tar.gz")
+                after = ""
+                if "&&" in original:
+                    after = original.split("&&", 1)[1].strip()
+                return (
+                    "set -e\n"
+                    + _download_shell_command(url, out, "tar.gz")
+                    + ("\n%s\n" % after if after else "\necho '[AIO Panel] Archiwum pobrane: %s'\n" % out)
+                    + "sync\n"
+                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
+                )
+
+            # Script installers from GitHub/raw.githubusercontent.com.
+            script_markers = (
+                "installer.sh", "install.sh", "e2iplayer_install.sh", "online-setup",
+                "setup.sh", "download/install.sh"
+            )
+            if any(marker in url_low for marker in script_markers) or "| sh" in low or "| /bin/sh" in low or "| bash" in low:
+                out = self._aio_tmp_name_for_url(url, ".sh")
+                run_line = '/bin/sh %s' % _safe_shell_arg(out)
+
+                if "bash -s install" in low or "sh -s install" in low:
+                    run_line = 'if command -v bash >/dev/null 2>&1; then bash %s install; else /bin/sh %s install; fi' % (_safe_shell_arg(out), _safe_shell_arg(out))
+                elif "| bash" in low or "/bin/bash" in low:
+                    run_line = 'if command -v bash >/dev/null 2>&1; then bash %s; else /bin/sh %s; fi' % (_safe_shell_arg(out), _safe_shell_arg(out))
+
+                return (
+                    "set -e\n"
+                    + _download_shell_command(url, out, "script")
+                    + "\n"
+                    + "chmod 755 %s 2>/dev/null || true\n" % _safe_shell_arg(out)
+                    + "echo '[AIO Panel] Uruchamiam pobrany instalator: %s'\n" % out
+                    + run_line + "\n"
+                    + "sync\n"
+                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
+                )
+
+            return None
+        except Exception as e:
+            print("[AIO Panel] OpenPLi-safe command rewrite error:", e)
+            return None
+
+
     def _sanitize_install_command(self, cmd):
         # Nie pozwalamy, aby pozycje z menu same zabijały GUI. Restart ma być świadomą decyzją użytkownika.
         try:
@@ -6064,6 +6367,9 @@ AIO_RESTORE_EOF
             safe = cmd
             for item in replacements:
                 safe = safe.replace(item, " && echo 'AIO Panel: automatyczny restart pominięty, restart wykonaj ręcznie.'")
+            openpli_safe = self._build_openpli_safe_installer_command("", safe)
+            if openpli_safe:
+                return openpli_safe
             return safe
         except Exception:
             return cmd
@@ -6075,9 +6381,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.1, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.2, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.1 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.2 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -6106,14 +6412,37 @@ AIO_RESTORE_EOF
             os.system("sync")
         except Exception:
             pass
+
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
         except Exception as e:
             print("[AIO Panel] Python channel reload error:", e)
+
+        # Odśwież widoczny selektor kanałów, jeśli jest dostępny w danym obrazie/skórce.
         try:
-            os.system("(wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1) &")
+            from Screens.InfoBar import InfoBar
+            ib = getattr(InfoBar, "instance", None)
+            sl = getattr(ib, "servicelist", None) if ib else None
+            if sl is not None:
+                for method_name in ("reloadBouquets", "buildBouquetList", "updateBouquetList", "refresh"):
+                    try:
+                        method = getattr(sl, method_name, None)
+                        if method:
+                            method()
+                    except Exception as e:
+                        print("[AIO Panel] servicelist %s error: %s" % (method_name, e))
+                try:
+                    if hasattr(sl, "getRoot") and hasattr(sl, "setRoot"):
+                        sl.setRoot(sl.getRoot())
+                except Exception as e:
+                    print("[AIO Panel] servicelist setRoot refresh error:", e)
+        except Exception as e:
+            print("[AIO Panel] InfoBar servicelist refresh error:", e)
+
+        try:
+            os.system("(wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1) &")
         except Exception as e:
             print("[AIO Panel] OpenWebif channel reload error:", e)
 
@@ -6188,7 +6517,7 @@ AIO_RESTORE_EOF
             SRC="{src}"
             STAMP=$(date +%Y%m%d_%H%M%S)
             {helpers}
-            echo "=== AIO Panel 13.0.1: oscam.dvbapi Poland ==="
+            echo "=== AIO Panel 13.0.2: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
             aio_require_oscam_dirs
             echo "$DIRS" | while IFS= read -r D; do
@@ -6306,7 +6635,7 @@ AIO_RESTORE_EOF
         self._open_console_install_action(title, [cmd])
     def install_iptv_dream_simplified(self): 
         # [FIX] Uruchamianie w konsoli, aby uniknąć zwisu na "wget pipe"
-        cmd = "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"
+        cmd = self._build_openpli_safe_installer_command("IPTV Dream Installer", "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh") or "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"
         self._open_console_install_action("IPTV Dream Installer", [cmd])
 
     def install_iptv_deps(self):

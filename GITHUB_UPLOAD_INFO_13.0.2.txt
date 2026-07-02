@@ -1,0 +1,14 @@
+AIO Panel 13.0.2 - GitHub/GitKraken
+
+Wgraj pełną zawartość paczki do repozytorium PanelAIO-Plugin.
+Najważniejsze pliki wersji:
+- version.txt
+- plugin.py
+- legacy_plugin.py
+- changelog.txt
+- RELEASES.md
+- RELEASE_NOTES_13.0.2.txt
+- enigma2-plugin-extensions-panelaio_13.0.2_all.ipk
+- releases/enigma2-plugin-extensions-panelaio_13.0.2_all.ipk
+
+Zakres: poprawka OpenPLi 9.x dla pobierania z GitHub/list kanałów.

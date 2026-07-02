@@ -1,0 +1,9 @@
+PanelAIO-Plugin 13.0.4 - GitHub / GitKraken
+
+Wgraj całą zawartość do repozytorium PanelAIO-Plugin.
+Najważniejsza poprawka:
+listy kanałów pobierały się do /var/volatile/tmp/PanelAIO, ale nie były kopiowane do /etc/enigma2.
+Poprawiono łączenie OpenPLi-safe downloadera z install_archive_script.sh.
+
+Plik release:
+enigma2-plugin-extensions-panelaio_13.0.4_all.ipk

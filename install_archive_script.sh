@@ -1,12 +1,12 @@
 #!/bin/sh
-# Skrypt install_archive_script.sh (v12.0.0) - Zgodny z AIO Panel
+# Skrypt install_archive_script.sh (v13.0.3) - Zgodny z AIO Panel
 # Logika: Rozpakuj -> Znajdź lamedb -> Kopiuj -> (Restart robi plugin.py)
 
 # LOG_FILE dla debugowania
 LOG_FILE="/tmp/aio_install.log"
 
 # Start logging
-echo "--- START install_archive_script.sh (v12.0.0) ---" > "$LOG_FILE"
+echo "--- START install_archive_script.sh (v13.0.3) ---" > "$LOG_FILE"
 echo "Argumenty: \$1='$1' \$2='$2'" >> "$LOG_FILE"
 date >> "$LOG_FILE"
 
@@ -77,6 +77,20 @@ TARGET_ENIGMA2_DIR="/etc/enigma2"
 TARGET_TUXBOX_DIR="/etc/tuxbox"
 COPY_ERRORS=0
 
+# AIO 13.0.3: stare listy czyścimy dopiero po poprawnym rozpakowaniu archiwum i znalezieniu lamedb.
+# Dzięki temu nie kasujemy obecnej listy, jeśli pobranie/rozpakowanie się nie uda.
+mkdir -p "$TARGET_ENIGMA2_DIR" >> "$LOG_FILE" 2>&1
+SAFE_BACKUP_DIR="/tmp/aio_pre_list_install_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$SAFE_BACKUP_DIR" >> "$LOG_FILE" 2>&1
+echo "--> Kopia awaryjna obecnych plików list: $SAFE_BACKUP_DIR" | tee -a "$LOG_FILE"
+for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml userbouquet.*.tv userbouquet.*.radio *.del; do
+    [ -f "$TARGET_ENIGMA2_DIR/$F" ] && cp -a "$TARGET_ENIGMA2_DIR/$F" "$SAFE_BACKUP_DIR/" 2>> "$LOG_FILE" || true
+done
+echo "--> Czyszczę stare pliki list po pozytywnej weryfikacji nowej listy..." | tee -a "$LOG_FILE"
+rm -f "$TARGET_ENIGMA2_DIR"/lamedb "$TARGET_ENIGMA2_DIR"/lamedb5 "$TARGET_ENIGMA2_DIR"/bouquets.tv "$TARGET_ENIGMA2_DIR"/bouquets.radio \
+      "$TARGET_ENIGMA2_DIR"/userbouquet.*.tv "$TARGET_ENIGMA2_DIR"/userbouquet.*.radio \
+      "$TARGET_ENIGMA2_DIR"/blacklist "$TARGET_ENIGMA2_DIR"/whitelist "$TARGET_ENIGMA2_DIR"/*.del 2>/dev/null || true
+
 # Kopiowanie wszystkich plików z znalezionego katalogu źródłowego do /etc/enigma2
 echo "--> Kopiowanie z '$SOURCE_DIR' do '$TARGET_ENIGMA2_DIR/'..." >> "$LOG_FILE"
 cp -rf "$SOURCE_DIR"/* "$TARGET_ENIGMA2_DIR/" 2>> "$LOG_FILE" || { echo "!!! OSTRZEŻENIE: Wystąpiły problemy podczas kopiowania plików do $TARGET_ENIGMA2_DIR (szczegóły w $LOG_FILE)"; COPY_ERRORS=1; }
@@ -99,7 +113,7 @@ echo "--> Pliki tymczasowe usunięte." >> "$LOG_FILE"
 # --- Koniec Czyszczenia ---
 
 # --- Komunikat końcowy ---
-echo "--- KONIEC install_archive_script.sh (v12.0.0) ---" >> "$LOG_FILE"
+echo "--- KONIEC install_archive_script.sh (v13.0.3) ---" >> "$LOG_FILE"
 if [ $COPY_ERRORS -ne 0 ]; then
     echo ">>> Instalacja ZAKOŃCZONA Z OSTRZEŻENIAMI." | tee -a "$LOG_FILE"
     echo ">>> Sprawdź listę kanałów. W razie problemów może być konieczny restart GUI." | tee -a "$LOG_FILE"
