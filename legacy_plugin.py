@@ -2033,15 +2033,12 @@ COL_TITLES = {
 
 
 
-# === SORTOWANIE LIST KANAŁÓW v12 ===
-# Premiowane pozycje (Bzyk83, Anom, Paweł Pawełek, JakiTaki, Fullkiler/Fullkiller,
-# Koncior, Twarek, Conrado, Dominiko/Dominico) są automatycznie przenoszone na górę
-# i sortowane wg najnowszej daty znalezionej w nazwie, wersji lub URL.  Pozostałe
-# listy zostają zachowane po nich w dotychczasowej kolejności.
-CHANNEL_LIST_PREMIUM_CREATORS = (
-    u"bzyk83", u"bzyk 83", u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek",
-    u"jakitaki", u"jaki taki", u"fullkiler", u"fullkiller", u"koncior", u"twarek",
-    u"conrado", u"dominiko", u"dominico"
+# === SORTOWANIE LIST KANAŁÓW v13.0.2 ===
+# Wszystkie listy poza Vhannibal i Azman są sortowane wyłącznie po dacie:
+# im nowsza lista, tym wyżej. Vhannibal i Azman zostają poza tym sortowaniem.
+# Listy z datą starszą niż 365 dni są ukrywane we wtyczce.
+CHANNEL_LIST_SPECIAL_KEEP_CURRENT = (
+    u"vhannibal", u"v hannibal", u"azman"
 )
 
 # These creators are maintained only in the PanelAIO-Lists repository.
@@ -2050,7 +2047,7 @@ CHANNEL_LIST_REPO_ONLY_CREATORS = (
     u"bzyk83", u"bzyk 83", u"jakitaki", u"jaki taki",
     u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek"
 )
-CHANNEL_LIST_MIN_YEAR = 2026
+CHANNEL_LIST_MAX_AGE_DAYS = 365
 
 def _normalize_channel_sort_text(value):
     txt = ensure_unicode(value).lower()
@@ -2065,15 +2062,15 @@ def _normalize_channel_sort_text(value):
     txt = re.sub(u"[^a-z0-9]+", u" ", txt)
     return re.sub(u"\\s+", u" ", txt).strip()
 
-def _is_premium_channel_list_item(name, action=""):
+def _is_special_channel_list_item(name, action=""):
     txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
+    compact = txt.replace(u" ", u"")
     padded = u" %s " % txt
-    for creator in CHANNEL_LIST_PREMIUM_CREATORS:
+    for creator in CHANNEL_LIST_SPECIAL_KEEP_CURRENT:
         c = _normalize_channel_sort_text(creator)
-        if c and (u" %s " % c) in padded:
-            return True
-        # Support compact names stored without spaces, e.g. "jakitaki".
-        if c and c.replace(u" ", u"") in txt.replace(u" ", u""):
+        if not c:
+            continue
+        if (u" %s " % c) in padded or c.replace(u" ", u"") in compact:
             return True
     return False
 
@@ -2120,7 +2117,23 @@ def _channel_date_year(date_key):
     except Exception:
         return 0
 
-def _channel_item_is_2026_or_newer(item):
+def _channel_date_key_to_date(date_key):
+    try:
+        value = int(date_key)
+        y = value // 10000
+        m = (value // 100) % 100
+        d = value % 100
+        if y < 1900 or y > 2100:
+            return None
+        if m <= 0:
+            m = 1
+        if d <= 0:
+            d = 1
+        return datetime.date(y, m, d)
+    except Exception:
+        return None
+
+def _channel_item_is_not_older_than_one_year(item):
     try:
         name, action = item[0], item[1]
     except Exception:
@@ -2129,9 +2142,16 @@ def _channel_item_is_2026_or_newer(item):
         return True
     date_key = _extract_channel_date_key(name, action)
     if not date_key:
-        # Keep undated entries; they are not proven to be older than 2026.
+        # Keep undated entries; there is no reliable date proving that they are older than one year.
         return True
-    return _channel_date_year(date_key) >= CHANNEL_LIST_MIN_YEAR
+    item_date = _channel_date_key_to_date(date_key)
+    if item_date is None:
+        return True
+    try:
+        cutoff = datetime.date.today() - datetime.timedelta(days=CHANNEL_LIST_MAX_AGE_DAYS)
+    except Exception:
+        return True
+    return item_date >= cutoff
 
 def _is_repo_only_creator_item(name, action=""):
     txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
@@ -2174,46 +2194,41 @@ def _dedupe_channel_lists(items):
     return result
 
 def _sort_channel_lists_v12(items):
-    decorated = []
+    dated_items = []
+    special_items = []
     for idx, item in enumerate(items or []):
         try:
             name, action = item[0], item[1]
         except Exception:
             continue
         if action == "SEPARATOR":
-            sort_key = (9, idx, 0)
-            decorated.append((sort_key, item))
             continue
-        premium = _is_premium_channel_list_item(name, action)
+        if _is_special_channel_list_item(name, action):
+            # Vhannibal and Azman keep their current/original relative order and are not date-sorted.
+            special_items.append((idx, item))
+            continue
         date_key = _extract_channel_date_key(name, action)
-        # Premium creators stay above the rest, but every dated list is ordered newest first.
-        if premium:
-            sort_key = (0, -date_key, idx)
-        else:
-            sort_key = (1, -date_key, idx)
-        decorated.append((sort_key, item))
-    decorated.sort(key=lambda row: row[0])
-    return [row[1] for row in decorated]
+        # All regular channel lists: newest date first. Undated entries stay below dated entries.
+        dated_items.append((-date_key, idx, item))
+    dated_items.sort(key=lambda row: (row[0], row[1]))
+    return [row[2] for row in dated_items] + [row[1] for row in special_items]
 
 def _prepare_channel_lists_v1201(repo_lists, s4a_lists_full):
-    repo_filtered = [item for item in (repo_lists or []) if _channel_item_is_2026_or_newer(item)]
+    repo_filtered = [item for item in (repo_lists or []) if _channel_item_is_not_older_than_one_year(item)]
     s4a_filtered = []
     for item in (s4a_lists_full or []):
         try:
             name, action = item[0], item[1]
         except Exception:
             continue
-        if not _channel_item_is_2026_or_newer(item):
+        if not _channel_item_is_not_older_than_one_year(item):
             continue
         if _is_repo_only_creator_item(name, action):
             # Bzyk83, JakiTaki, Anom and Paweł Pawełek are loaded only from PanelAIO-Lists.
             continue
         s4a_filtered.append(item)
     final_channel_lists = _dedupe_channel_lists(repo_filtered + s4a_filtered)
-    final_channel_lists = _sort_channel_lists_v12(final_channel_lists)
-    azman_items = [item for item in final_channel_lists if 'azman' in ensure_unicode(item[0]).lower()]
-    non_azman_items = [item for item in final_channel_lists if 'azman' not in ensure_unicode(item[0]).lower()]
-    return non_azman_items + azman_items
+    return _sort_channel_lists_v12(final_channel_lists)
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
 def _get_lists_from_repo_sync():
