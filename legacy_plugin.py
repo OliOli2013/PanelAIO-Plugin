@@ -5262,20 +5262,8 @@ class PanelAIO(Screen):
 
         if steps:
             picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/bzyk83_hb_13E_2026_02_24.zip'
-            list_name = 'Bzyk83 Hotbird 13E (2026-02-24)'
-
-            try:
-                repo_lists = self.fetched_data_cache.get("repo_lists", [])
-                for item in repo_lists:
-                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
-                        t = str(item[0]).lower()
-                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
-                            channel_list_url = str(item[1]).split(':', 1)[1]
-                            list_name = str(item[0]).replace("📡 ", "")
-                            break
-            except Exception:
-                pass
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Polska_13E_19E_AIO_Panel.zip'
+            list_name = 'Polska 13E AIO Panel'
 
             self.sess.open(
                 WizardProgressScreen,
