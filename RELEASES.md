@@ -1,21 +1,8 @@
-# AIO Panel 13.0.2
+# AIO Panel 13.0.3
 
-Poprawka zachowująca numer wersji **13.0.2** dla ciągłości GitHub.
+AIO Panel 13.0.3
 
-## Ważne
-
-Ta paczka bazuje bezpośrednio na działającej poprawce 13.0.4.  
-Nie cofnięto mechanizmu instalacji list kanałów.
-
-## Zmiany
-
-- Zachowano działające pobieranie i instalację list kanałów.
-- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
-- Dodano odświeżenie przez `eDVBDB`, aktywny `servicelist` oraz lokalne `servicelistreload` przez wget/curl.
-- Numer wersji pozostaje 13.0.2.
-
-## Instalacja
-
-```sh
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_13.0.2_all.ipk
-```
+Zmiany:
+- Super Konfigurator instaluje listę AIO Team 13E + 19.2E.
+- Poprawiono układanie list kanałów.
+- Naprawiono Restore list kanałów tak, aby przywracał wyłącznie listy i bukiety, bez ruszania ustawień tunera, głowic, sieci i systemu.

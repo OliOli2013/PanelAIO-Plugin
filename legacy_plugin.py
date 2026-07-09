@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 13.0.2
+Wersja 13.0.3
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("13.0.2")
+VER = _read_local_version("13.0.3")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -732,7 +732,7 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
     """
     Uruchamia polecenia shella w osobnym wątku.
-    v13.0.2: nie używa już MessageBox(enable_input=False), bo ta kombinacja
+    v13.0.3: nie używa już MessageBox(enable_input=False), bo ta kombinacja
     powodowała crash na niektórych skinach FHD (np. Algare FHD).
     """
     wait_message = None
@@ -2033,7 +2033,7 @@ COL_TITLES = {
 
 
 
-# === SORTOWANIE LIST KANAŁÓW v13.0.2 ===
+# === SORTOWANIE LIST KANAŁÓW v13.0.3 ===
 # Wszystkie listy poza Vhannibal i Azman są sortowane wyłącznie po dacie:
 # im nowsza lista, tym wyżej. Vhannibal i Azman zostają poza tym sortowaniem.
 # Listy z datą starszą niż 365 dni są ukrywane we wtyczce.
@@ -2604,8 +2604,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 13.0.2 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 13.0.2 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 13.0.3 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 13.0.3 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -6153,7 +6153,7 @@ class PanelAIO(Screen):
         f = self._find_channel_backup_file(path)
         if not fileExists(f):
             show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
-        msg = "Przywrócić listę kanałów z pliku:\n{}\n\nEnigma2 zostanie zatrzymana, stare listy zostaną wyczyszczone, a GUI uruchomi się ponownie.".format(f) if self.lang == 'PL' else "Restore channel list from file:\n{}\n\nEnigma2 will be stopped, old lists will be cleared and the GUI will restart.".format(f)
+        msg = "Przywrócić WYŁĄCZNIE listę kanałów z pliku:\n{}\n\nAIO nie będzie przywracał ustawień tunera, głowic, sieci ani konfiguracji systemu. Przywrócone zostaną tylko pliki list kanałów i bukietów.".format(f) if self.lang == 'PL' else "Restore ONLY the channel list from file:\n{}\n\nAIO will not restore tuner, frontend, network or system settings. Only channel-list and bouquet files will be restored.".format(f)
         cmd = r'''
             set -e
             ARCH="{archive}"
@@ -6170,33 +6170,78 @@ ARCH="$ARCH"
 DEST="/etc/enigma2"
 BACKUP_DIR="$BACKUP_DIR"
 PRE="\$BACKUP_DIR/pre_restore_\$(date +%Y%m%d_%H%M%S)"
-echo "=== AIO Panel: Restore list kanałów ==="
+WORK="/tmp/aio_restore_channels_work_\$\$"
+echo "=== AIO Panel: bezpieczny restore list kanałów ==="
 echo "Start: \$(date)"
 echo "Archiwum: \$ARCH"
 if [ ! -f "\$ARCH" ]; then echo "Brak archiwum: \$ARCH"; exit 1; fi
 if ! tar -tzf "\$ARCH" >/dev/null 2>&1; then echo "Uszkodzone archiwum: \$ARCH"; exit 1; fi
-mkdir -p "\$DEST" "\$PRE"
+
+# Zabezpieczenie: restore list nie może rozpakowywać absolutnych ścieżek ani ../
+if tar -tzf "\$ARCH" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null 2>&1; then
+    echo "Archiwum zawiera niebezpieczne ścieżki. Przerywam restore."
+    exit 1
+fi
+
+rm -rf "\$WORK"
+mkdir -p "\$WORK" "\$DEST" "\$PRE"
+tar -xzpf "\$ARCH" -C "\$WORK"
+
+RESTORE_COUNT=0
+for SRCFILE in \$(find "\$WORK" -type f 2>/dev/null); do
+    BASE=\$(basename "\$SRCFILE")
+    case "\$BASE" in
+        lamedb|lamedb5|bouquets.tv|bouquets.radio|blacklist|whitelist|cables.xml|satellites.xml|terrestrial.xml|userbouquet.*.tv|userbouquet.*.radio|*.del)
+            RESTORE_COUNT=\$((RESTORE_COUNT + 1))
+        ;;
+    esac
+done
+
+if [ "\$RESTORE_COUNT" = "0" ]; then
+    echo "W archiwum nie znaleziono plików list kanałów do przywrócenia."
+    rm -rf "\$WORK"
+    exit 1
+fi
+
 cd "\$DEST" || exit 1
 for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml userbouquet.*.tv userbouquet.*.radio *.del; do
     [ -f "\$F" ] && cp -a "\$F" "\$PRE/" || true
 done
 echo "Awaryjna kopia obecnych list: \$PRE"
+echo "Restore obejmuje tylko listy kanałów/bukiety. Plik settings i konfiguracja tunera/sieci nie są ruszane."
+
 echo "Zatrzymuję Enigma2..."
 if command -v init >/dev/null 2>&1; then init 4 || true; fi
 if command -v systemctl >/dev/null 2>&1; then systemctl stop enigma2 2>/dev/null || true; fi
 killall -9 enigma2 2>/dev/null || true
 sleep 4
-echo "Czyszczę stare pliki list..."
+
+echo "Czyszczę wyłącznie stare pliki list kanałów..."
 rm -f "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio \
       "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio \
       "\$DEST"/blacklist "\$DEST"/whitelist "\$DEST"/*.del 2>/dev/null || true
-echo "Przywracam backup..."
-tar -xzpf "\$ARCH" -C "\$DEST"
+
+echo "Przywracam tylko pliki list kanałów..."
+COPIED=0
+for SRCFILE in \$(find "\$WORK" -type f 2>/dev/null); do
+    BASE=\$(basename "\$SRCFILE")
+    case "\$BASE" in
+        lamedb|lamedb5|bouquets.tv|bouquets.radio|blacklist|whitelist|cables.xml|satellites.xml|terrestrial.xml|userbouquet.*.tv|userbouquet.*.radio|*.del)
+            cp -a "\$SRCFILE" "\$DEST/\$BASE"
+            COPIED=\$((COPIED + 1))
+        ;;
+        settings|*.conf|*.cfg|automounts.xml|network|interfaces)
+            echo "Pomijam plik ustawień/systemu: \$BASE"
+        ;;
+    esac
+done
+
 [ -f "\$DEST/bouquets.tv" ] || printf '#NAME Bouquets (TV)\n' > "\$DEST/bouquets.tv"
 [ -f "\$DEST/bouquets.radio" ] || printf '#NAME Bouquets (Radio)\n' > "\$DEST/bouquets.radio"
 chmod 644 "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio 2>/dev/null || true
+rm -rf "\$WORK"
 sync
-echo "Restore zakończony: \$(date)"
+echo "Restore list kanałów zakończony. Skopiowano plików: \$COPIED"
 echo "Uruchamiam Enigma2..."
 if command -v init >/dev/null 2>&1; then init 3 || true; fi
 if command -v systemctl >/dev/null 2>&1; then systemctl start enigma2 2>/dev/null || true; fi
@@ -6204,10 +6249,10 @@ exit 0
 AIO_RESTORE_EOF
             chmod 755 "$SCRIPT"
             nohup /bin/sh "$SCRIPT" >/tmp/aio_restore_channels_launcher.log 2>&1 &
-            echo "Restore uruchomiony w tle. Log: $LOG"
-            echo "Za chwilę GUI może zostać zatrzymane i uruchomione ponownie."
+            echo "Restore list kanałów uruchomiony w tle. Log: $LOG"
+            echo "AIO przywraca tylko listy kanałów, bez ustawień tunera/sieci/systemu."
         '''.format(archive=f, backupdir=path.rstrip('/'))
-        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
+        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie list kanałów" if self.lang == 'PL' else "Restoring channel lists", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def backup_oscam(self):
         path = self._get_backup_path()
@@ -6227,9 +6272,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.2 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.3 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.2 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.3 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -6384,9 +6429,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.2, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.3, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.2 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.3 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -6520,7 +6565,7 @@ AIO_RESTORE_EOF
             SRC="{src}"
             STAMP=$(date +%Y%m%d_%H%M%S)
             {helpers}
-            echo "=== AIO Panel 13.0.2: oscam.dvbapi Poland ==="
+            echo "=== AIO Panel 13.0.3: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
             aio_require_oscam_dirs
             echo "$DIRS" | while IFS= read -r D; do

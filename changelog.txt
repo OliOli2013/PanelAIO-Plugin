@@ -1,3 +1,18 @@
+[13.0.3]
+AIO Panel 13.0.3
+- Super Konfigurator instaluje listę AIO Team 13E + 19.2E.
+- Poprawiono układanie list kanałów: nowsze listy są wyżej, a starsze niż rok nie są wyświetlane.
+- Naprawiono Restore list kanałów: przywracane są tylko pliki list i bukietów.
+- Restore list kanałów nie przywraca już ustawień tunera, głowic, sieci ani konfiguracji systemu.
+
+[13.0.2]
+AIO Panel 13.0.2
+- Paczka bazuje bezpośrednio na działającej poprawce 13.0.4.
+- Zachowano naprawioną instalację list kanałów.
+- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
+- Dodano odświeżenie przez eDVBDB, aktywny servicelist oraz lokalne servicelistreload przez wget/curl.
+- Numer wersji pozostaje 13.0.2 dla ciągłości GitHub.
+
 [13.0.2]
 AIO Panel 13.0.2
 - Dodano poprawkę pobierania dla OpenPLi 9.x.
