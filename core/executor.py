@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+from threading import Timer
 
 from Plugins.SystemPlugins.PanelAIO.core.security import ALLOWED_SHELLS, SecurityError, validate_target_path
 
@@ -51,7 +52,29 @@ class SecureExecutor(object):
         try:
             stdout, stderr = process.communicate(timeout=timeout)
         except TypeError:
-            stdout, stderr = process.communicate()
+            # Python 2 subprocess has no communicate(timeout=...).
+            state = {'timed_out': False}
+            def _kill_on_timeout():
+                state['timed_out'] = True
+                try:
+                    process.kill()
+                except Exception:
+                    try:
+                        process.terminate()
+                    except Exception:
+                        pass
+            timer = Timer(timeout, _kill_on_timeout)
+            timer.daemon = True
+            timer.start()
+            try:
+                stdout, stderr = process.communicate()
+            finally:
+                try:
+                    timer.cancel()
+                except Exception:
+                    pass
+            if state['timed_out']:
+                raise CommandError('Command timed out', returncode=255, stdout=stdout, stderr=stderr)
         if not isinstance(stdout, str):
             stdout = stdout.decode('utf-8', 'ignore')
         if not isinstance(stderr, str):

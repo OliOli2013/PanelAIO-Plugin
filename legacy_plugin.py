@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 13.0.3
+Wersja 14.0.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -378,7 +378,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("13.0.3")
+VER = _read_local_version("14.0.0")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -756,13 +756,6 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
 
                 if process.returncode != 0:
                     print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
-                    try:
-                        with open("/tmp/aio_last_command_error.log", "ab") as _aio_log:
-                            _aio_log.write(("\n=== %s ===\n" % title).encode("utf-8"))
-                            _aio_log.write(stderr or b"")
-                            _aio_log.write(b"\n")
-                    except Exception:
-                        pass
 
         except Exception as e:
             print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
@@ -1739,7 +1732,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
             picon_path = "/usr/share/enigma2/picon"
         nested_picon_path = os.path.join(picon_path, "picon")
         full_command = (
-            "{download_cmd}\n"
+            "{download_cmd} && "
             "mkdir -p {picon_path} && "
             "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
             "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
@@ -1752,7 +1745,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
             nested_path=nested_picon_path
         )
     elif archive_type == "ipk":
-        full_command = "{}\nopkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
+        full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
     else:
         # Ten blok dotyczy list kanałów (TYPU "LIST")
         install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
@@ -1761,23 +1754,12 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
              if callback_on_finish: callback_on_finish()
              return
         chmod_cmd = "chmod 755 {}".format(install_script_path)
-        reload_cmd = (
-            "sync; sleep 1; "
-            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1 || true); "
-            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1 || true); "
-            "(wget -qO- -T 5 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1 || true); "
-            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1 || true); "
-            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1 || true); "
-            "(curl -s --max-time 5 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1 || true); "
-            "echo 'AIO Panel: wykonano próbę przeładowania list kanałów/bukietów.'"
-        )
-        full_command = "{download_cmd}\n{chmod_cmd} && /bin/sh {script_path} \"{tmp_archive}\" \"{archive_type}\" && {reload_cmd}".format(
+        full_command = "{download_cmd} && {chmod_cmd} && /bin/sh {script_path} \"{tmp_archive}\" \"{archive_type}\"".format(
             download_cmd=download_cmd,
             chmod_cmd=chmod_cmd,
             script_path=install_script_path,
             tmp_archive=tmp_archive_path,
-            archive_type=archive_type,
-            reload_cmd=reload_cmd
+            archive_type=archive_type
         )
     
     run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
@@ -1843,6 +1825,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
+    ("🩺 E2 Doctor - Instalator (Python 3)", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("📦 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -1885,6 +1868,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
     ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
+    ("🩺 E2 Doctor - Installer (Python 3)", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("📦 IPTV Configuration - dependencies", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
@@ -2033,21 +2017,18 @@ COL_TITLES = {
 
 
 
-# === SORTOWANIE LIST KANAŁÓW v13.0.3 ===
-# Wszystkie listy poza Vhannibal i Azman są sortowane wyłącznie po dacie:
-# im nowsza lista, tym wyżej. Vhannibal i Azman zostają poza tym sortowaniem.
-# Listy z datą starszą niż 365 dni są ukrywane we wtyczce.
-CHANNEL_LIST_SPECIAL_KEEP_CURRENT = (
-    u"vhannibal", u"v hannibal", u"azman"
-)
-
-# These creators are maintained only in the PanelAIO-Lists repository.
-# Any matching copies coming from S4aUpdater are filtered out to avoid duplicates.
+# === SORTOWANIE LIST KANAŁÓW v14.0.0 ===
+# Zasady kolejności:
+# 1. wpisy Azman są całkowicie usuwane,
+# 2. wszystkie pozostałe listy są sortowane wyłącznie według daty — najnowsze u góry,
+# 3. listy Vhannibal/Vhanibal są zawsze przenoszone na sam dół.
+# Przy identycznej lub brakującej dacie zachowywana jest stabilna kolejność źródłowa.
 CHANNEL_LIST_REPO_ONLY_CREATORS = (
     u"bzyk83", u"bzyk 83", u"jakitaki", u"jaki taki",
     u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek"
 )
-CHANNEL_LIST_MAX_AGE_DAYS = 365
+CHANNEL_LIST_MIN_YEAR = 2026
+
 
 def _normalize_channel_sort_text(value):
     txt = ensure_unicode(value).lower()
@@ -2062,17 +2043,30 @@ def _normalize_channel_sort_text(value):
     txt = re.sub(u"[^a-z0-9]+", u" ", txt)
     return re.sub(u"\\s+", u" ", txt).strip()
 
-def _is_special_channel_list_item(name, action=""):
+
+def _channel_item_matches_creator(name, action, creator_names):
     txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
     compact = txt.replace(u" ", u"")
     padded = u" %s " % txt
-    for creator in CHANNEL_LIST_SPECIAL_KEEP_CURRENT:
-        c = _normalize_channel_sort_text(creator)
-        if not c:
+    for creator in creator_names:
+        normalized = _normalize_channel_sort_text(creator)
+        if not normalized:
             continue
-        if (u" %s " % c) in padded or c.replace(u" ", u"") in compact:
+        if (u" %s " % normalized) in padded:
+            return True
+        if normalized.replace(u" ", u"") in compact:
             return True
     return False
+
+
+def _is_azman_channel_list_item(name, action=""):
+    return _channel_item_matches_creator(name, action, (u"azman",))
+
+
+def _is_vhannibal_channel_list_item(name, action=""):
+    # Obie pisownie występują w źródłach i opisach użytkowników.
+    return _channel_item_matches_creator(name, action, (u"vhannibal", u"vhanibal"))
+
 
 def _make_date_key(year, month=0, day=0):
     try:
@@ -2087,6 +2081,7 @@ def _make_date_key(year, month=0, day=0):
         return y * 10000 + m * 100 + d
     except Exception:
         return 0
+
 
 def _extract_channel_date_key(name, action=""):
     text = ensure_unicode(name) + u" " + ensure_unicode(action)
@@ -2104,12 +2099,13 @@ def _extract_channel_date_key(name, action=""):
             keys.append(key)
     if keys:
         return max(keys)
-    # Year-only versions such as "2024--" stay sortable but below full dates.
+    # Wersje zawierające tylko rok pozostają sortowalne, lecz trafiają za pełne daty.
     for m in re.finditer(r"(?<!\d)((?:19|20)\d{2})(?:--)?(?!\d)", text):
         key = _make_date_key(m.group(1), 0, 0)
         if key:
             keys.append(key)
     return max(keys) if keys else 0
+
 
 def _channel_date_year(date_key):
     try:
@@ -2117,23 +2113,8 @@ def _channel_date_year(date_key):
     except Exception:
         return 0
 
-def _channel_date_key_to_date(date_key):
-    try:
-        value = int(date_key)
-        y = value // 10000
-        m = (value // 100) % 100
-        d = value % 100
-        if y < 1900 or y > 2100:
-            return None
-        if m <= 0:
-            m = 1
-        if d <= 0:
-            d = 1
-        return datetime.date(y, m, d)
-    except Exception:
-        return None
 
-def _channel_item_is_not_older_than_one_year(item):
+def _channel_item_is_2026_or_newer(item):
     try:
         name, action = item[0], item[1]
     except Exception:
@@ -2142,28 +2123,14 @@ def _channel_item_is_not_older_than_one_year(item):
         return True
     date_key = _extract_channel_date_key(name, action)
     if not date_key:
-        # Keep undated entries; there is no reliable date proving that they are older than one year.
+        # Wpis bez daty pozostaje — nie można potwierdzić, że jest starszy od 2026 roku.
         return True
-    item_date = _channel_date_key_to_date(date_key)
-    if item_date is None:
-        return True
-    try:
-        cutoff = datetime.date.today() - datetime.timedelta(days=CHANNEL_LIST_MAX_AGE_DAYS)
-    except Exception:
-        return True
-    return item_date >= cutoff
+    return _channel_date_year(date_key) >= CHANNEL_LIST_MIN_YEAR
+
 
 def _is_repo_only_creator_item(name, action=""):
-    txt = _normalize_channel_sort_text(u"%s %s" % (ensure_unicode(name), ensure_unicode(action)))
-    compact = txt.replace(u" ", u"")
-    padded = u" %s " % txt
-    for creator in CHANNEL_LIST_REPO_ONLY_CREATORS:
-        c = _normalize_channel_sort_text(creator)
-        if not c:
-            continue
-        if (u" %s " % c) in padded or c.replace(u" ", u"") in compact:
-            return True
-    return False
+    return _channel_item_matches_creator(name, action, CHANNEL_LIST_REPO_ONLY_CREATORS)
+
 
 def _dedupe_channel_lists(items):
     result = []
@@ -2177,7 +2144,7 @@ def _dedupe_channel_lists(items):
             result.append(item)
             continue
         norm_name = _normalize_channel_sort_text(name)
-        # Remove volatile dates and generic source words before duplicate comparison.
+        # Usuń zmienne daty i ogólne nazwy źródeł przed porównaniem duplikatów.
         norm_name = re.sub(u"\\b(?:19|20)\\d{2}(?:[ -]?[01]?\\d[ -]?[0-3]?\\d)?\\b", u" ", norm_name)
         norm_name = re.sub(u"\\b(?:brak daty|dodaj bukiet m3u|dodaj bukiet ref|s4aupdater|s4a|repo)\\b", u" ", norm_name)
         norm_name = re.sub(u"\\s+", u" ", norm_name).strip()
@@ -2193,41 +2160,70 @@ def _dedupe_channel_lists(items):
         result.append(item)
     return result
 
+
 def _sort_channel_lists_v12(items):
-    dated_items = []
-    special_items = []
+    """Sortuj wszystkie zwykłe listy po dacie, a Vhannibal zawsze umieść na końcu."""
+    regular = []
+    separators = []
+    vhannibal = []
     for idx, item in enumerate(items or []):
         try:
             name, action = item[0], item[1]
         except Exception:
             continue
         if action == "SEPARATOR":
-            continue
-        if _is_special_channel_list_item(name, action):
-            # Vhannibal and Azman keep their current/original relative order and are not date-sorted.
-            special_items.append((idx, item))
+            separators.append((idx, item))
             continue
         date_key = _extract_channel_date_key(name, action)
-        # All regular channel lists: newest date first. Undated entries stay below dated entries.
-        dated_items.append((-date_key, idx, item))
-    dated_items.sort(key=lambda row: (row[0], row[1]))
-    return [row[2] for row in dated_items] + [row[1] for row in special_items]
+        row = (-date_key, idx, item)
+        if _is_vhannibal_channel_list_item(name, action):
+            vhannibal.append(row)
+        else:
+            regular.append(row)
+
+    # Python 2 i Python 3: jawny klucz nie porównuje obiektów item przy remisie.
+    regular.sort(key=lambda row: (row[0], row[1]))
+    vhannibal.sort(key=lambda row: (row[0], row[1]))
+
+    ordered = [row[2] for row in regular]
+    ordered.extend([row[1] for row in separators])
+    ordered.extend([row[2] for row in vhannibal])
+    return ordered
+
 
 def _prepare_channel_lists_v1201(repo_lists, s4a_lists_full):
-    repo_filtered = [item for item in (repo_lists or []) if _channel_item_is_not_older_than_one_year(item)]
+    repo_filtered = []
+    for item in (repo_lists or []):
+        try:
+            name, action = item[0], item[1]
+        except Exception:
+            continue
+        if _is_azman_channel_list_item(name, action):
+            continue
+        if _channel_item_is_2026_or_newer(item):
+            repo_filtered.append(item)
+
     s4a_filtered = []
     for item in (s4a_lists_full or []):
         try:
             name, action = item[0], item[1]
         except Exception:
             continue
-        if not _channel_item_is_not_older_than_one_year(item):
+        if _is_azman_channel_list_item(name, action):
+            continue
+        if not _channel_item_is_2026_or_newer(item):
             continue
         if _is_repo_only_creator_item(name, action):
-            # Bzyk83, JakiTaki, Anom and Paweł Pawełek are loaded only from PanelAIO-Lists.
+            # Te listy są pobierane wyłącznie z repozytorium PanelAIO-Lists.
             continue
         s4a_filtered.append(item)
+
     final_channel_lists = _dedupe_channel_lists(repo_filtered + s4a_filtered)
+    # Ostateczny filtr zabezpiecza również wpisy, w których nazwa Azman występuje tylko w URL.
+    final_channel_lists = [
+        item for item in final_channel_lists
+        if not _is_azman_channel_list_item(item[0], item[1])
+    ]
     return _sort_channel_lists_v12(final_channel_lists)
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
@@ -2604,8 +2600,8 @@ class WizardProgressScreen(Screen):
 
     def _on_wizard_finish(self, *args, **kwargs):
         self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 13.0.3 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 13.0.3 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
+            "Instalacja zakończona.\n\nAIO Panel 14.0.0 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
+            "Installation completed.\n\nAIO Panel 14.0.0 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
         )
         reactor.callLater(6, self.close)
 
@@ -4009,6 +4005,7 @@ FUNCTION_DESCRIPTIONS = {
         "📡 Paweł Pawełek HB 13E (04.01.2026)": "Oficjalna lista kanałów dla HotBird 13E.\nInstalacja listy wraz z automatycznym odświeżeniem bouquetów w Enigma2.",
         "📺 XStreamity - Instalator": "Instaluje XStreamity (IPTV).\nObsługa M3U oraz Xtream Codes; po instalacji uruchom z menu Wtyczki.",
         "📺 IPTV Dream - Instalator": "Instaluje IPTV Dream (zaawansowany odtwarzacz IPTV).\nWymagane biblioteki możesz doinstalować z pozycji zależności IPTV.",
+        "🩺 E2 Doctor - Instalator (Python 3)": "Instaluje E2 Doctor z oficjalnego repozytorium autora.\nNarzędzie wykonuje diagnostykę tunera i bezpieczne naprawy; pozycja jest dostępna wyłącznie na Pythonie 3.",
         "📦 Konfiguracja IPTV - zależności": "Instaluje wymagane zależności/biblioteki dla wtyczek IPTV.\nZalecane uruchomienie przed instalacją playerów IPTV.",
 
         # Softcam i Wtyczki
@@ -4084,6 +4081,7 @@ FUNCTION_DESCRIPTIONS = {
         "📡 Paweł Pawełek HB 13E (04.01.2026)": "Official channel list for HotBird 13E.\nInstalls the bouquets and refreshes the Enigma2 channel lists automatically.",
         "📺 XStreamity - Installer": "Installs XStreamity (IPTV).\nSupports M3U and Xtream Codes; launch it from the Plugins menu after install.",
         "📺 IPTV Dream - Installer": "Installs IPTV Dream (advanced IPTV player).\nIf needed, install IPTV dependencies from the dedicated dependencies entry.",
+        "🩺 E2 Doctor - Installer (Python 3)": "Installs E2 Doctor from the author’s official repository.\nThe plugin provides receiver diagnostics and safe repairs; this entry is available on Python 3 only.",
         "📦 IPTV Configuration - dependencies": "Installs required IPTV packages/libraries.\nRecommended to run before installing IPTV players.",
 
         # Softcam & Plugins
@@ -4213,7 +4211,7 @@ class PanelAIO(Screen):
         Screen.__init__(self, session)
         # Force our own internal skin name. Some external skins define a generic
         # screen named "Panel"; without this, the dashboard can open but remain invisible.
-        self.skinName = ["PanelAIO"]
+        self.skinName = getattr(self, "modern_skin_name", ["PanelAIO"])
         self.setTitle("Panel AIO " + VER)
         self.sess = session
         self.lang = 'PL'
@@ -4468,6 +4466,7 @@ class PanelAIO(Screen):
                       # Blokuj wtyczki, które działają tylko na Py3 lub są zbyt ciężkie dla starych boxów
                       if "E2Kodi" in name or cmd == "CMD:INSTALL_E2KODI": continue
                       if "XStreamity" in name: continue # Wersje Py2 rzadko wspierane
+                      if "E2 Doctor" in name: continue # E2 Doctor wymaga Python 3
                       softcam_filtered.append(item)
                  softcam_menu = softcam_filtered
 
@@ -5262,8 +5261,20 @@ class PanelAIO(Screen):
 
         if steps:
             picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Polska_13E_19E_AIO_Panel.zip'
-            list_name = 'Polska 13E AIO Panel'
+            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/bzyk83_hb_13E_2026_02_24.zip'
+            list_name = 'Bzyk83 Hotbird 13E (2026-02-24)'
+
+            try:
+                repo_lists = self.fetched_data_cache.get("repo_lists", [])
+                for item in repo_lists:
+                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
+                        t = str(item[0]).lower()
+                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
+                            channel_list_url = str(item[1]).split(':', 1)[1]
+                            list_name = str(item[0]).replace("📡 ", "")
+                            break
+            except Exception:
+                pass
 
             self.sess.open(
                 WizardProgressScreen,
@@ -6153,7 +6164,7 @@ class PanelAIO(Screen):
         f = self._find_channel_backup_file(path)
         if not fileExists(f):
             show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
-        msg = "Przywrócić WYŁĄCZNIE listę kanałów z pliku:\n{}\n\nAIO nie będzie przywracał ustawień tunera, głowic, sieci ani konfiguracji systemu. Przywrócone zostaną tylko pliki list kanałów i bukietów.".format(f) if self.lang == 'PL' else "Restore ONLY the channel list from file:\n{}\n\nAIO will not restore tuner, frontend, network or system settings. Only channel-list and bouquet files will be restored.".format(f)
+        msg = "Przywrócić listę kanałów z pliku:\n{}\n\nEnigma2 zostanie zatrzymana, stare listy zostaną wyczyszczone, a GUI uruchomi się ponownie.".format(f) if self.lang == 'PL' else "Restore channel list from file:\n{}\n\nEnigma2 will be stopped, old lists will be cleared and the GUI will restart.".format(f)
         cmd = r'''
             set -e
             ARCH="{archive}"
@@ -6170,78 +6181,33 @@ ARCH="$ARCH"
 DEST="/etc/enigma2"
 BACKUP_DIR="$BACKUP_DIR"
 PRE="\$BACKUP_DIR/pre_restore_\$(date +%Y%m%d_%H%M%S)"
-WORK="/tmp/aio_restore_channels_work_\$\$"
-echo "=== AIO Panel: bezpieczny restore list kanałów ==="
+echo "=== AIO Panel: Restore list kanałów ==="
 echo "Start: \$(date)"
 echo "Archiwum: \$ARCH"
 if [ ! -f "\$ARCH" ]; then echo "Brak archiwum: \$ARCH"; exit 1; fi
 if ! tar -tzf "\$ARCH" >/dev/null 2>&1; then echo "Uszkodzone archiwum: \$ARCH"; exit 1; fi
-
-# Zabezpieczenie: restore list nie może rozpakowywać absolutnych ścieżek ani ../
-if tar -tzf "\$ARCH" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null 2>&1; then
-    echo "Archiwum zawiera niebezpieczne ścieżki. Przerywam restore."
-    exit 1
-fi
-
-rm -rf "\$WORK"
-mkdir -p "\$WORK" "\$DEST" "\$PRE"
-tar -xzpf "\$ARCH" -C "\$WORK"
-
-RESTORE_COUNT=0
-for SRCFILE in \$(find "\$WORK" -type f 2>/dev/null); do
-    BASE=\$(basename "\$SRCFILE")
-    case "\$BASE" in
-        lamedb|lamedb5|bouquets.tv|bouquets.radio|blacklist|whitelist|cables.xml|satellites.xml|terrestrial.xml|userbouquet.*.tv|userbouquet.*.radio|*.del)
-            RESTORE_COUNT=\$((RESTORE_COUNT + 1))
-        ;;
-    esac
-done
-
-if [ "\$RESTORE_COUNT" = "0" ]; then
-    echo "W archiwum nie znaleziono plików list kanałów do przywrócenia."
-    rm -rf "\$WORK"
-    exit 1
-fi
-
+mkdir -p "\$DEST" "\$PRE"
 cd "\$DEST" || exit 1
 for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml userbouquet.*.tv userbouquet.*.radio *.del; do
     [ -f "\$F" ] && cp -a "\$F" "\$PRE/" || true
 done
 echo "Awaryjna kopia obecnych list: \$PRE"
-echo "Restore obejmuje tylko listy kanałów/bukiety. Plik settings i konfiguracja tunera/sieci nie są ruszane."
-
 echo "Zatrzymuję Enigma2..."
 if command -v init >/dev/null 2>&1; then init 4 || true; fi
 if command -v systemctl >/dev/null 2>&1; then systemctl stop enigma2 2>/dev/null || true; fi
 killall -9 enigma2 2>/dev/null || true
 sleep 4
-
-echo "Czyszczę wyłącznie stare pliki list kanałów..."
+echo "Czyszczę stare pliki list..."
 rm -f "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio \
       "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio \
       "\$DEST"/blacklist "\$DEST"/whitelist "\$DEST"/*.del 2>/dev/null || true
-
-echo "Przywracam tylko pliki list kanałów..."
-COPIED=0
-for SRCFILE in \$(find "\$WORK" -type f 2>/dev/null); do
-    BASE=\$(basename "\$SRCFILE")
-    case "\$BASE" in
-        lamedb|lamedb5|bouquets.tv|bouquets.radio|blacklist|whitelist|cables.xml|satellites.xml|terrestrial.xml|userbouquet.*.tv|userbouquet.*.radio|*.del)
-            cp -a "\$SRCFILE" "\$DEST/\$BASE"
-            COPIED=\$((COPIED + 1))
-        ;;
-        settings|*.conf|*.cfg|automounts.xml|network|interfaces)
-            echo "Pomijam plik ustawień/systemu: \$BASE"
-        ;;
-    esac
-done
-
+echo "Przywracam backup..."
+tar -xzpf "\$ARCH" -C "\$DEST"
 [ -f "\$DEST/bouquets.tv" ] || printf '#NAME Bouquets (TV)\n' > "\$DEST/bouquets.tv"
 [ -f "\$DEST/bouquets.radio" ] || printf '#NAME Bouquets (Radio)\n' > "\$DEST/bouquets.radio"
 chmod 644 "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio 2>/dev/null || true
-rm -rf "\$WORK"
 sync
-echo "Restore list kanałów zakończony. Skopiowano plików: \$COPIED"
+echo "Restore zakończony: \$(date)"
 echo "Uruchamiam Enigma2..."
 if command -v init >/dev/null 2>&1; then init 3 || true; fi
 if command -v systemctl >/dev/null 2>&1; then systemctl start enigma2 2>/dev/null || true; fi
@@ -6249,10 +6215,10 @@ exit 0
 AIO_RESTORE_EOF
             chmod 755 "$SCRIPT"
             nohup /bin/sh "$SCRIPT" >/tmp/aio_restore_channels_launcher.log 2>&1 &
-            echo "Restore list kanałów uruchomiony w tle. Log: $LOG"
-            echo "AIO przywraca tylko listy kanałów, bez ustawień tunera/sieci/systemu."
+            echo "Restore uruchomiony w tle. Log: $LOG"
+            echo "Za chwilę GUI może zostać zatrzymane i uruchomione ponownie."
         '''.format(archive=f, backupdir=path.rstrip('/'))
-        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie list kanałów" if self.lang == 'PL' else "Restoring channel lists", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
+        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def backup_oscam(self):
         path = self._get_backup_path()
@@ -6272,9 +6238,9 @@ AIO_RESTORE_EOF
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 13.0.3 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 14.0.0 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 13.0.3 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 14.0.0 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -6429,9 +6395,9 @@ AIO_RESTORE_EOF
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 13.0.3, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 14.0.0, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 13.0.3 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 14.0.0 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -6460,37 +6426,14 @@ AIO_RESTORE_EOF
             os.system("sync")
         except Exception:
             pass
-
         try:
             db = eDVBDB.getInstance()
             db.reloadServicelist()
             db.reloadBouquets()
         except Exception as e:
             print("[AIO Panel] Python channel reload error:", e)
-
-        # Odśwież widoczny selektor kanałów, jeśli jest dostępny w danym obrazie/skórce.
         try:
-            from Screens.InfoBar import InfoBar
-            ib = getattr(InfoBar, "instance", None)
-            sl = getattr(ib, "servicelist", None) if ib else None
-            if sl is not None:
-                for method_name in ("reloadBouquets", "buildBouquetList", "updateBouquetList", "refresh"):
-                    try:
-                        method = getattr(sl, method_name, None)
-                        if method:
-                            method()
-                    except Exception as e:
-                        print("[AIO Panel] servicelist %s error: %s" % (method_name, e))
-                try:
-                    if hasattr(sl, "getRoot") and hasattr(sl, "setRoot"):
-                        sl.setRoot(sl.getRoot())
-                except Exception as e:
-                    print("[AIO Panel] servicelist setRoot refresh error:", e)
-        except Exception as e:
-            print("[AIO Panel] InfoBar servicelist refresh error:", e)
-
-        try:
-            os.system("(wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; curl -s --max-time 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1) &")
+            os.system("(wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=0' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=1' >/dev/null 2>&1; wget -qO- -T 3 'http://127.0.0.1/web/servicelistreload?mode=2' >/dev/null 2>&1) &")
         except Exception as e:
             print("[AIO Panel] OpenWebif channel reload error:", e)
 
@@ -6565,7 +6508,7 @@ AIO_RESTORE_EOF
             SRC="{src}"
             STAMP=$(date +%Y%m%d_%H%M%S)
             {helpers}
-            echo "=== AIO Panel 13.0.3: oscam.dvbapi Poland ==="
+            echo "=== AIO Panel 14.0.0: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
             aio_require_oscam_dirs
             echo "$DIRS" | while IFS= read -r D; do

@@ -1,8 +1,45 @@
-# AIO Panel 13.0.3
+# AIO Panel 14.0.0
 
-AIO Panel 13.0.3
+AIO Panel is a universal Enigma2 toolbox for receivers running Python 2 or Python 3. Version 14.0.0 introduces a completely rebuilt adaptive dashboard while retaining the proven installers and maintenance actions from the previous release.
 
-Zmiany:
-- Super Konfigurator instaluje listę AIO Team 13E + 19.2E.
-- Poprawiono układanie list kanałów.
-- Naprawiono Restore list kanałów tak, aby przywracał wyłącznie listy i bukiety, bez ruszania ustawień tunera, głowic, sieci i systemu.
+## Main areas
+
+- channel lists and bouquet installation,
+- Softcam and Oscam tools,
+- online plugin installers,
+- first-installation configurator,
+- system tools, feed and repository management,
+- channel-list and Oscam backup/restore,
+- skins, diagnostics, cleanup and security tools,
+- plugin update and compatibility information.
+
+## Modern interface
+
+- separate layouts for compact, HD and Full HD desktops,
+- PNG pictograms independent of receiver font and emoji support,
+- category navigation, central action list and a live details panel,
+- CPU, RAM, flash, network, image and Python information,
+- automatic Polish interface on Polish Enigma2 systems and English on other languages,
+- manual language switching: Red — Polish, Green — English,
+- Yellow — restart GUI, Blue — AIO Panel update, INFO — support QR.
+
+## E2 Doctor
+
+E2 Doctor is available in Online Plugins and is installed with:
+
+```sh
+wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh
+```
+
+Because E2 Doctor requires Python 3, the entry is hidden automatically on Python 2 images.
+
+## Online installation
+
+```sh
+wget -q -O - https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
+```
+
+The installer does not force an automatic reboot.
+
+Author: **by Paweł Pawełek**  
+Contact: **aio-iptv@wp.pl**

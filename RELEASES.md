@@ -1,8 +1,5 @@
-# AIO Panel 13.0.3
+# AIO Panel releases
 
-AIO Panel 13.0.3
+## 14.0.0
 
-Zmiany:
-- Super Konfigurator instaluje listę AIO Team 13E + 19.2E.
-- Poprawiono układanie list kanałów.
-- Naprawiono Restore list kanałów tak, aby przywracał wyłącznie listy i bukiety, bez ruszania ustawień tunera, głowic, sieci i systemu.
+Major visual and architectural rebuild with adaptive compact/HD/FHD layouts, independent PNG iconography, automatic PL/EN language selection, live receiver health information and the E2 Doctor installer for Python 3 images. The existing action engine remains available through a compatibility adapter to avoid regressions.

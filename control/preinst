@@ -1,0 +1,4 @@
+#!/bin/sh
+rm -rf /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO 2>/dev/null || true
+rm -rf /usr/lib/enigma2/python/Plugins/Extensions/PanelAIO 2>/dev/null || true
+exit 0

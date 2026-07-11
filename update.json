@@ -1,0 +1,9 @@
+{
+  "version": "14.0.0",
+  "build": 14000,
+  "package": "enigma2-plugin-extensions-panelaio",
+  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/releases/enigma2-plugin-extensions-panelaio_14.0.0_all.ipk",
+  "sha256": "b4fb5d27f42f3ff57a8b00813ce22469e4947df3121e28b8645d37bae406cb70",
+  "python": "2/3",
+  "changelog": "Usunięto listy Azman, listy Vhannibal/Vhanibal przeniesiono na sam dół, a wszystkie pozostałe listy są sortowane według daty od najnowszej. Wersja pozostaje 14.0.0."
+}

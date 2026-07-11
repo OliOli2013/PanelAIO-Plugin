@@ -1,5 +1,5 @@
 #!/bin/sh
-# PanelAIO 12.0.5 - bezpieczna instalacja/aktualizacja z GitHuba dla Python 2/3
+# PanelAIO 14.0.0 - bezpieczna instalacja/aktualizacja z GitHuba dla Python 2/3
 # Poprawka: BusyBox unzip na starszych obrazach/Python 2 wymaga wcześniejszego utworzenia katalogu -d.
 set -e
 
@@ -99,7 +99,8 @@ mkdir -p "$DST.new"
 cp -R "$SRC"/. "$DST.new/"
 
 # Nie instaluj katalogów technicznych repozytorium na tunerze.
-rm -rf "$DST.new/release" "$DST.new/.git" "$DST.new/.github" 2>/dev/null || true
+rm -rf "$DST.new/release" "$DST.new/releases" "$DST.new/control" "$DST.new/packaging" "$DST.new/.git" "$DST.new/.github" 2>/dev/null || true
+find "$DST.new" -maxdepth 1 -type f \( -name "*.ipk" -o -name "build*.sh" -o -name "SHA256SUMS*" \) -delete 2>/dev/null || true
 
 # Usuń starą lokalizację po dawnych paczkach Extensions/PanelAIO.
 rm -rf "$OLD" 2>/dev/null || true

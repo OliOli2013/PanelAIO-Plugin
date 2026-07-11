@@ -97,7 +97,12 @@ class ManagedScreen(Screen):
                 except Exception:
                     pass
 
-        Thread(target=runner, daemon=True).start()
+        worker = Thread(target=runner)
+        try:
+            worker.daemon = True
+        except Exception:
+            pass
+        worker.start()
         timer = self.create_timer(poll)
         if timer is not None:
             timer.start(250, True)

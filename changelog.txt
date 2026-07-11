@@ -1,17 +1,30 @@
+AIO Panel 14.0.0 — Modern UI rebuild
+
+- całkowicie nowy, adaptacyjny pulpit dla SD/HD/FHD,
+- osobne piktogramy PNG zamiast zależności od emoji i czcionek skina,
+- trzy strefy pracy: kategorie, funkcje oraz panel szczegółów i kondycji tunera,
+- automatyczny język: polski dla polskiego systemu, angielski dla pozostałych,
+- zachowane ręczne przełączanie PL/EN przyciskami czerwonym i zielonym,
+- nowy ekran startowy z watchdogiem i informacją o ładowaniu danych,
+- podgląd CPU, RAM, flash, sieci, obrazu Enigma2 i wersji Pythona,
+- dodano E2 Doctor do Wtyczek Online z oficjalnym instalatorem GitHub,
+- E2 Doctor jest automatycznie ukrywany na obrazach Python 2,
+- zachowano wszystkie istniejące listy, instalatory, backup/restore, softcamy i narzędzia,
+- uporządkowano paczkę instalacyjną i usunięto pliki robocze GitHub/GitKraken z katalogu runtime,
+- brak zadań wykonywanych podczas startu GUI Enigma2.
+
+--- Poprzednia historia ---
 [13.0.3]
 AIO Panel 13.0.3
-- Super Konfigurator instaluje listę AIO Team 13E + 19.2E.
-- Poprawiono układanie list kanałów: nowsze listy są wyżej, a starsze niż rok nie są wyświetlane.
-- Naprawiono Restore list kanałów: przywracane są tylko pliki list i bukietów.
-- Restore list kanałów nie przywraca już ustawień tunera, głowic, sieci ani konfiguracji systemu.
-
-[13.0.2]
-AIO Panel 13.0.2
-- Paczka bazuje bezpośrednio na działającej poprawce 13.0.4.
-- Zachowano naprawioną instalację list kanałów.
-- Dodano automatyczne przeładowanie list kanałów/bukietów po udanej instalacji.
-- Dodano odświeżenie przez eDVBDB, aktywny servicelist oraz lokalne servicelistreload przez wget/curl.
-- Numer wersji pozostaje 13.0.2 dla ciągłości GitHub.
+- Naprawiono instalatory online z GitHub na OpenPLi 9.x.
+- Usunięto ryzykowne bezpośrednie uruchamianie wget | sh dla instalatorów GitHub.
+- Dodano pobieranie instalatora do /tmp z walidacją pliku przed uruchomieniem.
+- Dodano fallback pobierania: wget IPv4, wget z --no-check-certificate, curl IPv4, curl -k oraz Python urllib.
+- Dodano wykrywanie pustych plików oraz HTML/błędów zamiast skryptu/IPK/archiwum.
+- Poprawiono instalację list kanałów: install_archive_script.sh uruchamiany jest przez /bin/sh zamiast bash.
+- Stare listy kanałów są usuwane dopiero po poprawnym pobraniu, rozpakowaniu i wykryciu lamedb.
+- Jeśli instalacja listy się nie powiedzie, obecna lista kanałów nie jest kasowana.
+- Pozostałe funkcje pozostają bez zmian względem 13.0.2.
 
 [13.0.2]
 AIO Panel 13.0.2
@@ -41,3 +54,13 @@ AIO Panel 13.0.0 Final
 - Jeżeli katalog konfiguracji Oscam nie zostanie wykryty jednoznacznie, operacja zostaje przerwana.
 - Dodano instalator Oscam Levi45 z oficjalnego polecenia Levi45Emulator.
 - Menu pokazuje uproszczoną nazwę Oscam Levi45 i wykryty numer Oscama.
+
+14.0.0 (poprawka testowa 2, bez zmiany wersji)
+- przywrócono dokładnie oryginalne logo telewizora z AIO Panel 13.0.3,
+- poprawiono warstwy eLabel, które na części obrazów Enigma2 zasłaniały listy i opisy,
+- wymuszono czystą reinstalację katalogu wtyczki, aby usunąć stare pliki i cache.
+
+14.0.0 (korekta kolejności list kanałów, bez zmiany wersji)
+- usunięto wszystkie listy Azman,
+- listy Vhannibal/Vhanibal są zawsze umieszczane na samym dole,
+- wszystkie pozostałe listy są sortowane według daty od najnowszej.
