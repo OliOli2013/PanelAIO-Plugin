@@ -1,0 +1,16 @@
+AIO Panel 14.0.0 - poprawka instalowania list kanałów
+
+Numer wersji pozostaje 14.0.0.
+
+Naprawiono rzeczywistą przyczynę braku instalacji list: wieloliniowy blok pobierania
+był łączony z kolejnym poleceniem przez "&&" po znaku nowej linii. Na części
+systemów /bin/sh powstawała niepoprawna składnia "fi\n && ...", więc archiwum
+mogło pozostać w /tmp/PanelAIO, ale install_archive_script.sh nie był uruchamiany.
+
+Zmiany:
+- pobieranie wykonywane jest w osobnym pod-shellu zgodnym z BusyBox/ash/dash,
+- wynik pobierania jest sprawdzany przed uruchomieniem instalatora,
+- status błędu jest zapisywany również wtedy, gdy instalator nie może wystartować,
+- zachowano bezpieczną kopię i rollback listy,
+- poprawiono POSIX-owe cytowanie argumentów shella,
+- nie zmieniono interfejsu, logo, kolejności list ani numeru wersji.

@@ -64,3 +64,9 @@ AIO Panel 13.0.0 Final
 - usunięto wszystkie listy Azman,
 - listy Vhannibal/Vhanibal są zawsze umieszczane na samym dole,
 - wszystkie pozostałe listy są sortowane według daty od najnowszej.
+
+14.0.0 (poprawka instalacji list kanałów, bez zmiany wersji)
+- poprawiono instalację list na części obrazów Enigma2,
+- dodano obsługę lamedb5 i bezpieczną walidację archiwum,
+- dodano kopię awaryjną i automatyczne przywrócenie poprzedniej listy przy błędzie,
+- zachowano działający interfejs oraz oryginalne logo z wersji 13.0.3.

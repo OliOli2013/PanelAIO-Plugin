@@ -966,8 +966,13 @@ aio_validate_download() {
             dd if="$F" bs=8 count=1 2>/dev/null | grep -q '^!<arch>' || return 1
         ;;
         zip)
+            # Najpierw sprawdź podpis ZIP. Nie wszystkie obrazy mają pełny unzip
+            # obsługujący opcję -tqq (część używa wariantu BusyBox).
+            dd if="$F" bs=2 count=1 2>/dev/null | grep -q '^PK' || return 1
             if command -v unzip >/dev/null 2>&1; then
-                unzip -tqq "$F" >/dev/null 2>&1 || return 1
+                unzip -t "$F" >/dev/null 2>&1 || unzip -l "$F" >/dev/null 2>&1 || return 1
+            elif command -v busybox >/dev/null 2>&1; then
+                busybox unzip -l "$F" >/dev/null 2>&1 || return 1
             fi
         ;;
         tar.gz|tgz)
@@ -1179,8 +1184,9 @@ def _run_shell_capture(cmd, timeout=30):
         return 255, '', ensure_unicode(e)
 
 def _safe_shell_arg(value):
-    txt = ensure_unicode(value).replace("'", "'\''")
-    return "'{}'".format(txt)
+    # POSIX-safe quoting, zgodne z Python 2 i Python 3.
+    txt = ensure_unicode(value)
+    return "'" + txt.replace("'", "'\"'\"'") + "'"
 
 def _parse_opkg_installed_map(raw_text):
     installed = {}
@@ -1716,53 +1722,147 @@ def _build_compat_report(lang, image_type="unknown"):
 
 # === FUNKCJA install_archive (GLOBALNA) ===
 def install_archive(session, title, url, callback_on_finish=None, picon_path=None):
-    if not url.endswith((".zip", ".tar.gz", ".tgz", ".ipk")):
-        show_message_compat(session, "Nieobsługiwany format archiwum!", message_type=MessageBox.TYPE_ERROR)
-        if callback_on_finish: callback_on_finish()
-        return
-    archive_type = "zip" if url.endswith(".zip") else ("tar.gz" if url.endswith((".tar.gz", ".tgz")) else "ipk")
-    prepare_tmp_dir()
-    tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, os.path.basename(url))
-    
-    download_cmd = _download_shell_command(url, tmp_archive_path, archive_type)
-    
-    if "picon" in title.lower():
-        picon_path = (picon_path or "/usr/share/enigma2/picon").strip()
-        if not picon_path:
-            picon_path = "/usr/share/enigma2/picon"
-        nested_picon_path = os.path.join(picon_path, "picon")
-        full_command = (
-            "{download_cmd} && "
-            "mkdir -p {picon_path} && "
-            "unzip -o -q \"{archive_path}\" -d \"{picon_path}\" && "
-            "if [ -d \"{nested_path}\" ]; then mv -f \"{nested_path}\"/* \"{picon_path}/\"; rmdir \"{nested_path}\"; fi && "
-            "rm -f \"{archive_path}\" && "
-            "echo 'Picony zostały pomyślnie zainstalowane do: {picon_path}' && sleep 1"
-        ).format(
-            download_cmd=download_cmd,
-            archive_path=tmp_archive_path,
-            picon_path=picon_path,
-            nested_path=nested_picon_path
-        )
-    elif archive_type == "ipk":
-        full_command = "{} && opkg install --force-reinstall \"{}\" && rm -f \"{}\"".format(download_cmd, tmp_archive_path, tmp_archive_path)
+    """Download and install an archive with explicit result verification.
+
+    Channel-list installation writes a status file from install_archive_script.sh.
+    The UI reloads bouquets only after a confirmed success. On failure, the
+    previous list is restored by the shell script and the user receives a real
+    error instead of a misleading "reloaded" message.
+    """
+    clean_url = ensure_unicode(url).split('?', 1)[0].split('#', 1)[0]
+    lower_url = clean_url.lower()
+    if lower_url.endswith('.zip'):
+        archive_type = 'zip'
+        archive_ext = 'zip'
+    elif lower_url.endswith(('.tar.gz', '.tgz')):
+        archive_type = 'tar.gz'
+        archive_ext = 'tar.gz'
+    elif lower_url.endswith('.ipk'):
+        archive_type = 'ipk'
+        archive_ext = 'ipk'
     else:
-        # Ten blok dotyczy list kanałów (TYPU "LIST")
-        install_script_path = os.path.join(PLUGIN_PATH, "install_archive_script.sh")
-        if not os.path.exists(install_script_path):
-             show_message_compat(session, "BŁĄD: Brak pliku install_archive_script.sh!", message_type=MessageBox.TYPE_ERROR)
-             if callback_on_finish: callback_on_finish()
-             return
-        chmod_cmd = "chmod 755 {}".format(install_script_path)
-        full_command = "{download_cmd} && {chmod_cmd} && /bin/sh {script_path} \"{tmp_archive}\" \"{archive_type}\"".format(
-            download_cmd=download_cmd,
-            chmod_cmd=chmod_cmd,
-            script_path=install_script_path,
-            tmp_archive=tmp_archive_path,
-            archive_type=archive_type
+        show_message_compat(session, 'Nieobsługiwany format archiwum!', message_type=MessageBox.TYPE_ERROR)
+        if callback_on_finish:
+            callback_on_finish()
+        return
+
+    prepare_tmp_dir()
+    unique_id = '%s_%s' % (os.getpid(), int(time.time() * 1000))
+    tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, 'aio_download_%s.%s' % (unique_id, archive_ext))
+    status_path = os.path.join(PLUGIN_TMP_PATH, 'channel_install_%s.status' % unique_id)
+    download_cmd = _download_shell_command(url, tmp_archive_path, archive_type)
+    # _download_shell_command() zwraca wieloliniowy skrypt zakończony znakiem nowej linii.
+    # Doklejenie do niego tekstu rozpoczynającego się od "&&" tworzyło na części obrazów
+    # niepoprawną składnię: "fi\n && ...". W efekcie plik mógł pozostać w /tmp,
+    # ale właściwy instalator listy w ogóle nie był uruchamiany. Osobny pod-shell
+    # pozwala bezpiecznie sprawdzić kod pobierania na każdym /bin/sh (BusyBox/ash/dash).
+    download_block = '(\n%s\n)' % download_cmd
+
+    if 'picon' in title.lower():
+        picon_path = (picon_path or '/usr/share/enigma2/picon').strip()
+        if not picon_path:
+            picon_path = '/usr/share/enigma2/picon'
+        nested_picon_path = os.path.join(picon_path, 'picon')
+        full_command = (
+            '{download_block}\n'
+            'DOWNLOAD_RC=$?\n'
+            'if [ "$DOWNLOAD_RC" -ne 0 ]; then exit "$DOWNLOAD_RC"; fi\n'
+            'mkdir -p {picon_path} && '
+            'unzip -o -q {archive_path} -d {picon_path} && '
+            'if [ -d {nested_path} ]; then mv -f {nested_path}/* {picon_path}/ 2>/dev/null || true; rmdir {nested_path} 2>/dev/null || true; fi && '
+            'rm -f {archive_path} && '
+            'echo "Picony zostały pomyślnie zainstalowane do: {display_path}"'
+        ).format(
+            download_block=download_block,
+            archive_path=_safe_shell_arg(tmp_archive_path),
+            picon_path=_safe_shell_arg(picon_path),
+            nested_path=_safe_shell_arg(nested_picon_path),
+            display_path=picon_path.replace('"', '')
         )
-    
-    run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
+        run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
+        return
+
+    if archive_type == 'ipk':
+        full_command = (
+            '{download_block}\n'
+            'DOWNLOAD_RC=$?\n'
+            'if [ "$DOWNLOAD_RC" -ne 0 ]; then exit "$DOWNLOAD_RC"; fi\n'
+            'opkg install --force-reinstall {archive_path} && rm -f {archive_path}'
+        ).format(
+            download_block=download_block,
+            archive_path=_safe_shell_arg(tmp_archive_path)
+        )
+        run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
+        return
+
+    install_script_path = os.path.join(PLUGIN_PATH, 'install_archive_script.sh')
+    if not os.path.exists(install_script_path):
+        show_message_compat(session, 'BŁĄD: Brak pliku install_archive_script.sh!', message_type=MessageBox.TYPE_ERROR)
+        if callback_on_finish:
+            callback_on_finish()
+        return
+
+    try:
+        if os.path.exists(status_path):
+            os.remove(status_path)
+    except Exception:
+        pass
+
+    script_q = _safe_shell_arg(install_script_path)
+    archive_q = _safe_shell_arg(tmp_archive_path)
+    type_q = _safe_shell_arg(archive_type)
+    status_q = _safe_shell_arg(status_path)
+    full_command = (
+        "{download_block}\n"
+        "DOWNLOAD_RC=$?\n"
+        "if [ \"$DOWNLOAD_RC\" -ne 0 ]; then "
+        "printf '%s\\n' 'ERROR|Nie udało się pobrać lub zweryfikować archiwum listy.|download' > {status_path}; "
+        "exit \"$DOWNLOAD_RC\"; fi\n"
+        "if ! chmod 755 {script_path}; then "
+        "printf '%s\\n' 'ERROR|Nie można uruchomić skryptu instalacji listy.|chmod' > {status_path}; exit 1; fi\n"
+        "if ! /bin/sh {script_path} {archive_path} {archive_type} {status_path}; then "
+        "[ -s {status_path} ] || printf '%s\\n' 'ERROR|Skrypt instalacji listy zakończył się błędem.|script' > {status_path}; "
+        "exit 1; fi"
+    ).format(
+        download_block=download_block,
+        script_path=script_q,
+        archive_path=archive_q,
+        archive_type=type_q,
+        status_path=status_q
+    )
+
+
+    def _channel_install_finished():
+        status = _read_text_file(status_path, '').strip()
+        try:
+            if os.path.exists(status_path):
+                os.remove(status_path)
+        except Exception:
+            pass
+
+        if status.startswith('OK|') or status == 'OK':
+            if callback_on_finish:
+                callback_on_finish()
+            else:
+                show_message_compat(session, 'Lista kanałów została zainstalowana.', timeout=5)
+            return
+
+        detail = ''
+        if status.startswith('ERROR|'):
+            try:
+                detail = status.split('|', 2)[1].strip()
+            except Exception:
+                detail = ''
+        if not detail:
+            detail = 'Instalator nie potwierdził poprawnego zapisania listy.'
+        message = (
+            'Nie udało się zainstalować listy kanałów.\n\n%s\n\n'
+            'Poprzednia lista nie została usunięta albo została automatycznie przywrócona. '
+            'Szczegóły: /tmp/aio_install.log' % detail
+        )
+        show_message_compat(session, message, message_type=MessageBox.TYPE_ERROR, timeout=14)
+
+    run_command_in_background(session, title, [full_command], callback_on_finish=_channel_install_finished)
 
 def get_python_version():
     try:
