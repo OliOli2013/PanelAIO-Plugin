@@ -1,5 +1,5 @@
+[14.0.0]
 AIO Panel 14.0.0 — Modern UI rebuild
-
 - całkowicie nowy, adaptacyjny pulpit dla SD/HD/FHD,
 - osobne piktogramy PNG zamiast zależności od emoji i czcionek skina,
 - trzy strefy pracy: kategorie, funkcje oraz panel szczegółów i kondycji tunera,
@@ -13,7 +13,6 @@ AIO Panel 14.0.0 — Modern UI rebuild
 - uporządkowano paczkę instalacyjną i usunięto pliki robocze GitHub/GitKraken z katalogu runtime,
 - brak zadań wykonywanych podczas startu GUI Enigma2.
 
---- Poprzednia historia ---
 [13.0.3]
 AIO Panel 13.0.3
 - Naprawiono instalatory online z GitHub na OpenPLi 9.x.
