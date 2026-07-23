@@ -1,5 +1,6 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - niezawodna instalacja piconów dla obrazów Enigma2/Python 2/3.
+# AIO Panel 14.0.0 - prosty instalator piconów, zgodny z zachowaniem sprzed audytu.
+# Bez sztucznego limitu 130/180 MB i bez odrzucania powtarzających się nazw.
 # Użycie: picon_install_script.sh URL KATALOG_DOCELOWY PLIK_STATUSU
 
 URL="${1:-}"
@@ -14,20 +15,24 @@ log() {
     echo "$LINE" >> "$LOG" 2>/dev/null || true
 }
 
+cleanup() {
+    [ -n "$WORK" ] && rm -rf "$WORK" 2>/dev/null || true
+}
+
 finish_error() {
     MESSAGE="$1"
     STAGE="${2:-unknown}"
-    log "BŁĄD ($STAGE): $MESSAGE"
+    log "BŁĄD [$STAGE]: $MESSAGE"
     printf '%s\n' "ERROR|$MESSAGE|$STAGE" > "$STATUS" 2>/dev/null || true
-    [ -n "$WORK" ] && rm -rf "$WORK" 2>/dev/null || true
+    cleanup
     exit 1
 }
 
 finish_ok() {
     COUNT="$1"
-    log "OK: skopiowano $COUNT piconów do $TARGET"
+    log "OK: zainstalowano $COUNT piconów w $TARGET"
     printf '%s\n' "OK|$COUNT|$TARGET" > "$STATUS" 2>/dev/null || true
-    [ -n "$WORK" ] && rm -rf "$WORK" 2>/dev/null || true
+    cleanup
     sync 2>/dev/null || true
     exit 0
 }
@@ -36,21 +41,26 @@ free_kb() {
     df -Pk "$1" 2>/dev/null | awk 'NR==2 {print $4; exit}'
 }
 
+# Wybieramy zapisywalny katalog z największą faktycznie dostępną przestrzenią.
+# Nie stosujemy sztywnego progu, który wcześniej powodował fałszywy komunikat
+# o braku miejsca mimo możliwości nadpisania już istniejących piconów.
 choose_work_root() {
-    MIN_KB=130000
+    BEST=""
+    BEST_FREE=-1
     TARGET_PARENT=$(dirname "$TARGET")
-    for ROOT in "$TARGET_PARENT" /media/hdd /media/usb /media/mmc /media/sdcard /tmp; do
+    for ROOT in /tmp /var/volatile/tmp /media/hdd /media/usb /media/mmc /media/sdcard "$TARGET_PARENT"; do
         [ -n "$ROOT" ] || continue
         [ -d "$ROOT" ] || continue
         [ -w "$ROOT" ] || continue
         FREE=$(free_kb "$ROOT")
         case "$FREE" in ''|*[!0-9]*) FREE=0 ;; esac
-        if [ "$FREE" -ge "$MIN_KB" ]; then
-            echo "$ROOT"
-            return 0
+        if [ "$FREE" -gt "$BEST_FREE" ]; then
+            BEST="$ROOT"
+            BEST_FREE="$FREE"
         fi
     done
-    return 1
+    [ -n "$BEST" ] || return 1
+    echo "$BEST"
 }
 
 download_file() {
@@ -90,21 +100,26 @@ try:
     out = os.environ.get('AIO_OUT')
     req = Request(url, headers={'User-Agent': 'Enigma2-AIO-Panel'})
     if context is not None:
-        response = urlopen(req, timeout=120, context=context)
+        response = urlopen(req, timeout=180, context=context)
     else:
-        response = urlopen(req, timeout=120)
-    data = response.read()
+        response = urlopen(req, timeout=180)
+    handle = open(out, 'wb')
+    while True:
+        data = response.read(1024 * 256)
+        if not data:
+            break
+        handle.write(data)
+    handle.close()
     try:
         response.close()
     except Exception:
         pass
-    if not data:
-        sys.exit(1)
-    handle = open(out, 'wb')
-    handle.write(data)
-    handle.close()
-    sys.exit(0)
+    sys.exit(0 if os.path.getsize(out) > 0 else 1)
 except Exception:
+    try:
+        os.remove(os.environ.get('AIO_OUT', ''))
+    except Exception:
+        pass
     sys.exit(1)
 PY
         [ -s "$DL_OUT.tmp" ] && mv -f "$DL_OUT.tmp" "$DL_OUT" && return 0
@@ -116,6 +131,7 @@ PY
 
 : > "$LOG" 2>/dev/null || true
 rm -f "$STATUS" 2>/dev/null || true
+trap cleanup EXIT HUP INT TERM
 
 [ -n "$URL" ] || finish_error "Nie podano adresu archiwum piconów." "arguments"
 case "$TARGET" in
@@ -123,80 +139,136 @@ case "$TARGET" in
     *) finish_error "Katalog docelowy musi być ścieżką bezwzględną." "target" ;;
 esac
 
-if ! command -v unzip >/dev/null 2>&1; then
-    log "Brak unzip - próba instalacji pakietu."
-    opkg update >/dev/null 2>&1 || true
-    opkg install unzip >/dev/null 2>&1 || true
-fi
-command -v unzip >/dev/null 2>&1 || finish_error "Brak programu unzip." "dependency"
+mkdir -p "$TARGET" || finish_error "Nie można utworzyć katalogu docelowego: $TARGET" "target"
+[ -d "$TARGET" ] || finish_error "Katalog docelowy nie istnieje: $TARGET" "target"
+[ -w "$TARGET" ] || finish_error "Brak prawa zapisu do katalogu: $TARGET" "target"
 
-WORK_ROOT=$(choose_work_root) || finish_error "Za mało wolnego miejsca. Wymagane jest około 130 MB w /tmp, na USB/HDD albo w katalogu docelowym." "space"
+WORK_ROOT=$(choose_work_root) || finish_error "Nie znaleziono zapisywalnego katalogu roboczego." "workdir"
 WORK="$WORK_ROOT/.aio_picons_$$"
 ARCHIVE="$WORK/Picony.zip"
-EXTRACT="$WORK/extract"
-LIST="$WORK/png_files.txt"
-COPY_ERRORS="$WORK/copy_errors.txt"
+mkdir -p "$WORK" || finish_error "Nie można utworzyć katalogu roboczego: $WORK" "workdir"
 
-rm -rf "$WORK" 2>/dev/null || true
-mkdir -p "$EXTRACT" || finish_error "Nie można utworzyć katalogu roboczego: $WORK" "workdir"
+log "URL: $URL"
+log "Cel: $TARGET"
 log "Katalog roboczy: $WORK"
-log "Katalog docelowy: $TARGET"
 
 if ! download_file "$URL" "$ARCHIVE"; then
-    finish_error "Nie udało się pobrać archiwum piconów po kilku próbach." "download"
+    finish_error "Nie udało się pobrać archiwum piconów. Sprawdź połączenie z Internetem i miejsce w katalogu roboczym." "download"
 fi
 
 ARCHIVE_KB=$(du -k "$ARCHIVE" 2>/dev/null | awk '{print $1; exit}')
 case "$ARCHIVE_KB" in ''|*[!0-9]*) ARCHIVE_KB=0 ;; esac
-[ "$ARCHIVE_KB" -gt 100 ] || finish_error "Pobrane archiwum jest puste lub zbyt małe." "download"
+[ "$ARCHIVE_KB" -gt 0 ] || finish_error "Pobrany plik jest pusty." "download"
 
 if head -c 512 "$ARCHIVE" 2>/dev/null | grep -qiE '<!doctype|<html|404: not found|accessdenied'; then
     finish_error "Pobrano stronę HTML zamiast archiwum ZIP." "validation"
 fi
 
-unzip -t "$ARCHIVE" >/dev/null 2>&1 || finish_error "Archiwum ZIP jest uszkodzone albo niekompletne." "validation"
+PYTHON=""
+command -v python3 >/dev/null 2>&1 && PYTHON=python3
+[ -z "$PYTHON" ] && command -v python >/dev/null 2>&1 && PYTHON=python
+[ -n "$PYTHON" ] || finish_error "Brak interpretera Python potrzebnego do rozpakowania piconów." "dependency"
 
-REQUIRED_KB=$((ARCHIVE_KB * 3 + 20480))
-WORK_FREE=$(free_kb "$WORK_ROOT")
-case "$WORK_FREE" in ''|*[!0-9]*) WORK_FREE=0 ;; esac
-[ "$WORK_FREE" -ge "$REQUIRED_KB" ] || finish_error "Brak miejsca na rozpakowanie archiwum. Potrzeba około $((REQUIRED_KB / 1024)) MB." "space"
+# Picony są kopiowane strumieniowo bez tworzenia drugiej pełnej kopii paczki.
+# Powtarzające się nazwy są zwyczajnie nadpisywane, tak jak w starszej wersji.
+AIO_ARCHIVE="$ARCHIVE" AIO_TARGET="$TARGET" "$PYTHON" - <<'PY' >> "$LOG" 2>&1
+from __future__ import print_function
+import errno
+import os
+import sys
+import zipfile
 
-mkdir -p "$TARGET" || finish_error "Nie można utworzyć katalogu docelowego: $TARGET" "target"
-[ -d "$TARGET" ] || finish_error "Katalog docelowy nie istnieje: $TARGET" "target"
-[ -w "$TARGET" ] || finish_error "Brak prawa zapisu do katalogu: $TARGET" "target"
+archive = os.environ.get('AIO_ARCHIVE')
+target = os.environ.get('AIO_TARGET')
+installed = set()
+created_tmp = []
 
-log "Rozpakowywanie archiwum..."
-unzip -o -q "$ARCHIVE" -d "$EXTRACT" || finish_error "Nie udało się rozpakować archiwum." "extract"
+try:
+    zf = zipfile.ZipFile(archive, 'r')
+    bad = zf.testzip()
+    if bad:
+        raise RuntimeError('Uszkodzony plik w ZIP: %s' % bad)
 
-EXTRACT_KB=$(du -sk "$EXTRACT" 2>/dev/null | awk '{print $1; exit}')
-case "$EXTRACT_KB" in ''|*[!0-9]*) EXTRACT_KB=0 ;; esac
-TARGET_FREE=$(free_kb "$TARGET")
-case "$TARGET_FREE" in ''|*[!0-9]*) TARGET_FREE=0 ;; esac
-TARGET_REQUIRED=$((EXTRACT_KB + 10240))
-[ "$TARGET_FREE" -ge "$TARGET_REQUIRED" ] || finish_error "Za mało miejsca w katalogu docelowym. Potrzeba około $((TARGET_REQUIRED / 1024)) MB." "target-space"
+    index = 0
+    for info in zf.infolist():
+        raw_name = info.filename
+        if not raw_name or raw_name.endswith('/'):
+            continue
+        normalized = raw_name.replace('\\', '/')
+        name = normalized.rsplit('/', 1)[-1]
+        if not name or not name.lower().endswith('.png'):
+            continue
 
-find "$EXTRACT" -type f \( -name '*.png' -o -name '*.PNG' \) > "$LIST" 2>/dev/null || true
-PNG_COUNT=$(wc -l < "$LIST" 2>/dev/null | tr -d ' ')
-case "$PNG_COUNT" in ''|*[!0-9]*) PNG_COUNT=0 ;; esac
-[ "$PNG_COUNT" -gt 0 ] || finish_error "Archiwum nie zawiera żadnych plików PNG." "content"
+        index += 1
+        tmp_name = '.aio_picon_%s_%s.tmp' % (os.getpid(), index)
+        tmp_path = os.path.join(target, tmp_name)
+        dst_path = os.path.join(target, name)
+        created_tmp.append(tmp_path)
 
-: > "$COPY_ERRORS"
-log "Kopiowanie $PNG_COUNT piconów..."
-while IFS= read -r SRC; do
-    [ -f "$SRC" ] || continue
-    NAME=$(basename "$SRC")
-    if ! cp -f "$SRC" "$TARGET/$NAME"; then
-        echo "$SRC" >> "$COPY_ERRORS"
-    fi
-done < "$LIST"
+        src = zf.open(info, 'r')
+        out = open(tmp_path, 'wb')
+        try:
+            while True:
+                block = src.read(256 * 1024)
+                if not block:
+                    break
+                out.write(block)
+        finally:
+            try:
+                out.close()
+            except Exception:
+                pass
+            try:
+                src.close()
+            except Exception:
+                pass
 
-ERROR_COUNT=$(wc -l < "$COPY_ERRORS" 2>/dev/null | tr -d ' ')
-case "$ERROR_COUNT" in ''|*[!0-9]*) ERROR_COUNT=0 ;; esac
-[ "$ERROR_COUNT" -eq 0 ] || finish_error "Nie skopiowano $ERROR_COUNT plików. Sprawdź nośnik i uprawnienia." "copy"
+        try:
+            os.chmod(tmp_path, 0o644)
+        except Exception:
+            pass
+        try:
+            os.rename(tmp_path, dst_path)
+        except OSError:
+            if os.path.exists(dst_path):
+                os.remove(dst_path)
+                os.rename(tmp_path, dst_path)
+            else:
+                raise
+        try:
+            created_tmp.remove(tmp_path)
+        except Exception:
+            pass
+        installed.add(name.lower())
 
-find "$TARGET" -maxdepth 1 -type f \( -name '*.png' -o -name '*.PNG' \) -exec chmod 644 {} \; 2>/dev/null || true
-INSTALLED_COUNT=$(find "$TARGET" -maxdepth 1 -type f \( -name '*.png' -o -name '*.PNG' \) 2>/dev/null | wc -l | tr -d ' ')
-case "$INSTALLED_COUNT" in ''|*[!0-9]*) INSTALLED_COUNT=0 ;; esac
-[ "$INSTALLED_COUNT" -gt 0 ] || finish_error "Po instalacji nie znaleziono piconów w katalogu docelowym." "verify"
+    zf.close()
+    if not installed:
+        raise RuntimeError('Archiwum nie zawiera plików PNG.')
+    print('AIO_PICON_OK|%d' % len(installed))
+    sys.exit(0)
+except Exception as exc:
+    for path in created_tmp:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+    if isinstance(exc, OSError) and getattr(exc, 'errno', None) == errno.ENOSPC:
+        print('AIO_PICON_ERROR|Brak miejsca podczas faktycznego zapisu piconów.')
+        sys.exit(28)
+    print('AIO_PICON_ERROR|%s' % exc)
+    sys.exit(1)
+PY
+RC=$?
 
-finish_ok "$PNG_COUNT"
+if [ "$RC" -ne 0 ]; then
+    DETAIL=$(grep 'AIO_PICON_ERROR|' "$LOG" 2>/dev/null | tail -n 1 | sed 's/^.*AIO_PICON_ERROR|//')
+    [ -n "$DETAIL" ] || DETAIL="Nie udało się rozpakować lub skopiować piconów."
+    finish_error "$DETAIL" "copy"
+fi
+
+COUNT=$(grep 'AIO_PICON_OK|' "$LOG" 2>/dev/null | tail -n 1 | sed 's/^.*AIO_PICON_OK|//')
+case "$COUNT" in ''|*[!0-9]*) COUNT=0 ;; esac
+[ "$COUNT" -gt 0 ] || finish_error "Po instalacji nie znaleziono piconów PNG." "verify"
+
+trap - EXIT HUP INT TERM
+finish_ok "$COUNT"

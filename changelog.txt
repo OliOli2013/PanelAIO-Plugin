@@ -1,3 +1,11 @@
+AIO Panel 14.0.0 — poprawka fałszywego komunikatu o braku miejsca na picony
+
+- usunięto sztuczny próg 130/180 MB dla instalacji piconów,
+- usunięto blokowanie paczki przez powtarzające się nazwy piconów,
+- picony są kopiowane strumieniowo bez tworzenia drugiej pełnej kopii archiwum,
+- komunikat o braku miejsca pojawia się tylko po rzeczywistym błędzie zapisu ENOSPC,
+- instalacja usuwa stare statusy i logi pozostawione przez wariant Full Repair.
+
 AIO Panel 14.0.0 — poprawka piconów i Super Konfiguratora (bez zmiany wersji)
 
 - dodano dedykowany, weryfikowany instalator piconów z kontrolą miejsca, wielokrotnym pobieraniem, walidacją ZIP i rekursywnym kopiowaniem PNG,

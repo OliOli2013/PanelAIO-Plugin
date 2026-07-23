@@ -1,0 +1,8 @@
+AIO Panel 14.0.0 – poprawka instalacji piconów
+
+- usunięto sztuczny wymóg 130/180 MB wolnego miejsca,
+- picony są rozpakowywane strumieniowo bez drugiej pełnej kopii paczki,
+- istniejące picony są nadpisywane bez błędu kolizji,
+- powtarzające się nazwy w archiwum nie blokują instalacji,
+- komunikat o braku miejsca pojawia się dopiero po rzeczywistym błędzie ENOSPC,
+- po instalacji IPK usuwane są stare logi i statusy wadliwej wersji Full Repair.
