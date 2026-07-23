@@ -638,8 +638,8 @@ Czy chcesz ją teraz zainstalować?\n\nPo instalacji lub aktualizacji zalecany j
         "sk_option_full_picons": "3) [FULL] Pełna Konfiguracja (z Piconami)",
         "sk_option_cancel": "[X] Anuluj",
         "sk_confirm_deps": "Czy na pewno chcesz zainstalować tylko podstawowe zależności systemowe?",
-        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n\nCzy chcesz kontynuować?",
-        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
+        "sk_confirm_basic": "Rozpocznie się podstawowa konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n\nCzy chcesz kontynuować?",
+        "sk_confirm_full": "Rozpocznie się pełna konfiguracja systemu.\n\n- Instalacja zależności\n- Instalacja listy kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n- Instalacja Piconów (duży plik)\n\nCzy chcesz kontynuować?",
         "net_diag_title": "Diagnostyka Sieci",
         "net_diag_wait": "Trwa diagnostyka sieci, proszę czekać...",
         "net_diag_error": "Wystąpił błąd podczas testu prędkości.",
@@ -676,8 +676,8 @@ Do you want to install it now?\n\nA manual reboot is recommended after checking 
         "sk_option_full_picons": "3) [FULL] Full Configuration (with Picons)",
         "sk_option_cancel": "[X] Cancel",
         "sk_confirm_deps": "Are you sure you want to install only the basic system dependencies?",
-        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install Oscam from feed\n\nDo you want to continue?",
-        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- Install Picons (large file)\n\nDo you want to continue?",
+        "sk_confirm_basic": "A basic system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n\nDo you want to continue?",
+        "sk_confirm_full": "A full system configuration will now begin.\n\n- Install dependencies\n- Install channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n- Install Picons (large file)\n\nDo you want to continue?",
         "net_diag_title": "Network Diagnostics",
         "net_diag_wait": "Running network diagnostics, please wait...",
         "net_diag_error": "An error occurred during the speed test.",
@@ -1759,27 +1759,71 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
     download_block = '(\n%s\n)' % download_cmd
 
     if 'picon' in title.lower():
+        # Picony używają osobnego instalatora. Duża paczka nie jest już pobierana
+        # i rozpakowywana bezpośrednio w /tmp, co na tunerach z małą ilością RAM
+        # powodowało sporadyczne (około 10%) niepełne instalacje bez plików PNG.
         picon_path = (picon_path or '/usr/share/enigma2/picon').strip()
         if not picon_path:
             picon_path = '/usr/share/enigma2/picon'
-        nested_picon_path = os.path.join(picon_path, 'picon')
+        picon_script_path = os.path.join(PLUGIN_PATH, 'picon_install_script.sh')
+        picon_status_path = os.path.join(PLUGIN_TMP_PATH, 'picon_install_%s.status' % unique_id)
+        if not os.path.exists(picon_script_path):
+            show_message_compat(session, 'BŁĄD: Brak pliku picon_install_script.sh!', message_type=MessageBox.TYPE_ERROR)
+            return
+        try:
+            if os.path.exists(picon_status_path):
+                os.remove(picon_status_path)
+        except Exception:
+            pass
+
         full_command = (
-            '{download_block}\n'
-            'DOWNLOAD_RC=$?\n'
-            'if [ "$DOWNLOAD_RC" -ne 0 ]; then exit "$DOWNLOAD_RC"; fi\n'
-            'mkdir -p {picon_path} && '
-            'unzip -o -q {archive_path} -d {picon_path} && '
-            'if [ -d {nested_path} ]; then mv -f {nested_path}/* {picon_path}/ 2>/dev/null || true; rmdir {nested_path} 2>/dev/null || true; fi && '
-            'rm -f {archive_path} && '
-            'echo "Picony zostały pomyślnie zainstalowane do: {display_path}"'
+            'chmod 755 {script_path} && '
+            '/bin/sh {script_path} {url} {target} {status}'
         ).format(
-            download_block=download_block,
-            archive_path=_safe_shell_arg(tmp_archive_path),
-            picon_path=_safe_shell_arg(picon_path),
-            nested_path=_safe_shell_arg(nested_picon_path),
-            display_path=picon_path.replace('"', '')
+            script_path=_safe_shell_arg(picon_script_path),
+            url=_safe_shell_arg(url),
+            target=_safe_shell_arg(picon_path),
+            status=_safe_shell_arg(picon_status_path)
         )
-        run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
+
+        def _picon_install_finished():
+            status = _read_text_file(picon_status_path, '').strip()
+            try:
+                if os.path.exists(picon_status_path):
+                    os.remove(picon_status_path)
+            except Exception:
+                pass
+
+            if status.startswith('OK|') or status == 'OK':
+                if callback_on_finish:
+                    callback_on_finish()
+                else:
+                    details = status.split('|', 2)
+                    count = details[1] if len(details) > 1 else '?'
+                    target = details[2] if len(details) > 2 else picon_path
+                    show_message_compat(
+                        session,
+                        'Picony zostały zainstalowane.\n\nPliki: %s\nKatalog: %s' % (count, target),
+                        timeout=7
+                    )
+                return
+
+            detail = ''
+            if status.startswith('ERROR|'):
+                try:
+                    detail = status.split('|', 2)[1].strip()
+                except Exception:
+                    detail = ''
+            if not detail:
+                detail = 'Instalator nie potwierdził skopiowania plików PNG.'
+            show_message_compat(
+                session,
+                'Nie udało się zainstalować piconów.\n\n%s\n\nSzczegóły: /tmp/aio_picons_install.log' % detail,
+                message_type=MessageBox.TYPE_ERROR,
+                timeout=15
+            )
+
+        run_command_in_background(session, title, [full_command], callback_on_finish=_picon_install_finished)
         return
 
     if archive_type == 'ipk':
@@ -1919,7 +1963,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔄 Aktualizuj oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Aktualizuj SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Instalator", "CMD:INSTALL_SOFTCAM_SCRIPT"),
-    ("📥 Oscam Feed - Instalator (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 OSCam-Emu - Instalator i aktywacja", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - najnowszy)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
@@ -1962,7 +2006,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔄 Update oscam.srvid/srvid2", "CMD:UPDATE_SRVID"),
     ("🔑 Update SoftCam.Key (Online)", "CMD:INSTALL_SOFTCAMKEY_ONLINE"),
     ("📥 Softcam - Installer", "CMD:INSTALL_SOFTCAM_SCRIPT"),
-    ("📥 Oscam Feed - Installer (Auto)", "CMD:INSTALL_BEST_OSCAM"),
+    ("📥 OSCam-Emu - Install and activate", "CMD:INSTALL_BEST_OSCAM"),
     ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - latest)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
@@ -2599,81 +2643,78 @@ class WizardProgressScreen(Screen):
     def _wizard_step_install_softcam(self):
         title = self._get_wizard_title("Instalacja Softcam")
         self["message"].setText(
-            "Krok [{}/{}]:\nInstalacja Softcam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
+            "Krok [{}/{}]:\nInstalacja feedu i obsługi Softcam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
         )
 
+        feed_tmp = os.path.join(PLUGIN_TMP_PATH, 'aio_softcam_feed_%s.sh' % int(time.time() * 1000))
+        download = _download_shell_command('http://updates.mynonpublic.com/oea/feed', feed_tmp, 'script')
         cmd = r"""
-            echo "=== Softcam installation (AIO Wizard) ==="
+            echo "=== Softcam feed installation (AIO Wizard) ==="
             opkg update || true
             opkg install wget ca-certificates || true
-            wget -O - -q http://updates.mynonpublic.com/oea/feed | bash || true
+            {download}
+            if [ -s {feed_tmp} ]; then
+                chmod 755 {feed_tmp} 2>/dev/null || true
+                if command -v bash >/dev/null 2>&1; then bash {feed_tmp} || echo "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; else /bin/sh {feed_tmp} || echo "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; fi
+            fi
+            rm -f {feed_tmp} 2>/dev/null || true
             mkdir -p /usr/softcams 2>/dev/null || true
             chmod 755 /etc/init.d/softcam 2>/dev/null || true
             sync
             sleep 1
-        """
+        """.format(download=download, feed_tmp=_safe_shell_arg(feed_tmp))
         run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
 
     def _wizard_step_install_oscam(self):
-        title = self._get_wizard_title("Instalacja Oscam")
+        title = self._get_wizard_title("Instalacja i uruchomienie OSCam-Emu")
         self["message"].setText(
-            "Krok [{}/{}]:\nInstalacja Oscam z feed...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
+            "Krok [{}/{}]:\nInstalacja OSCam-Emu, wybór jako aktywny softcam i uruchomienie...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
         )
 
-        cmd = r"""
-            echo "=== Oscam installation (AIO Wizard) ==="
-            opkg update || true
+        script_path = os.path.join(PLUGIN_PATH, 'install_oscam_emu_script.sh')
+        status_path = os.path.join(PLUGIN_TMP_PATH, 'wizard_oscam_%s.status' % int(time.time() * 1000))
+        if not os.path.exists(script_path):
+            show_message_compat(self.session, 'BŁĄD: Brak pliku install_oscam_emu_script.sh!', MessageBox.TYPE_ERROR)
+            return
+        cmd = 'chmod 755 {script} && /bin/sh {script} {status}'.format(
+            script=_safe_shell_arg(script_path),
+            status=_safe_shell_arg(status_path)
+        )
+        run_command_in_background(
+            self.session,
+            title,
+            [cmd],
+            callback_on_finish=lambda: self._wizard_oscam_finished(status_path)
+        )
 
-            pkg_exists(){ opkg list 2>/dev/null | awk '{print $1}' | grep -qx "$1"; }
-            pkg_installed(){ opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$1"; }
+    def _wizard_oscam_finished(self, status_path):
+        status = _read_text_file(status_path, '').strip()
+        try:
+            if os.path.exists(status_path):
+                os.remove(status_path)
+        except Exception:
+            pass
+        if status.startswith('OK|') or status == 'OK':
+            self._wizard_run_next_step()
+            return
 
-            CAND=""
-            for p in enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod; do
-                if pkg_exists "$p"; then CAND="$p"; break; fi
-            done
-            if [ -z "$CAND" ]; then
-                CAND=$(opkg list 2>/dev/null | awk 'BEGIN{IGNORECASE=1} $1 ~ /oscam/ {print $1}' | head -n 1)
-            fi
-
-            if [ -n "$CAND" ]; then
-                echo "Installing: $CAND"
-                opkg install "$CAND" || opkg install --force-reinstall "$CAND" || true
-            else
-                echo "!!! Oscam package not found in feeds."
-            fi
-
-            INSTALLED=""
-            for p in "$CAND" enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod; do
-                [ -n "$p" ] || continue
-                if pkg_installed "$p"; then INSTALLED="$p"; break; fi
-            done
-
-            BIN=""
-            for b in /usr/bin/oscam /usr/bin/oscam-emu /usr/bin/oscam* /usr/softcams/oscam /usr/softcams/oscam* /usr/local/bin/oscam*; do
-                [ -x "$b" ] && BIN="$b" && break
-            done
-            [ -z "$BIN" ] && BIN=$(command -v oscam 2>/dev/null || true)
-
-            mkdir -p /usr/softcams 2>/dev/null || true
-            chmod 755 /etc/init.d/softcam 2>/dev/null || true
-            if [ -n "$BIN" ] && [ -d /usr/softcams ]; then
-                ln -sfn "$BIN" /usr/softcams/oscam 2>/dev/null || true
-            fi
-
-            /etc/init.d/softcam stop 2>/dev/null || true
-            killall -9 oscam softcam 2>/dev/null || true
-            sleep 2
-            /etc/init.d/softcam start 2>/dev/null || /etc/init.d/softcam restart 2>/dev/null || systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
-            ps | grep -E 'oscam|softcam' | grep -v grep || true
-
-            if [ -z "$INSTALLED" ]; then
-                echo "ERROR: Oscam package not confirmed after install."
-                exit 1
-            fi
-            sync
-            sleep 1
-        """
-        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
+        detail = ''
+        if status.startswith('ERROR|'):
+            try:
+                detail = status.split('|', 2)[1].strip()
+            except Exception:
+                detail = ''
+        if not detail:
+            detail = 'Nie potwierdzono instalacji i uruchomienia procesu OSCam.'
+        self["message"].setText(
+            "Instalacja została zatrzymana.\n\nOSCam nie został uruchomiony.\n%s\n\nLog: /tmp/aio_oscam_install.log" % detail
+        )
+        show_message_compat(
+            self.session,
+            'Nie udało się zainstalować lub uruchomić OSCam-Emu.\n\n%s\n\nSzczegóły: /tmp/aio_oscam_install.log' % detail,
+            MessageBox.TYPE_ERROR,
+            timeout=15
+        )
 
     def _wizard_step_picons(self):
         title = self._get_wizard_title("Instalacja Picon (Transparent)")
@@ -4115,7 +4156,7 @@ FUNCTION_DESCRIPTIONS = {
         "⚙️ oscam.dvbapi - kasowanie zawartości": "Czyści (kasuje zawartość) pliku oscam.dvbapi w konfiguracji Oscam.\nPrzydatne, gdy plik zawiera błędne wpisy lub chcesz zacząć od zera.",
         "⚙️ oscam.dvbapi - aktualizacja Poland": "Podmienia oscam.dvbapi na gotową konfigurację Poland dołączoną do AIO Panel.\nPrzed podmianą tworzy kopię starego pliku i próbuje odświeżyć usługę Softcam/Oscam.",
         "📥 Softcam - Instalator": "Instaluje Softcam za pomocą skryptu (wget | bash).\nPo instalacji możesz doinstalować/wybrać emulator oraz przejść do instalacji Oscam z feed.",
-        "📥 Oscam Feed - Instalator (Auto)": "Automatycznie dobiera i instaluje Oscam z feedu, weryfikuje obecność pakietu po instalacji i próbuje odświeżyć Softcam.\nPo zakończeniu zalecany jest pełny restart tunera.",
+        "📥 OSCam-Emu - Instalator i aktywacja": "Preferuje OSCam-Emu z feedu, instaluje lub naprawczo przeinstalowuje pakiet, ustawia go jako aktywny softcam i sprawdza, czy proces faktycznie wystartował.\nLog diagnostyczny: /tmp/aio_oscam_install.log.",
         "📥 Oscam Levi45": "Instaluje Oscam Levi45 z oficjalnego instalatora Levi45Emulator.\nAIO pokazuje tylko nazwę Oscam Levi45 oraz wykryty numer lokalnej binarki, bez technicznej komendy w menu.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
         "📥 NCam (Feed - najnowszy)": "Instaluje najnowszy NCam z feedu Twojego systemu (opkg).\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
@@ -4138,7 +4179,7 @@ FUNCTION_DESCRIPTIONS = {
         # Narzędzia Systemowe
         "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
         "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
-        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Bzyk83 13E Hotbird)\n- instalację softcamu\n- instalację najnowszego Oscam z feedu (dobór pod tuner/CPU)\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
+        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Polska 13E AIO Panel)\n- instalację obsługi Softcam\n- instalację OSCam-Emu, ustawienie jako aktywny softcam i uruchomienie\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "🔎 Sprawdź aktualizacje zainstalowanych wtyczek": "Sprawdza zainstalowane wtyczki i pokazuje dwie sekcje aktualizacji: OPKG oraz GitHub/Custom.\nPozwala uruchomić aktualizację tylko dla pozycji, dla których wykryto nowszą wersję.",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
@@ -4191,7 +4232,7 @@ FUNCTION_DESCRIPTIONS = {
         "⚙️ oscam.dvbapi - clear file": "Clears/truncates the oscam.dvbapi file in Oscam config directories.\nUseful if the file contains wrong entries or you want a clean start.",
         "⚙️ oscam.dvbapi - Poland update": "Replaces oscam.dvbapi with the bundled Poland profile from AIO Panel.\nCreates a backup of the previous file and tries to refresh Softcam/Oscam afterwards.",
         "📥 Softcam - Installer": "Installs Softcam using the installer script (wget | bash).\nAfter install you can proceed with installing Oscam from your feed.",
-        "📥 Oscam Feed - Installer (Auto)": "Automatically selects and installs Oscam from feed, verifies the package after install and attempts to refresh Softcam.\nA full receiver reboot is recommended afterwards.",
+        "📥 OSCam-Emu - Install and activate": "Prefers OSCam-Emu from the feed, installs or repairs the package, selects it as the active softcam and verifies that the process is actually running.\nDiagnostic log: /tmp/aio_oscam_install.log.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
         "📥 NCam (Feed - latest)": "Installs the latest NCam from your system feed (opkg).\nGUI restart recommended; then select the emulator in Softcam settings.",
         "⚙️ ServiceApp - Installer": "Installs ServiceApp (alternative playback engine) for improved IPTV/stream handling.\nMay require Enigma2 restart after installation.",
@@ -4213,7 +4254,7 @@ FUNCTION_DESCRIPTIONS = {
         # System Tools
         "⚙️ System Tools": "Advanced system administration tools",
         "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
-        ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Paweł Pawełek)\n- install softcam\n- install the newest Oscam from feed (auto-detect tuner/CPU)\n- download picons (Transparent)\nFinally triggers a full system reboot.",
+        ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Polska 13E AIO Panel)\n- install Softcam support\n- install OSCam-Emu, select it as the active softcam and start it\n- download picons (Transparent)\nFinally triggers a full system reboot.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
         "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set covering 13E, 19.2E and IPTV, then asks for the target folder before installation.\nYou can keep the default path or choose an external device; GUI restart or a full reboot is recommended after larger changes.",
@@ -4585,7 +4626,7 @@ class PanelAIO(Screen):
             
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "📥 Oscam Feed - {}" if lang == 'PL' else "📥 Oscam Feed - {}"
+                    oscam_text = "📥 OSCam-Emu - {}" if lang == 'PL' else "📥 OSCam-Emu - {}"
                     softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
                 elif action == "CMD:INSTALL_LEVI45_OSCAM":
                     levi_ver = local_oscam_version or "Online"
@@ -5324,15 +5365,15 @@ class PanelAIO(Screen):
         # Mapa opisów dla opcji
         desc_map = {
             "deps_only": "Tylko podstawowe pakiety systemowe (wget, tar, unzip).\nNie zmienia konfiguracji kanałów ani softcamu.",
-            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- Pełny restart tunera\nSzybka instalacja.",
-            "install_with_picons": "Konfiguracja pełna:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja Oscam z feed\n- PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
+            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n- Pełny restart tunera\nSzybka instalacja.",
+            "install_with_picons": "Konfiguracja pełna:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n- PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
             "cancel": "Powrót do menu."
         }
         if lang != "PL":
             desc_map = {
                 "deps_only": "Install only basic system packages (wget, tar, unzip).\nDoes not change channel lists or softcam.",
-                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- Full receiver reboot\nFast installation.",
-                "install_with_picons": "Full configuration:\n- Channel list\n- Install Softcam (script)\n- Install Oscam from feed\n- PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
+                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n- Full receiver reboot\nFast installation.",
+                "install_with_picons": "Full configuration:\n- Channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n- PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
                 "cancel": "Back to menu."
             }
 
@@ -5361,18 +5402,26 @@ class PanelAIO(Screen):
 
         if steps:
             picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/bzyk83_hb_13E_2026_02_24.zip'
-            list_name = 'Bzyk83 Hotbird 13E (2026-02-24)'
+            channel_list_url = 'https://github.com/OliOli2013/PanelAIO-Lists/raw/main/archives/Polska_13E_AIO_Panel.zip'
+            list_name = 'Polska 13E AIO Panel'
 
+            # Preferuj dokładnie listę Polska 13E AIO Panel z aktualnego manifestu.
+            # Nie wybieraj wariantów 13E+19.2E ani innych list zawierających podobną nazwę.
             try:
                 repo_lists = self.fetched_data_cache.get("repo_lists", [])
                 for item in repo_lists:
-                    if isinstance(item, (list, tuple)) and len(item) >= 2 and str(item[1]).startswith("archive:"):
-                        t = str(item[0]).lower()
-                        if ("bzyk83" in t or "bzyk 83" in t) and ("13e" in t) and ("hotbird" in t) and ("dual" not in t):
-                            channel_list_url = str(item[1]).split(':', 1)[1]
-                            list_name = str(item[0]).replace("📡 ", "")
-                            break
+                    if not (isinstance(item, (list, tuple)) and len(item) >= 2):
+                        continue
+                    action = ensure_unicode(item[1])
+                    if not action.startswith("archive:"):
+                        continue
+                    title_txt = ensure_unicode(item[0]).replace(u"📡 ", "").strip()
+                    url_txt = action.split(':', 1)[1]
+                    normalized_title = re.sub(r'[^a-z0-9]+', ' ', title_txt.lower()).strip()
+                    if normalized_title == 'polska 13e aio panel' or 'Polska_13E_AIO_Panel.zip' in url_txt:
+                        channel_list_url = url_txt
+                        list_name = 'Polska 13E AIO Panel'
+                        break
             except Exception:
                 pass
 
@@ -6642,57 +6691,16 @@ AIO_RESTORE_EOF
     def show_plugin_update_manager(self):
         self.sess.open(PluginUpdateManagerScreen, self.lang)
     def install_best_oscam(self):
-        title = "Oscam - Instalator (Auto)" if self.lang == 'PL' else "Oscam - Installer (Auto)"
-        cmd = r"""
-            echo "=== Oscam installer (feed) ==="
-            opkg update || true
-
-            pkg_exists(){ opkg list 2>/dev/null | awk '{print $1}' | grep -qx "$1"; }
-            pkg_installed(){ opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$1"; }
-
-            CAND=""
-            for p in enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod; do
-                if pkg_exists "$p"; then CAND="$p"; break; fi
-            done
-            if [ -z "$CAND" ]; then
-                CAND=$(opkg list 2>/dev/null | awk 'BEGIN{IGNORECASE=1} $1 ~ /oscam/ {print $1}' | head -n 1)
-            fi
-            if [ -z "$CAND" ]; then
-                echo "!!! Oscam not found in feeds."
-                exit 1
-            fi
-
-            echo "Installing: $CAND"
-            opkg install "$CAND" || opkg install --force-reinstall "$CAND" || true
-
-            INSTALLED=""
-            for p in "$CAND" enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod; do
-                [ -n "$p" ] || continue
-                if pkg_installed "$p"; then INSTALLED="$p"; break; fi
-            done
-
-            BIN=""
-            for b in /usr/bin/oscam /usr/bin/oscam-emu /usr/bin/oscam* /usr/softcams/oscam /usr/softcams/oscam* /usr/local/bin/oscam*; do
-                [ -x "$b" ] && BIN="$b" && break
-            done
-            [ -z "$BIN" ] && BIN=$(command -v oscam 2>/dev/null || true)
-
-            mkdir -p /usr/softcams 2>/dev/null || true
-            chmod 755 /etc/init.d/softcam 2>/dev/null || true
-            if [ -n "$BIN" ] && [ -d /usr/softcams ]; then
-                ln -sfn "$BIN" /usr/softcams/oscam 2>/dev/null || true
-            fi
-
-            /etc/init.d/softcam stop 2>/dev/null || true
-            killall -9 oscam softcam 2>/dev/null || true
-            sleep 2
-            /etc/init.d/softcam start 2>/dev/null || /etc/init.d/softcam restart 2>/dev/null || systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
-            ps | grep -E 'oscam|softcam' | grep -v grep || true
-
-            [ -n "$INSTALLED" ] || { echo "ERROR: Oscam package not confirmed after install."; exit 1; }
-            sync
-            sleep 1
-        """
+        title = "OSCam-Emu - Instalator i aktywacja" if self.lang == 'PL' else "OSCam-Emu - Install and activate"
+        script_path = os.path.join(PLUGIN_PATH, 'install_oscam_emu_script.sh')
+        status_path = os.path.join(PLUGIN_TMP_PATH, 'manual_oscam_%s.status' % int(time.time() * 1000))
+        if not os.path.exists(script_path):
+            show_message_compat(self.sess, 'Brak pliku install_oscam_emu_script.sh.', MessageBox.TYPE_ERROR)
+            return
+        cmd = 'chmod 755 {script} && /bin/sh {script} {status}; RC=$?; echo; cat {status} 2>/dev/null || true; exit $RC'.format(
+            script=_safe_shell_arg(script_path),
+            status=_safe_shell_arg(status_path)
+        )
         self._open_console_install_action(title, [cmd])
 
     def install_softcam_script(self):

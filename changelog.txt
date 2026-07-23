@@ -1,5 +1,16 @@
-[14.0.0]
+AIO Panel 14.0.0 — poprawka piconów i Super Konfiguratora (bez zmiany wersji)
+
+- dodano dedykowany, weryfikowany instalator piconów z kontrolą miejsca, wielokrotnym pobieraniem, walidacją ZIP i rekursywnym kopiowaniem PNG,
+- usunięto zależność instalacji piconów od wolnej pamięci /tmp; instalator wybiera bezpieczny katalog roboczy,
+- dodano log instalacji piconów: /tmp/aio_picons_install.log,
+- Super Konfigurator START i FULL instaluje teraz listę „Polska 13E AIO Panel”,
+- usunięto wybieranie starej listy Bzyk83,
+- po instalacji Softcam konfigurator preferuje OSCam-Emu, ustawia go jako aktywny i sprawdza, czy proces wystartował,
+- dodano log instalacji i aktywacji OSCam: /tmp/aio_oscam_install.log,
+- ręczny instalator OSCam korzysta z tego samego mechanizmu instalacji i aktywacji.
+
 AIO Panel 14.0.0 — Modern UI rebuild
+
 - całkowicie nowy, adaptacyjny pulpit dla SD/HD/FHD,
 - osobne piktogramy PNG zamiast zależności od emoji i czcionek skina,
 - trzy strefy pracy: kategorie, funkcje oraz panel szczegółów i kondycji tunera,
@@ -13,6 +24,7 @@ AIO Panel 14.0.0 — Modern UI rebuild
 - uporządkowano paczkę instalacyjną i usunięto pliki robocze GitHub/GitKraken z katalogu runtime,
 - brak zadań wykonywanych podczas startu GUI Enigma2.
 
+--- Poprzednia historia ---
 [13.0.3]
 AIO Panel 13.0.3
 - Naprawiono instalatory online z GitHub na OpenPLi 9.x.
