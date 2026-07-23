@@ -4,6 +4,7 @@
 
 VERSION="14.0.1"
 PACKAGE="enigma2-plugin-extensions-panelaio_${VERSION}_all.ipk"
+EXPECTED_SHA256="b87f3e8f687fcd2288f96ff1b7740be797f1b3d134c873abe610659117fa578f"
 URL_PRIMARY="https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/${PACKAGE}"
 URL_FALLBACK="https://github.com/OliOli2013/PanelAIO-Plugin/raw/refs/heads/main/release/${PACKAGE}"
 TMP="/tmp/${PACKAGE}"
@@ -49,6 +50,16 @@ SIZE=$(wc -c < "$TMP" 2>/dev/null || echo 0)
 
 if head -c 512 "$TMP" 2>/dev/null | grep -Eqi '<!DOCTYPE|<html|404: Not Found'; then
     fail "GitHub zwrócił stronę HTML zamiast pakietu IPK."
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL_SHA256=$(sha256sum "$TMP" 2>/dev/null | awk '{print $1}')
+    [ "$ACTUAL_SHA256" = "$EXPECTED_SHA256" ] || fail "Suma SHA-256 pobranego IPK jest nieprawidłowa."
+elif command -v openssl >/dev/null 2>&1; then
+    ACTUAL_SHA256=$(openssl dgst -sha256 "$TMP" 2>/dev/null | awk '{print $NF}')
+    [ "$ACTUAL_SHA256" = "$EXPECTED_SHA256" ] || fail "Suma SHA-256 pobranego IPK jest nieprawidłowa."
+else
+    log "OSTRZEŻENIE: brak sha256sum/openssl — pominięto kontrolę SHA-256."
 fi
 
 log "Instalacja pakietu ${PACKAGE}..."

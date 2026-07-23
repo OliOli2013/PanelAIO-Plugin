@@ -1,1 +1,1 @@
-cd58437e57f3816c53a0b743f092b5af9e28e7d122c0be65215bdbd55017ee44  releases/enigma2-plugin-extensions-panelaio_14.0.0_all.ipk
+b87f3e8f687fcd2288f96ff1b7740be797f1b3d134c873abe610659117fa578f  release/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk

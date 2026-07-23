@@ -1,0 +1,26 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Editors and OS
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local build and test artifacts
+*.log
+*.tmp
+*.bak
+*.before_*
+work/
+build/
+dist/
+
+# IPK packages are ignored everywhere except the current release package
+*.ipk
+!release/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk

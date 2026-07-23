@@ -1,9 +1,10 @@
 {
-  "version": "14.0.0",
-  "build": 14003,
+  "version": "14.0.1",
+  "build": 14001,
   "package": "enigma2-plugin-extensions-panelaio",
-  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/releases/enigma2-plugin-extensions-panelaio_14.0.0_all.ipk",
-  "sha256": "cd58437e57f3816c53a0b743f092b5af9e28e7d122c0be65215bdbd55017ee44",
+  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk",
+  "sha256": "b87f3e8f687fcd2288f96ff1b7740be797f1b3d134c873abe610659117fa578f",
+  "size": 289370,
   "python": "2/3",
-  "changelog": "Naprawiono uruchamianie instalatora list kanałów po pobraniu archiwum. Zachowano wersję 14.0.0, działający interfejs, kolejność list i oryginalne logo z 13.0.3."
+  "changelog": "Autorskie picony AIO Panel, naprawiona instalacja piconów, poprawiony Super Konfigurator, Softcam, OSCam-Emu, listy, backup, restore i aktualizacje."
 }

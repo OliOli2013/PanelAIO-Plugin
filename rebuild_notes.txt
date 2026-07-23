@@ -1,9 +1,0 @@
-AIO Panel 12.0.4
-
-Zakres aktualizacji stabilizacyjnej:
-- brak zadań startowych przy ładowaniu GUI Enigma2,
-- blokada oczywistych instalatorów Python 3 na Pythonie 2,
-- zewnętrzne instalatory wymagają potwierdzenia i nie wymuszają automatycznego restartu,
-- instalator GitHub nie wykonuje automatycznego rebootu,
-- czyszczenie starej lokalizacji i starych plików pyc/pyo,
-- zachowanie poprawek oscam.dvbapi Poland oraz Backup/Restore.
