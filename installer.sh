@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - transactional GitHub source installer.
+# AIO Panel 14.0.1 - transactional GitHub source installer.
 set -u
 REPO="OliOli2013/PanelAIO-Plugin"; BRANCH="main"
 BASE="/usr/lib/enigma2/python/Plugins"; DST="$BASE/SystemPlugins/PanelAIO"; OLD="$BASE/Extensions/PanelAIO"

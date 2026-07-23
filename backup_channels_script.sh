@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - complete channel-list backup without duplicate latest copy.
+# AIO Panel 14.0.1 - complete channel-list backup without duplicate latest copy.
 set -u
 PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 AIO_PLUGIN_DIR="$PLUGIN_DIR"

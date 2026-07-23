@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - unified OSCam service control.
+# AIO Panel 14.0.1 - unified OSCam service control.
 set -u
 ACTION="${1:-restart}"; STATUS="${2:-/tmp/PanelAIO/oscam_control.status}"; LOG="/tmp/aio_oscam_control.log"
 mkdir -p "$(dirname "$STATUS")" 2>/dev/null || true

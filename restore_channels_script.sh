@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - validated, transactional channel restore.
+# AIO Panel 14.0.1 - validated, transactional channel restore.
 set -u
 PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 AIO_PLUGIN_DIR="$PLUGIN_DIR"

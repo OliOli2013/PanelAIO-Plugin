@@ -1,6 +1,6 @@
-# AIO Panel 14.0.0
+# AIO Panel 14.0.1
 
-AIO Panel is a universal Enigma2 toolbox for receivers running Python 2 or Python 3. Version 14.0.0 introduces a completely rebuilt adaptive dashboard while retaining the proven installers and maintenance actions from the previous release.
+AIO Panel is a universal Enigma2 toolbox for receivers running Python 2 or Python 3. Version 14.0.1 is the stabilized release of the 14.x line. It retains the adaptive dashboard and all existing functions while consolidating fixes for picons, channel-list installation, S4aUpdater and Super Configurator.
 
 ## Main areas
 

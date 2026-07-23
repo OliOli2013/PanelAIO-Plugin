@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - prosty instalator piconów, zgodny z zachowaniem sprzed audytu.
+# AIO Panel 14.0.1 - prosty instalator piconów, zgodny z zachowaniem sprzed audytu.
 # Bez sztucznego limitu 130/180 MB i bez odrzucania powtarzających się nazw.
 # Użycie: picon_install_script.sh URL KATALOG_DOCELOWY PLIK_STATUSU
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 14.0.0
+Wersja 14.0.1
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -444,7 +444,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("14.0.0")
+VER = _read_local_version("14.0.1")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -2085,7 +2085,7 @@ COL_TITLES = {
 
 
 
-# === SORTOWANIE I FILTROWANIE LIST KANAŁÓW v14.0.0 ===
+# === SORTOWANIE I FILTROWANIE LIST KANAŁÓW v14.0.1 ===
 # Repozytorium AIO pozostaje źródłem podstawowym. S4aUpdater uzupełnia je
 # wszystkimi listami z ostatnich 12 miesięcy. Listy Bzyk83 są wykluczone ze
 # wszystkich źródeł. Vhannibal pozostaje na końcu listy zgodnie z układem AIO.
@@ -4743,7 +4743,7 @@ class PanelAIO(Screen):
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
             
-            # v14.0.0: repo + wszystkie datowane listy S4a z ostatnich 12 miesięcy;
+            # v14.0.1: repo + wszystkie datowane listy S4a z ostatnich 12 miesięcy;
             # Bzyk83 jest wykluczony globalnie, a kolejność pozostaje datowa.
             final_channel_lists = _prepare_channel_lists_v1201(repo_lists, s4a_lists_full)
             
@@ -6411,9 +6411,9 @@ class PanelAIO(Screen):
 
     def _ask_reboot_after_install(self, *args):
         msg = (
-            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 14.0.0 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
+            "Instalacja lub aktualizacja została zakończona.\n\nJeżeli wszystko działa, wykonaj restart tunera ręcznie z menu zasilania. AIO Panel 14.0.1 nie wymusza automatycznego restartu, żeby nie powodować pętli restartów po wadliwej zewnętrznej wtyczce.\n\nWykonać pełny restart teraz?"
             if self.lang == 'PL' else
-            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 14.0.0 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
+            "The install/update has finished.\n\nIf everything works, reboot the receiver manually from the power menu. AIO Panel 14.0.1 does not force an automatic reboot to avoid reboot loops caused by faulty external plugins.\n\nReboot now?"
         )
 
         def _open_reboot_prompt():
@@ -6510,9 +6510,9 @@ class PanelAIO(Screen):
     def _open_console_install_action(self, title, cmdlist):
         if IS_PY2 and self._is_py2_incompatible_install(title, cmdlist):
             msg = (
-                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 14.0.0, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
+                "Ta pozycja wygląda na przeznaczoną dla Pythona 3 i została zablokowana na Pythonie 2.\n\nTo zabezpieczenie dodano w AIO Panel 14.0.1, ponieważ instalacja pakietów Py3 na obrazach Py2 może powodować crashe lub bootloop."
                 if self.lang == 'PL' else
-                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 14.0.0 because installing Py3 packages on Py2 images may cause crashes or boot loops."
+                "This item appears to be intended for Python 3 and has been blocked on Python 2.\n\nThis safeguard was added in AIO Panel 14.0.1 because installing Py3 packages on Py2 images may cause crashes or boot loops."
             )
             show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=12)
             return
@@ -6623,7 +6623,7 @@ class PanelAIO(Screen):
             SRC="{src}"
             STAMP=$(date +%Y%m%d_%H%M%S)
             {helpers}
-            echo "=== AIO Panel 14.0.0: oscam.dvbapi Poland ==="
+            echo "=== AIO Panel 14.0.1: oscam.dvbapi Poland ==="
             [ -f "$SRC" ] || {{ echo "Brak pliku wzorcowego: $SRC"; exit 1; }}
             aio_require_oscam_dirs
             echo "$DIRS" | while IFS= read -r D; do

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Shared POSIX helpers for AIO Panel 14.0.0.
+# Shared POSIX helpers for AIO Panel 14.0.1.
 
 AIO_PLUGIN_DIR="${AIO_PLUGIN_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)}"
 AIO_RUNTIME_ROOT="${AIO_RUNTIME_ROOT:-/tmp/PanelAIO}"

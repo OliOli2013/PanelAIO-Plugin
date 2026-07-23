@@ -1,11 +1,11 @@
 Package: enigma2-plugin-extensions-panelaio
-Version: 14.0.0
+Version: 14.0.1
 Section: systemplugins
 Priority: optional
 Architecture: all
 Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
 Depends: enigma2
 Provides: enigma2-plugin-systemplugins-panelaio
-Description: AIO Panel 14.0.0 complete Enigma2 toolbox for Python 2 and Python 3
+Description: AIO Panel 14.0.1 complete Enigma2 toolbox for Python 2 and Python 3
  Functional channel lists from AIO and S4aUpdater, transactional channel installation,
  picons without an artificial free-space threshold and Super Configurator using the direct mynonpublic Softcam feed command.

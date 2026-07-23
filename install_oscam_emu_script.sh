@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - resilient OSCam installer/activator.
+# AIO Panel 14.0.1 - resilient OSCam installer/activator.
 # It prefers an already installed OSCam, then the current system feed, and only
 # then the optional external Softcam feed.
 

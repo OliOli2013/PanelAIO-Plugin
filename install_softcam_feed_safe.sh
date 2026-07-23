@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - Softcam feed installer.
+# AIO Panel 14.0.1 - Softcam feed installer.
 # Uses the exact official command requested by the project owner.
 
 STATUS="${1:-/tmp/PanelAIO/aio_softcam_feed.status}"

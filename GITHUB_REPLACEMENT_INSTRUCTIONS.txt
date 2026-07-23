@@ -1,19 +1,14 @@
-AIO Panel 14.0.0 — pliki do podmiany na GitHubie
+AIO Panel 14.0.1 — pliki do podmiany na GitHubie
 
-Najważniejsze zmienione pliki:
-1. install_softcam_feed_safe.sh
-2. legacy_plugin.py
-3. changelog.txt
-4. SUPERCONFIG_DIRECT_FEED_14.0.0.txt
+1. Podmień całą zawartość katalogu wtyczki plikami z tej paczki.
+2. Umieść gotowy pakiet IPK z katalogu release w sekcji wydań lub w lokalizacji używanej przez aktualizator.
+3. Najważniejsze pliki wersji: version.txt, control/control, plugin.py, legacy_plugin.py i changelog.txt.
+4. Numer wersji pakietu: 14.0.1.
 
-Do repozytorium można wgrać cały katalog z paczki GitHub albo podmienić powyższe pliki.
-Gotowy IPK znajduje się w katalogu release.
+Instalacja ręczna po skopiowaniu IPK do /tmp:
 
-Instalacja na tunerze:
-opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_14.0.0_all_DIRECT_FEED.ipk
+opkg install --force-reinstall /tmp/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk
+
+Po instalacji zalecany jest ręczny restart GUI:
+
 killall -9 enigma2
-
-Przed ponownym testem można usunąć stare statusy:
-rm -f /tmp/PanelAIO/wizard_softcam_*.status /tmp/PanelAIO/wizard_oscam_*.status
-rm -f /tmp/PanelAIO/aio_oscam_feed_*.status
-rm -rf /tmp/PanelAIO/locks/opkg_softcam.lock

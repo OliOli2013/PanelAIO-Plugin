@@ -1,0 +1,32 @@
+AIO Panel 14.0.1 — aktualizacja stabilności i kompletności (23.07.2026)
+
+NAJWAŻNIEJSZA POPRAWKA — INSTALACJA PICONÓW
+- aktualizacja przede wszystkim dotyczy problemu występującego u części użytkowników podczas instalacji piconów; problem został naprawiony,
+- usunięto sztuczny minimalny próg wolnego miejsca, który na części tunerów błędnie zatrzymywał instalację,
+- poprawiono obsługę paczek zawierających powtarzające się nazwy piconów; istniejące pliki są prawidłowo nadpisywane,
+- poprawiono pobieranie, kontrolę archiwum i kopiowanie piconów do wybranego katalogu,
+- komunikat o braku miejsca pojawia się wyłącznie przy rzeczywistym błędzie zapisu na nośniku.
+
+POZOSTAŁE ZMIANY — EFEKT PEŁNEGO AUDYTU WTYCZKI
+- przeanalizowano cały mechanizm instalacji list kanałów, piconów, wtyczek, Softcam/OSCam, backupu, restore, aktualizacji i działania GUI,
+- naprawiono instalację list kanałów z repozytorium PanelAIO-Lists, w tym listy „Polska 13E AIO Panel”,
+- przywrócono listy S4aUpdater z ostatnich 12 miesięcy i całkowicie wykluczono listy Bzyk83,
+- dodano obsługę list umieszczonych w zagnieżdżonych katalogach oraz formatów lamedb i lamedb5,
+- brak opcjonalnego bukietu nie blokuje już instalacji całej poprawnej listy,
+- instalacja list wykonuje kopię bezpieczeństwa, pracuje w katalogu tymczasowym i przy błędzie przywraca poprzedni stan,
+- poprawiono przywracanie list kanałów i zabezpieczono je przed pozostawieniem niepełnej konfiguracji,
+- Super Konfigurator START i FULL instaluje listę „Polska 13E AIO Panel”,
+- Super Konfigurator używa działającego polecenia feedu Softcam: wget -O - -q http://updates.mynonpublic.com/oea/feed | bash,
+- po dodaniu feedu instalowany jest preferowany OSCam-Emu, ustawiany jako aktywny i uruchamiany,
+- poprawiono kontrolę wyników kolejnych kroków Super Konfiguratora oraz opcje Ponów, Pomiń i Anuluj,
+- poprawiono obsługę błędów pobierania, stron HTML zamiast plików, uszkodzonych archiwów i niepełnych paczek,
+- uporządkowano mechanizmy blokad, katalogów roboczych, walidacji i rollbacku, aby równoległe operacje nie kolidowały ze sobą,
+- poprawiono backup i restore konfiguracji OSCam oraz wykrywanie różnych katalogów używanych przez obrazy Enigma2,
+- poprawiono obsługę aktualizacji satellites.xml i plików pomocniczych OSCam,
+- poprawiono import M3U i zapis bukietów,
+- uporządkowano timery i zadania ekranów, aby nie pozostawały aktywne po wyjściu z wtyczki,
+- ograniczono agresywne czyszczenie plików tymczasowych i logów należących do innych wtyczek,
+- poprawiono instalację i aktualizację samego pakietu: działająca wersja nie jest usuwana przed sprawdzeniem nowej,
+- zachowano zgodność z Python 2 i Python 3 oraz różnymi obrazami Enigma2,
+- numer wersji został podniesiony z 14.0.0 do 14.0.1.
+

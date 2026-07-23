@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - secure, validated and atomic satellites.xml update.
+# AIO Panel 14.0.1 - secure, validated and atomic satellites.xml update.
 set -u
 PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 AIO_PLUGIN_DIR="$PLUGIN_DIR"; . "$PLUGIN_DIR/aio_safe_common.sh" || exit 1

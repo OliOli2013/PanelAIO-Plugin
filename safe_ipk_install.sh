@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - HTTPS IPK downloader/validator/installer.
+# AIO Panel 14.0.1 - HTTPS IPK downloader/validator/installer.
 set -u
 PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 AIO_PLUGIN_DIR="$PLUGIN_DIR"; . "$PLUGIN_DIR/aio_safe_common.sh" || exit 1

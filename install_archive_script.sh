@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - functional transactional channel-list installer.
+# AIO Panel 14.0.1 - functional transactional channel-list installer.
 # No fixed free-space threshold: the best writable workspace is selected and
 # every write is checked. Existing lists are restored automatically on error.
 
@@ -208,7 +208,7 @@ WORK="$ROOT/aio_list_install_$RUN_ID"
 EXTRACT="$WORK/extract"; STAGE_E2="$WORK/stage/e2"; STAGE_TUXBOX="$WORK/stage/tuxbox"; BACKUP="$WORK/backup"
 mkdir -p "$EXTRACT" "$STAGE_E2" "$STAGE_TUXBOX" "$BACKUP" || fail "Nie można utworzyć katalogu roboczego." workdir
 
-log "=== AIO Panel 14.0.0: funkcjonalna instalacja listy ==="
+log "=== AIO Panel 14.0.1: funkcjonalna instalacja listy ==="
 log "Archiwum: $ARCHIVE"
 log "Katalog roboczy: $WORK (wolne KB przed operacją: $FREE)"
 aio_validate_archive "$ARCHIVE" "$ARCHIVE_TYPE" 100000 2147483648 >> "$LOG_FILE" 2>&1 || fail "Archiwum jest uszkodzone albo zawiera niebezpieczne wpisy." validation
