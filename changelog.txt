@@ -1,5 +1,5 @@
+[14.0.1]
 AIO Panel 14.0.1 — aktualizacja stabilności i kompletności (23.07.2026)
-
 POPRAWKA AKTUALIZACJI ONLINE
 - naprawiono aktualizację AIO Panel uruchamianą bezpośrednio z wtyczki,
 - własny instalator AIO nie jest już błędnie blokowany przez walidator z powodu bezpiecznej składni find,
