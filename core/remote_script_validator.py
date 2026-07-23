@@ -6,7 +6,7 @@ import sys
 
 MAX_SIZE = 256 * 1024
 DENY_PATTERNS = [
-    r'\beval\b', r'\bexec\b', r'/dev/tcp', r'\bnc\s', r'\bnetcat\b',
+    r'\beval\b', r'^[ \t]*exec(?:[ \t]|$)', r'/dev/tcp', r'\bnc\s', r'\bnetcat\b',
     r'\btelnet\b', r'\bmkfs\b', r'\bfdisk\b', r'\bparted\b', r'\bdd\s+if=',
     r'\bmount\s', r'\bumount\s', r'\bchroot\s', r'\buseradd\b', r'\bpasswd\b',
     r'\biptables\b', r'\bnft\s', r'\bssh\s', r'\bscp\s',

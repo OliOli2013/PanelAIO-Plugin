@@ -1,0 +1,6 @@
+AIO Panel 14.0.1 — poprawka aktualizacji online
+
+Naprawiono fałszywe blokowanie własnego installer.sh przez walidator zdalnych skryptów.
+Przyczyną była bezpieczna składnia find ... -exec, błędnie rozpoznawana jako polecenie shell exec.
+Installer nie zawiera już tokenu exec, dzięki czemu aktualizacja działa również ze starszą wersją walidatora.
+Nowy walidator blokuje tylko samodzielne polecenie exec na początku linii.

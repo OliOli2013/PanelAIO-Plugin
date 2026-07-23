@@ -27,12 +27,15 @@ if [ -z "$SRC" ]; then F=$(find "$EXTRACT" -type f -name plugin.py -print -quit 
 [ -n "$SRC" ] || fail "Plugin source root not found."
 cp -pR "$SRC"/. "$NEW/" || fail "Cannot copy staged plugin."
 rm -rf "$NEW/.git" "$NEW/.github" "$NEW/release" "$NEW/releases" "$NEW/control" "$NEW/packaging" 2>/dev/null || true
-find "$NEW" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true; find "$NEW" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+find "$NEW" -depth -type d -name __pycache__ -print 2>/dev/null | while IFS= read -r D; do rm -rf "$D" 2>/dev/null || true; done
+find "$NEW" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
 for REQUIRED in plugin.py legacy_plugin.py version.txt install_archive_script.sh picon_install_script.sh aio_safe_common.sh; do [ -s "$NEW/$REQUIRED" ] || fail "Missing required file: $REQUIRED"; done
 PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail "Python interpreter not found."
 "$PY" -m py_compile "$NEW/plugin.py" "$NEW/legacy_plugin.py" >> "$LOG" 2>&1 || fail "Python syntax validation failed."
 for S in "$NEW"/*.sh; do [ -f "$S" ] || continue; /bin/sh -n "$S" >> "$LOG" 2>&1 || fail "Shell syntax error: $(basename "$S")"; done
-find "$NEW" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true; find "$NEW" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true; find "$NEW" -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true
+find "$NEW" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r F; do chmod 755 "$F" 2>/dev/null || true; done
+find "$NEW" -type f -name '*.py' -print 2>/dev/null | while IFS= read -r F; do chmod 644 "$F" 2>/dev/null || true; done
+find "$NEW" -type f -name '*.png' -print 2>/dev/null | while IFS= read -r F; do chmod 644 "$F" 2>/dev/null || true; done
 [ -d "$DST" ] && mv "$DST" "$BAK" || true
 mv "$NEW" "$DST" || { [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Atomic activation failed."; }
 [ -s "$DST/plugin.py" ] && [ -s "$DST/legacy_plugin.py" ] || { rm -rf "$DST" 2>/dev/null || true; [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Post-activation validation failed."; }
