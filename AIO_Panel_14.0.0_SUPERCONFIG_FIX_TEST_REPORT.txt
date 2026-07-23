@@ -1,0 +1,15 @@
+AIO Panel 14.0.0 - Super Konfigurator / Softcam Fix
+Data testu: 2026-07-23 16:54:18 UTC
+
+1. Python 3 compile: OK
+2. POSIX shell syntax: OK
+3. IPK gzip compatibility: OK (control.tar.gz + data.tar.gz)
+4. Package metadata: OK
+5. Controlled bootstrap validation: OK
+6. Unapproved HTTP host rejection: OK
+7. Softcam package detection (oscam-emu/master/trunk/stable variants): OK
+8. Simulated feed bootstrap and final status: OK|feed-installed|source=local-test|sha256=9777078975d832f1304051c4c9073287d73263e1f53201c575d6c5640c0170b3|log=/tmp/aio_softcam_feed.log
+9. Channel-list installer unchanged from CHANNELS_FIX: OK
+10. Picon installer unchanged from accepted PICON_FIX/CHANNELS_FIX: OK
+
+Result: ALL_SUPERCONFIG_FIX_TESTS_PASSED

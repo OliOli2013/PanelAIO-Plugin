@@ -14,6 +14,11 @@ aio_python() {
     return 1
 }
 
+# Compatibility alias for older AIO code paths.
+aio_find_python() {
+    aio_python
+}
+
 aio_https_url() {
     case "$1" in https://*) return 0 ;; *) return 1 ;; esac
 }

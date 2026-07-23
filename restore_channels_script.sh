@@ -133,10 +133,14 @@ tar -xzpf "$ARCHIVE" -C "$STAGE" || fail "Nie można rozpakować backupu." extra
 
 for IDX in "$STAGE/enigma2/bouquets.tv" "$STAGE/enigma2/bouquets.radio"; do
     [ -s "$IDX" ] || continue
-    sed -n 's/.*FROM BOUQUET "\([^"]*\)".*/\1/p' "$IDX" | while IFS= read -r REF; do
-        case "$REF" in */*|*'..'*) exit 2 ;; esac
-        [ -f "$STAGE/enigma2/$REF" ] || exit 3
-    done || fail "Backup zawiera brakujące lub niedozwolone odwołanie bukietu." validation
+    REFS="$WORK/restore_refs_$(basename "$IDX")_$$"
+    sed -n 's/.*FROM BOUQUET "\([^"]*\)".*/\1/p' "$IDX" > "$REFS" 2>/dev/null || true
+    while IFS= read -r REF; do
+        [ -n "$REF" ] || continue
+        case "$REF" in */*|*'..'*) fail "Backup zawiera niedozwolone odwołanie bukietu: $REF" validation ;; esac
+        [ -f "$STAGE/enigma2/$REF" ] || log "Ostrzeżenie: backup odwołuje się do brakującego opcjonalnego bukietu: $REF"
+    done < "$REFS"
+    rm -f "$REFS" 2>/dev/null || true
 done
 
 copy_e2 "$TARGET_E2" "$BACKUP/enigma2" || fail "Nie można wykonać kopii rollback." backup

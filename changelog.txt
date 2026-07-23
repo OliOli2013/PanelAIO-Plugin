@@ -1,10 +1,45 @@
-AIO Panel 14.0.0 — poprawka fałszywego komunikatu o braku miejsca na picony
+AIO Panel 14.0.0 — wersja funkcjonalna i kompletna: listy kanałów + S4aUpdater (bez zmiany numeru wersji)
 
-- usunięto sztuczny próg 130/180 MB dla instalacji piconów,
-- usunięto blokowanie paczki przez powtarzające się nazwy piconów,
-- picony są kopiowane strumieniowo bez tworzenia drugiej pełnej kopii archiwum,
-- komunikat o braku miejsca pojawia się tylko po rzeczywistym błędzie zapisu ENOSPC,
-- instalacja usuwa stare statusy i logi pozostawione przez wariant Full Repair.
+- przywrócono pobieranie katalogu list S4aUpdater jako danych tekstowych; zawartość nie jest wykonywana jako skrypt,
+- dodano wszystkie datowane listy S4aUpdater nie starsze niż 12 miesięcy liczone od bieżącej daty tunera,
+- całkowicie wykluczono listy Bzyk83 ze źródła AIO, S4aUpdater, nazw i adresów pobierania,
+- repozytorium PanelAIO-Lists pozostaje źródłem podstawowym, a S4aUpdater uzupełnia brakujących twórców,
+- poprawiono rozpoznawanie dat: YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY oraz skrócone DD-MM-YY,
+- przywrócono obsługę archiwów S4a dostępnych przez HTTP wyłącznie jako plików danych ZIP/TAR.GZ; każde archiwum jest walidowane przed rozpakowaniem,
+- instalator list nie wymaga już stałych 128 MB ani 5000 wolnych inode; wybiera zapisywalny katalog roboczy z największą dostępną przestrzenią,
+- instalator rozpoznaje listy w zagnieżdżonych katalogach i wybiera najbardziej kompletny zestaw Enigma2,
+- brakujące opcjonalne odwołanie w bouquets.tv/bouquets.radio jest raportowane jako ostrzeżenie, a nie jako fałszywy błąd całej instalacji,
+- bukiety wskazane w indeksie są automatycznie odnajdywane w pozostałych katalogach archiwum,
+- paczka zawierająca wyłącznie bukiety nie usuwa istniejącego lamedb/lamedb5,
+- przed zmianą list wykonywana jest zweryfikowana kopia transakcyjna, a błąd zapisu uruchamia rollback,
+- restore dopuszcza brakujące opcjonalne odwołania, ale nadal blokuje niebezpieczne ścieżki,
+- zachowano działający instalator piconów bez sztucznego minimalnego progu wolnego miejsca i bez blokowania powtarzających się nazw,
+- ręczne pobieranie piconów zawsze używa dedykowanej akcji picons, również w nowym module menu,
+- Super Konfigurator START i FULL nadal instalują „Polska 13E AIO Panel”, Softcam oraz preferowany OSCam-Emu,
+- zachowano pozostałe zabezpieczenia z audytu: kontrolę wyników, blokady operacji, staging, rollback i bezpieczne aktualizacje.
+
+AIO Panel 14.0.0 — pełna naprawa bezpieczeństwa i niezawodności (bez zmiany numeru wersji)
+
+- transakcyjna instalacja oraz przywracanie list kanałów: staging, kompletna kopia, walidacja, lock i automatyczny rollback,
+- restore list działa w odłączonym procesie i zawsze próbuje ponownie uruchomić Enigmę2, również po błędzie,
+- bezpieczna instalacja piconów: HTTPS, walidacja ZIP, kontrola miejsca i inodów, wykrywanie kolizji nazw, atomowe kopiowanie i blokada równoległej instalacji,
+- Super Konfigurator sprawdza wynik każdego kroku, umożliwia ponowienie/anulowanie i nie przechodzi dalej po błędzie krytycznym,
+- FULL pozwala wybrać katalog piconów, zamiast zawsze zapełniać pamięć wewnętrzną,
+- START i FULL instalują dokładnie „Polska 13E AIO Panel”, feed Softcam oraz preferowany OSCam-Emu i sprawdzają uruchomiony proces,
+- zdalne instalatory nie są już uruchamiane przez potok wget/curl do powłoki; są pobierane, walidowane i dopiero uruchamiane,
+- zdalny manifest aktualizacji nie może przekazać dowolnego polecenia shell; aktualizacje IPK są sprawdzane po nazwie pakietu i opcjonalnej sumie SHA-256,
+- usunięto wyłączanie weryfikacji certyfikatów TLS; źródła HTTP są blokowane, poza lokalnym OpenWebif 127.0.0.1,
+- bezpieczne backup/restore OSCam z wykrywaniem katalogów, walidacją archiwum, rollbackiem oraz jednolitym sterowaniem procesem,
+- bezpieczna aktualizacja satellites.xml i danych OSCam przez plik tymczasowy, walidację i atomową podmianę,
+- import M3U i bukietów używa unikalnego stagingu, walidowanych identyfikatorów, poprawnego kodowania i atomowego zapisu,
+- timery ekranów są zatrzymywane po zamknięciu, a ekran aktualizacji i usług ma układ dla SD,
+- Auto RAM nie wykonuje już drop_caches; używa bezpiecznego GC i czyści wyłącznie własne pliki tymczasowe,
+- czyszczenie nie usuwa cudzych archiwów, logów ani list OPKG, a „naprawa uszkodzonych wtyczek” tylko raportuje problemy,
+- Service Manager wykonuje akcję wyłącznie na wykrytej jednostce/skrypcie zamiast próbować wiele usług łańcuchem OR,
+- hasło root jest wprowadzane w trybie maskowanym i przekazywane przez chroniony plik tymczasowy,
+- preinst nie usuwa już działającej wersji; postinst najpierw waliduje nową instalację i dopiero wtedy usuwa starą ścieżkę Extensions,
+- dodano postrm zachowujący ustawienia użytkownika i backupy,
+- zachowano zgodność Python 2/Python 3 oraz historyczną nazwę pakietu dla poprawnych aktualizacji istniejących instalacji.
 
 AIO Panel 14.0.0 — poprawka piconów i Super Konfiguratora (bez zmiany wersji)
 
@@ -89,3 +124,24 @@ AIO Panel 13.0.0 Final
 - dodano obsługę lamedb5 i bezpieczną walidację archiwum,
 - dodano kopię awaryjną i automatyczne przywrócenie poprzedniej listy przy błędzie,
 - zachowano działający interfejs oraz oryginalne logo z wersji 13.0.3.
+
+14.0.0 (krytyczna poprawka instalacji list kanałów, bez zmiany wersji)
+- naprawiono zatrzymywanie instalacji po poprawnym pobraniu ZIP,
+- poprawiono błędne wywołanie `aio_find_python` na istniejącą funkcję `aio_python`,
+- dodano alias zgodności dla starszych ścieżek wykonania,
+- naprawiono instalację list z GitHuba oraz krok listy w Super Konfiguratorze,
+- instalator piconów pozostaje bez sztucznego minimum wolnego miejsca.
+
+14.0.0 - poprawka Super Konfiguratora (23.07.2026)
+- naprawiono błąd 404 podczas instalacji feedu Softcam,
+- HTTPS /oea/feed jest sprawdzany jako pierwszy, a następnie używany jest wyłącznie kontrolowany historyczny adres HTTP,
+- pobrany bootstrap jest walidowany przed uruchomieniem,
+- rozszerzono wykrywanie pakietów OSCam (emu/master/trunk/stable i warianty obrazów),
+- Super Konfigurator nie zatrzymuje się już z powodu błędnego wymuszenia HTTPS.
+
+14.0.0 - Super Konfigurator: bezpośredni feed Softcam
+- usunięto walidator, który błędnie blokował prawidłowy bootstrap mynonpublic,
+- feed Softcam używa dokładnie polecenia: wget -O - -q http://updates.mynonpublic.com/oea/feed | bash,
+- nieudany zewnętrzny feed nie blokuje możliwości pominięcia kroku ani pozostałych funkcji,
+- etap OSCam nadal niezależnie sprawdza pakiety, instaluje emulator i kontroluje uruchomienie procesu,
+- zachowano naprawy list kanałów, S4aUpdater i piconów bez sztucznego minimum miejsca.

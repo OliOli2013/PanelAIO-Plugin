@@ -1,78 +1,85 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - hardened Softcam feed bootstrap.
-
-set -u
-PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
-AIO_PLUGIN_DIR="$PLUGIN_DIR"
-. "$PLUGIN_DIR/aio_safe_common.sh" || exit 1
+# AIO Panel 14.0.0 - Softcam feed installer.
+# Uses the exact official command requested by the project owner.
 
 STATUS="${1:-/tmp/PanelAIO/aio_softcam_feed.status}"
 LOG="/tmp/aio_softcam_feed.log"
-URL="https://updates.mynonpublic.com/oea/feed"
-RAW="/tmp/PanelAIO/softcam_feed_$$.raw"
-TMP="/tmp/PanelAIO/softcam_feed_$$.sh"
-PIN_FILE="/etc/enigma2/.panelaio_softcam_feed.sha256"
+TMPDIR="/tmp/PanelAIO"
+FEED_CMD='wget -O - -q http://updates.mynonpublic.com/oea/feed | bash'
 
-mkdir -p "$(dirname "$STATUS")" /tmp/PanelAIO /etc/enigma2 2>/dev/null || true
-rm -f "$STATUS" "$STATUS.tmp" "$RAW" "$TMP" 2>/dev/null || true
+mkdir -p "$TMPDIR" "$(dirname "$STATUS")" 2>/dev/null || true
+rm -f "$STATUS" "$STATUS.tmp" 2>/dev/null || true
 : > "$LOG" 2>/dev/null || LOG="/tmp/aio_softcam_feed_$$.log"
-log() { printf '%s\n' "[AIO Softcam Feed] $*" | tee -a "$LOG"; }
-status() { printf '%s\n' "$*" > "$STATUS.tmp" 2>/dev/null && mv -f "$STATUS.tmp" "$STATUS" 2>/dev/null || true; }
-cleanup() { rm -f "$RAW" "$TMP" 2>/dev/null || true; aio_release_lock; }
-fail() { MSG="$1"; STAGE="${2:-unknown}"; log "BŁĄD [$STAGE]: $MSG"; status "ERROR|$MSG|$STAGE|log=$LOG"; cleanup; trap - EXIT HUP INT TERM; exit 1; }
 
-has_oscam_package() {
-    opkg list 2>/dev/null | awk '{print $1}' | grep -Eiq '^(enigma2-plugin-softcams-)?oscam([_-]emu|[-_]smod)?$'
+log() {
+    printf '%s\n' "[AIO Softcam Feed] $*" | tee -a "$LOG"
+}
+write_status() {
+    printf '%s\n' "$*" > "$STATUS.tmp" 2>/dev/null && mv -f "$STATUS.tmp" "$STATUS" 2>/dev/null || true
+}
+finish_ok() {
+    write_status "OK|feed-command-completed|log=$LOG"
+    log "$1"
+    exit 0
+}
+finish_warn() {
+    write_status "WARN|$1|log=$LOG"
+    log "OSTRZEŻENIE: $2"
+    exit 0
+}
+fail() {
+    write_status "ERROR|$1|feed|log=$LOG"
+    log "BŁĄD: $1"
+    exit 1
 }
 
-trap 'cleanup' EXIT HUP INT TERM
-aio_acquire_lock opkg_softcam || fail "Inna operacja OPKG/Softcam jest już wykonywana." lock
-command -v opkg >/dev/null 2>&1 || fail "Brak opkg." dependency
+command -v opkg >/dev/null 2>&1 || fail "Brak menedżera pakietów opkg."
 
-log "Aktualizacja feedów systemowych..."
-opkg update >> "$LOG" 2>&1 || log "Ostrzeżenie: opkg update zwrócił błąd."
-if has_oscam_package; then
-    status "OK|feed-already-available|log=$LOG"
-    log "Pakiet OSCam jest już dostępny; zewnętrzny bootstrap nie jest potrzebny."
-    cleanup; trap - EXIT HUP INT TERM; exit 0
+if ! command -v wget >/dev/null 2>&1; then
+    log "Brak wget — próba instalacji z bieżącego feedu systemowego."
+    opkg update >> "$LOG" 2>&1 || true
+    opkg install wget >> "$LOG" 2>&1 || fail "Nie udało się zainstalować wget."
 fi
 
-log "Pobieranie bootstrapu Softcam przez HTTPS..."
-aio_secure_download "$URL" "$RAW" 180 3 || fail "Nie udało się pobrać bootstrapu Softcam przez HTTPS." download
-aio_not_html "$RAW" || fail "Odpowiedź nie jest skryptem." validation
-# Legacy bootstrap historically contains plain HTTP package/feed URLs. Rewrite only
-# the exact trusted feed prefix to HTTPS and then validate the resulting script
-# under the normal strict policy. Any other HTTP URL remains blocked.
-sed 's#http://updates\.mynonpublic\.com/oea#https://updates.mynonpublic.com/oea#g' "$RAW" > "$TMP" || fail "Nie można przygotować bezpiecznej wersji bootstrapu." sanitize
-grep -q 'http://' "$TMP" 2>/dev/null && fail "Bootstrap nadal zawiera niezabezpieczony adres HTTP." sanitize
-PY=$(aio_python 2>/dev/null || true)
-[ -n "$PY" ] || fail "Brak Pythona do walidacji skryptu." dependency
-"$PY" "$PLUGIN_DIR/core/remote_script_validator.py" "$TMP" >> "$LOG" 2>&1 || fail "Bootstrap zawiera niedozwolone polecenia lub domeny." validation
-HASH=$(aio_sha256 "$TMP" 2>/dev/null || true)
-[ -n "$HASH" ] || fail "Nie udało się obliczyć SHA-256 bootstrapu." validation
-
-if [ -s "$PIN_FILE" ]; then
-    PIN=$(head -n 1 "$PIN_FILE" 2>/dev/null | tr -d ' \r\n')
-    [ "$PIN" = "$HASH" ] || fail "Bootstrap Softcam zmienił sumę SHA-256. Dla bezpieczeństwa nie został uruchomiony. Zweryfikuj zmianę i usuń $PIN_FILE, aby świadomie zaakceptować nową wersję." pin
-else
-    umask 077
-    printf '%s\n' "$HASH" > "$PIN_FILE.tmp" || fail "Nie można zapisać przypiętej sumy bootstrapu." pin
-    mv -f "$PIN_FILE.tmp" "$PIN_FILE" || fail "Nie można aktywować przypiętej sumy bootstrapu." pin
-    chmod 600 "$PIN_FILE" 2>/dev/null || true
-    log "Zapisano pierwszą zweryfikowaną sumę bootstrapu: $HASH"
+if ! command -v bash >/dev/null 2>&1; then
+    log "Brak bash — próba instalacji z bieżącego feedu systemowego."
+    opkg update >> "$LOG" 2>&1 || true
+    opkg install bash >> "$LOG" 2>&1 || fail "Nie udało się zainstalować bash."
 fi
 
-chmod 700 "$TMP" || fail "Nie można ustawić praw skryptu." execute
-log "Uruchamianie zweryfikowanego bootstrapu..."
+log "Uruchamiam dokładne polecenie instalacji feedu Softcam:"
+log "$FEED_CMD"
+
+# Intentionally execute the exact command supplied by the project owner.
+# Do not add a validator here: the previous validator rejected the legitimate
+# upstream bootstrap on several Enigma2 images.
 (
-    umask 022
-    PATH=/usr/sbin:/usr/bin:/sbin:/bin
-    export PATH
-    /bin/sh "$TMP"
-) >> "$LOG" 2>&1 || fail "Bootstrap Softcam zakończył się błędem." execute
+    wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
+) >> "$LOG" 2>&1
+RC=$?
 
-opkg update >> "$LOG" 2>&1 || true
-has_oscam_package || fail "Po instalacji feedu nadal nie znaleziono pakietu OSCam." verify
-status "OK|feed-installed|sha256=$HASH|log=$LOG"
-log "Feed Softcam został zainstalowany i zweryfikowany."
-cleanup; trap - EXIT HUP INT TERM; exit 0
+if [ "$RC" -ne 0 ]; then
+    finish_warn "feed-command-failed-$RC" "Polecenie feedu zakończyło się kodem $RC. Super Konfigurator przejdzie dalej i niezależnie sprawdzi dostępność OSCam."
+fi
+
+log "Odświeżam listę pakietów po dodaniu feedu."
+opkg update >> "$LOG" 2>&1 || log "opkg update zwrócił błąd; etap OSCam wykona własną kontrolę."
+
+# Do not inspect or reject the upstream script. Confirm only its observable
+# result, so an empty response or an upstream 404 is not reported as success.
+CONFIRMED=0
+opkg list-installed 2>/dev/null | awk '{print tolower($1)}' | grep -Eq '^softcam[-_]feed|^softcam-feed-universal$' && CONFIRMED=1
+if [ "$CONFIRMED" -eq 0 ]; then
+    for F in /etc/opkg/*.conf /etc/opkg/*.feed /etc/opkg/*.list /etc/opkg/*/*.conf; do
+        [ -f "$F" ] || continue
+        grep -Eqi 'mynonpublic|feeds2\.mynonpublic|softcam' "$F" && { CONFIRMED=1; break; }
+    done
+fi
+if [ "$CONFIRMED" -eq 0 ]; then
+    opkg list 2>/dev/null | awk '{print tolower($1)}' | grep -Eq '^(enigma2-plugin-softcams-oscam|oscam[-_])' && CONFIRMED=1
+fi
+
+if [ "$CONFIRMED" -eq 1 ]; then
+    finish_ok "Polecenie feedu Softcam zostało wykonane i feed lub pakiety OSCam są widoczne."
+fi
+finish_warn "feed-not-confirmed" "Polecenie zostało wykonane, ale feed ani pakiety OSCam nie są jeszcze widoczne. Etap OSCam wykona własną kontrolę; ten krok można pominąć."

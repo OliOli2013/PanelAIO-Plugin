@@ -1,16 +1,17 @@
-AIO Panel 14.0.0 - poprawka instalowania list kanałów
+AIO Panel 14.0.0 - poprawka instalacji list kanałów
 
 Numer wersji pozostaje 14.0.0.
 
-Naprawiono rzeczywistą przyczynę braku instalacji list: wieloliniowy blok pobierania
-był łączony z kolejnym poleceniem przez "&&" po znaku nowej linii. Na części
-systemów /bin/sh powstawała niepoprawna składnia "fi\n && ...", więc archiwum
-mogło pozostać w /tmp/PanelAIO, ale install_archive_script.sh nie był uruchamiany.
+Przyczyna błędu:
+- archiwum ZIP było pobierane poprawnie,
+- po pobraniu kod wywoływał nieistniejącą funkcję shell `aio_find_python`,
+- funkcja dostępna w `aio_safe_common.sh` nazywa się `aio_python`,
+- polecenie kończyło się przed uruchomieniem `install_archive_script.sh`, dlatego
+  lista nie była instalowana, a Super Konfigurator zatrzymywał się na tym kroku.
 
-Zmiany:
-- pobieranie wykonywane jest w osobnym pod-shellu zgodnym z BusyBox/ash/dash,
-- wynik pobierania jest sprawdzany przed uruchomieniem instalatora,
-- status błędu jest zapisywany również wtedy, gdy instalator nie może wystartować,
-- zachowano bezpieczną kopię i rollback listy,
-- poprawiono POSIX-owe cytowanie argumentów shella,
-- nie zmieniono interfejsu, logo, kolejności list ani numeru wersji.
+Naprawa:
+- zmieniono wywołanie na `aio_python`,
+- dodano alias zgodności `aio_find_python()` dla starszych ścieżek kodu,
+- pozostawiono bez zmian działający instalator piconów bez sztucznego minimum miejsca,
+- zachowano walidację, staging, kopię i rollback list kanałów,
+- nie zmieniono numeru wersji ani wyglądu wtyczki.

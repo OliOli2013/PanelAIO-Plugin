@@ -51,8 +51,9 @@ def validate_zip(path, max_files, max_bytes):
             if total > max_bytes:
                 raise ValueError('archive expands beyond size limit')
             normalized = os.path.normpath(_text(info.filename).replace('\\', '/'))
-            if normalized in seen and not normalized.endswith('/'):
-                raise ValueError('duplicate ZIP member: %s' % normalized)
+            # Duplicate regular members occur in some real Enigma2 settings ZIPs.
+            # They are safe after path/type validation; unzip -o deterministically
+            # keeps the last entry, so do not reject an otherwise usable list.
             seen.add(normalized)
             # UNIX mode is stored in high bits. Reject symlinks/devices if present.
             mode = (int(getattr(info, 'external_attr', 0)) >> 16) & 0xFFFF
@@ -80,8 +81,8 @@ def validate_tar(path, max_files, max_bytes):
             if total > max_bytes:
                 raise ValueError('archive expands beyond size limit')
             normalized = os.path.normpath(_text(member.name).replace('\\', '/'))
-            if normalized in seen and member.isfile():
-                raise ValueError('duplicate TAR member: %s' % normalized)
+            # Permit duplicate safe regular members for compatibility with
+            # settings archives created by incremental packers.
             seen.add(normalized)
     return count, total
 

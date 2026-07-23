@@ -1,0 +1,10 @@
+AIO Panel 14.0.0 — Super Konfigurator / bezpośredni feed Softcam
+
+Zastosowane polecenie:
+wget -O - -q http://updates.mynonpublic.com/oea/feed | bash
+
+Zmiany:
+- usunięto walidację zawartości bootstrapu, która powodowała fałszywe błędy,
+- krok feedu Softcam jest możliwy do pominięcia,
+- instalator OSCam wykonuje osobną kontrolę dostępnych i zainstalowanych pakietów,
+- nie zmieniono mechanizmu list kanałów ani piconów.

@@ -5,7 +5,7 @@ OLD=/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
 LOG=/tmp/aio_panel_postinst.log
 : > "$LOG" 2>/dev/null || true
 fail(){ echo "AIO Panel postinst: $1" | tee -a "$LOG" >&2; exit 1; }
-for F in plugin.py legacy_plugin.py version.txt aio_safe_common.sh install_archive_script.sh picon_install_script.sh restore_channels_script.sh install_oscam_emu_script.sh; do
+for F in plugin.py legacy_plugin.py version.txt aio_safe_common.sh install_archive_script.sh picon_install_script.sh restore_channels_script.sh install_softcam_feed_safe.sh install_oscam_emu_script.sh; do
     [ -s "$DST/$F" ] || fail "missing required file: $F"
 done
 PY=""

@@ -1,225 +1,247 @@
 #!/bin/sh
-# AIO Panel 14.0.0 - instalacja, wybór i uruchomienie OSCam/OSCam-Emu.
-# Użycie: install_oscam_emu_script.sh [PLIK_STATUSU]
+# AIO Panel 14.0.0 - resilient OSCam installer/activator.
+# It prefers an already installed OSCam, then the current system feed, and only
+# then the optional external Softcam feed.
 
-STATUS="${1:-/tmp/aio_oscam_install.status}"
+set -u
+PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
+AIO_PLUGIN_DIR="$PLUGIN_DIR"
+. "$PLUGIN_DIR/aio_safe_common.sh" || exit 1
+
+STATUS="${1:-/tmp/PanelAIO/aio_oscam_install.status}"
 LOG="/tmp/aio_oscam_install.log"
-OPKG_LIST="/tmp/aio_oscam_opkg_$$.txt"
-SETTINGS="/etc/enigma2/settings"
-SELECTED=""
-BIN=""
+AVAILABLE="/tmp/PanelAIO/aio_oscam_available_$$.txt"
+INSTALLED="/tmp/PanelAIO/aio_oscam_installed_$$.txt"
+FEED_STATUS="/tmp/PanelAIO/aio_oscam_feed_$$.status"
+SELECTED=""; BIN=""; MANAGER=""; CFG=""; PREV_PROC=""
 
-log() {
-    LINE="[AIO OSCam] $*"
-    echo "$LINE"
-    echo "$LINE" >> "$LOG" 2>/dev/null || true
+mkdir -p "$(dirname "$STATUS")" /tmp/PanelAIO 2>/dev/null || true
+rm -f "$STATUS" "$STATUS.tmp" "$AVAILABLE" "$INSTALLED" "$FEED_STATUS" 2>/dev/null || true
+: > "$LOG" 2>/dev/null || LOG="/tmp/aio_oscam_install_$$.log"
+log() { printf '%s\n' "[AIO OSCam] $*" | tee -a "$LOG"; }
+status() { printf '%s\n' "$*" > "$STATUS.tmp" 2>/dev/null && mv -f "$STATUS.tmp" "$STATUS" 2>/dev/null || true; }
+cleanup() { rm -f "$AVAILABLE" "$INSTALLED" "$FEED_STATUS" 2>/dev/null || true; aio_release_lock; }
+finish_ok() { status "OK|$1|bin=$BIN|manager=$MANAGER|log=$LOG"; log "$2"; cleanup; trap - EXIT HUP INT TERM; exit 0; }
+fail() { MSG="$1"; STAGE="${2:-unknown}"; log "BŁĄD [$STAGE]: $MSG"; restore_previous_cam; status "ERROR|$MSG|$STAGE|log=$LOG"; cleanup; trap - EXIT HUP INT TERM; exit 1; }
+
+is_running() {
+    pidof oscam >/dev/null 2>&1 || pidof oscam-emu >/dev/null 2>&1 || pidof oscam_emu >/dev/null 2>&1 || ps 2>/dev/null | grep -E '[o]scam([_-]emu)?' >/dev/null 2>&1
 }
-
-fail() {
-    MESSAGE="$1"
-    STAGE="${2:-unknown}"
-    log "BŁĄD ($STAGE): $MESSAGE"
-    printf '%s\n' "ERROR|$MESSAGE|$STAGE" > "$STATUS" 2>/dev/null || true
-    rm -f "$OPKG_LIST" 2>/dev/null || true
-    exit 1
+record_previous_cam() {
+    for P in oscam-emu oscam_emu oscam ncam; do
+        if pidof "$P" >/dev/null 2>&1; then PREV_PROC="$P"; return; fi
+    done
 }
-
-success() {
-    log "OK: aktywny OSCam, pakiet: $SELECTED, binarka: $BIN"
-    printf '%s\n' "OK|$SELECTED|$BIN" > "$STATUS" 2>/dev/null || true
-    rm -f "$OPKG_LIST" 2>/dev/null || true
-    sync 2>/dev/null || true
-    exit 0
-}
-
-pkg_available() {
-    awk '{print $1}' "$OPKG_LIST" 2>/dev/null | grep -qx "$1"
-}
-
-pkg_installed() {
-    opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$1"
-}
-
-download_feed_script() {
-    FEED_URL="http://updates.mynonpublic.com/oea/feed"
-    FEED_TMP="/tmp/aio_softcam_feed_$$.sh"
-    rm -f "$FEED_TMP"
-    if command -v wget >/dev/null 2>&1; then
-        wget -4 -U "Enigma2-AIO-Panel" -T 45 -t 3 -O "$FEED_TMP" "$FEED_URL" && [ -s "$FEED_TMP" ] && echo "$FEED_TMP" && return 0
-        wget -U "Enigma2-AIO-Panel" -T 45 -t 3 -O "$FEED_TMP" "$FEED_URL" && [ -s "$FEED_TMP" ] && echo "$FEED_TMP" && return 0
+restore_previous_cam() {
+    [ -n "$PREV_PROC" ] || return 0
+    log "Próba przywrócenia poprzedniego softcamu: $PREV_PROC"
+    [ -x /etc/init.d/softcam ] && /etc/init.d/softcam restart >> "$LOG" 2>&1 || true
+    if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 2>/dev/null | grep -q '^softcam\.service'; then
+        systemctl restart softcam >> "$LOG" 2>&1 || true
     fi
-    if command -v curl >/dev/null 2>&1; then
-        curl -L --ipv4 -A "Enigma2-AIO-Panel" --connect-timeout 20 --max-time 120 --retry 2 -o "$FEED_TMP" "$FEED_URL" && [ -s "$FEED_TMP" ] && echo "$FEED_TMP" && return 0
+}
+
+refresh_package_lists() {
+    opkg list > "$AVAILABLE" 2>/dev/null || : > "$AVAILABLE"
+    opkg list-installed > "$INSTALLED" 2>/dev/null || : > "$INSTALLED"
+}
+pkg_in_file() { awk '{print $1}' "$2" 2>/dev/null | grep -qx "$1"; }
+pkg_available() { pkg_in_file "$1" "$AVAILABLE"; }
+pkg_installed() { pkg_in_file "$1" "$INSTALLED"; }
+
+candidate_packages() {
+    cat <<'PKGS'
+enigma2-plugin-softcams-oscam-emu
+oscam-emu
+enigma2-plugin-softcams-oscam-master
+oscam-master
+enigma2-plugin-softcams-oscam-trunk
+oscam-trunk
+enigma2-plugin-softcams-oscam-stable
+oscam-stable
+enigma2-plugin-softcams-oscam-smod
+oscam-smod
+enigma2-plugin-softcams-oscam
+enigma2-softcams-oscam
+softcam-oscam
+oscam
+PKGS
+}
+
+select_installed_package() {
+    SELECTED=""
+    candidate_packages | while IFS= read -r P; do
+        [ -n "$P" ] || continue
+        if pkg_installed "$P"; then printf '%s\n' "$P"; break; fi
+    done
+}
+select_available_package() {
+    SELECTED=""
+    candidate_packages | while IFS= read -r P; do
+        [ -n "$P" ] || continue
+        if pkg_available "$P"; then printf '%s\n' "$P"; break; fi
+    done
+}
+select_fuzzy_package() {
+    awk '
+        {
+            p=tolower($1)
+            if (p ~ /oscam/ && p !~ /(source|src|dev|dbg|doc|config|example|skin|locale)/) {
+                score=50
+                if (p ~ /emu/) score=1
+                else if (p ~ /master/) score=2
+                else if (p ~ /trunk/) score=3
+                else if (p ~ /stable/) score=4
+                else if (p ~ /smod/) score=5
+                print score "|" $1
+            }
+        }
+    ' "$AVAILABLE" 2>/dev/null | sort -t '|' -k1,1n | head -n 1 | cut -d '|' -f2-
+}
+
+find_binary() {
+    BIN=""
+    for C in /usr/softcams/oscam-emu /usr/softcams/oscam_emu /usr/softcams/oscam /usr/bin/oscam-emu /usr/bin/oscam_emu /usr/bin/oscam /usr/local/bin/oscam-emu /usr/local/bin/oscam; do
+        [ -x "$C" ] && { BIN="$C"; return 0; }
+    done
+    if [ -n "$SELECTED" ] && command -v opkg >/dev/null 2>&1; then
+        C=$(opkg files "$SELECTED" 2>/dev/null | awk '/\/oscam([_-]emu)?$/ {print; exit}')
+        [ -n "$C" ] && [ -x "$C" ] && { BIN="$C"; return 0; }
     fi
-    rm -f "$FEED_TMP"
+    for C in /usr/softcams/oscam* /usr/bin/oscam* /usr/local/bin/oscam*; do
+        [ -x "$C" ] && { BIN="$C"; return 0; }
+    done
     return 1
 }
 
-set_e2_setting() {
-    KEY="$1"
-    VALUE="$2"
-    TMP_SETTINGS="/tmp/aio_settings_$$.tmp"
-    mkdir -p /etc/enigma2 2>/dev/null || true
-    [ -f "$SETTINGS" ] || : > "$SETTINGS"
-    awk -v key="$KEY" -v value="$VALUE" '
-        BEGIN { found=0 }
-        index($0, key "=") == 1 { print key "=" value; found=1; next }
-        { print }
-        END { if (!found) print key "=" value }
-    ' "$SETTINGS" > "$TMP_SETTINGS" && cat "$TMP_SETTINGS" > "$SETTINGS"
-    rm -f "$TMP_SETTINGS" 2>/dev/null || true
-}
-
-is_oscam_running() {
-    pidof oscam >/dev/null 2>&1 && return 0
-    pidof oscam-emu >/dev/null 2>&1 && return 0
-    pidof oscam_emu >/dev/null 2>&1 && return 0
-    ps 2>/dev/null | grep -E '[o]scam([_-]emu)?' >/dev/null 2>&1
-}
-
-: > "$LOG" 2>/dev/null || true
-rm -f "$STATUS" 2>/dev/null || true
-command -v opkg >/dev/null 2>&1 || fail "Brak menedżera pakietów opkg." "dependency"
-
-log "Aktualizacja listy pakietów..."
-opkg update || log "Ostrzeżenie: opkg update zakończył się błędem; używam dostępnej listy pakietów."
-opkg list > "$OPKG_LIST" 2>/dev/null || true
-
-# Priorytet: prawdziwy OSCam-Emu, dopiero potem zwykły OSCam.
-for PACKAGE in \
-    enigma2-plugin-softcams-oscam-emu \
-    oscam-emu \
-    enigma2-plugin-softcams-oscam-smod \
-    oscam-smod \
-    enigma2-plugin-softcams-oscam \
-    oscam
-do
-    if pkg_available "$PACKAGE"; then
-        SELECTED="$PACKAGE"
-        break
-    fi
-done
-
-# Jeśli feed obrazu nie zawiera softcamów, dodaj repozytorium Softcam i sprawdź ponownie.
-if [ -z "$SELECTED" ]; then
-    log "OSCam nie jest widoczny w feedzie obrazu - próba dodania feedu Softcam."
-    FEED_SCRIPT=$(download_feed_script 2>/dev/null || true)
-    if [ -n "$FEED_SCRIPT" ] && [ -s "$FEED_SCRIPT" ]; then
-        if head -c 256 "$FEED_SCRIPT" | grep -qiE '<!doctype|<html'; then
-            log "Pominięto nieprawidłową odpowiedź feedu Softcam."
-        else
-            chmod 755 "$FEED_SCRIPT" 2>/dev/null || true
-            if command -v bash >/dev/null 2>&1; then bash "$FEED_SCRIPT" || log "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; else /bin/sh "$FEED_SCRIPT" || log "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; fi
-        fi
-        rm -f "$FEED_SCRIPT" 2>/dev/null || true
-        opkg update || true
-        opkg list > "$OPKG_LIST" 2>/dev/null || true
-    fi
-
-    for PACKAGE in \
-        enigma2-plugin-softcams-oscam-emu \
-        oscam-emu \
-        enigma2-plugin-softcams-oscam-smod \
-        oscam-smod \
-        enigma2-plugin-softcams-oscam \
-        oscam
-    do
-        if pkg_available "$PACKAGE"; then
-            SELECTED="$PACKAGE"
-            break
-        fi
+find_config_dir() {
+    for D in /etc/tuxbox/config/oscam-emu /etc/tuxbox/config/oscam /etc/tuxbox/config /etc/oscam /usr/keys /var/keys; do
+        [ -f "$D/oscam.conf" ] && { printf '%s\n' "$D"; return 0; }
     done
-fi
+    find /etc/tuxbox/config /etc/oscam /usr/keys /var/keys -maxdepth 4 -type f -name oscam.conf -exec dirname {} \; 2>/dev/null | head -n 1
+}
+ensure_minimal_config() {
+    CFG=$(find_config_dir 2>/dev/null || true)
+    [ -n "$CFG" ] && return 0
+    CFG=/etc/tuxbox/config/oscam-emu
+    mkdir -p "$CFG" 2>/dev/null || return 1
+    if [ ! -e "$CFG/oscam.conf" ]; then
+        cat > "$CFG/oscam.conf" <<'CONF'
+[global]
+logfile                       = /tmp/oscam.log
+nice                          = -1
+waitforcards                  = 0
+CONF
+        chmod 600 "$CFG/oscam.conf" 2>/dev/null || true
+        log "Utworzono minimalny oscam.conf, ponieważ obraz nie dostarczył żadnej konfiguracji."
+    fi
+    return 0
+}
 
-# Ostatni bezpieczny fallback: pierwszy pakiet zawierający oscam, preferowany z "emu".
-if [ -z "$SELECTED" ]; then
-    SELECTED=$(awk 'tolower($1) ~ /oscam/ && tolower($1) ~ /emu/ {print $1; exit}' "$OPKG_LIST")
-fi
-if [ -z "$SELECTED" ]; then
-    SELECTED=$(awk 'tolower($1) ~ /oscam/ && tolower($1) !~ /(config|source|dev|doc|example|webif|skin)/ {print $1; exit}' "$OPKG_LIST")
-fi
-[ -n "$SELECTED" ] || fail "Nie znaleziono pakietu OSCam/OSCam-Emu w dostępnych feedach." "package"
+write_active_cam_markers() {
+    mkdir -p /usr/softcams 2>/dev/null || true
+    if [ -n "$BIN" ]; then
+        if [ ! -e /usr/softcams/oscam ] || [ -L /usr/softcams/oscam ]; then ln -sfn "$BIN" /usr/softcams/oscam 2>/dev/null || true; fi
+        if [ ! -e /usr/bin/oscam ]; then ln -s "$BIN" /usr/bin/oscam 2>/dev/null || true; fi
+    fi
+    [ -e /etc/CurrentBhCamName ] && printf '%s\n' oscam > /etc/CurrentBhCamName 2>/dev/null || true
+    [ -e /etc/active_cam ] && printf '%s\n' oscam > /etc/active_cam 2>/dev/null || true
+}
 
-log "Wybrany pakiet: $SELECTED"
-if pkg_installed "$SELECTED"; then
-    log "Pakiet jest już zainstalowany - wykonuję naprawczą reinstalację."
-    opkg install --force-reinstall "$SELECTED" || opkg install "$SELECTED" || fail "Nie udało się przeinstalować pakietu $SELECTED." "install"
+stop_oscam() {
+    [ -x /etc/init.d/softcam ] && /etc/init.d/softcam stop >> "$LOG" 2>&1 || true
+    [ -x /etc/init.d/oscam ] && /etc/init.d/oscam stop >> "$LOG" 2>&1 || true
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop softcam 2>/dev/null || true
+        systemctl stop oscam 2>/dev/null || true
+    fi
+    killall -TERM oscam oscam-emu oscam_emu 2>/dev/null || true
+    N=0
+    while is_running && [ "$N" -lt 6 ]; do sleep 1; N=$((N + 1)); done
+    is_running && killall -KILL oscam oscam-emu oscam_emu 2>/dev/null || true
+}
+start_via_manager() {
+    if [ -x /etc/init.d/softcam ]; then
+        MANAGER=/etc/init.d/softcam
+        /etc/init.d/softcam restart >> "$LOG" 2>&1 || /etc/init.d/softcam start >> "$LOG" 2>&1 || true
+        sleep 3; is_running && return 0
+    fi
+    if [ -x /etc/init.d/oscam ]; then
+        MANAGER=/etc/init.d/oscam
+        /etc/init.d/oscam restart >> "$LOG" 2>&1 || /etc/init.d/oscam start >> "$LOG" 2>&1 || true
+        sleep 3; is_running && return 0
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl list-unit-files 2>/dev/null | grep -q '^softcam\.service'; then
+            MANAGER=systemd:softcam; systemctl restart softcam >> "$LOG" 2>&1 || true; sleep 3; is_running && return 0
+        fi
+        if systemctl list-unit-files 2>/dev/null | grep -q '^oscam\.service'; then
+            MANAGER=systemd:oscam; systemctl restart oscam >> "$LOG" 2>&1 || true; sleep 3; is_running && return 0
+        fi
+    fi
+    return 1
+}
+
+trap 'cleanup' EXIT HUP INT TERM
+aio_acquire_lock opkg_softcam || fail "Inna operacja OPKG/Softcam jest już wykonywana." lock
+command -v opkg >/dev/null 2>&1 || fail "Brak opkg." dependency
+record_previous_cam
+
+log "Sprawdzanie już zainstalowanego OSCam..."
+refresh_package_lists
+SELECTED=$(select_installed_package 2>/dev/null || true)
+find_binary || true
+if [ -n "$BIN" ]; then
+    [ -n "$SELECTED" ] || SELECTED=existing-binary
+    log "Znaleziono istniejącą binarkę: $BIN"
 else
-    opkg install "$SELECTED" || opkg install --force-reinstall "$SELECTED" || fail "Nie udało się zainstalować pakietu $SELECTED." "install"
-fi
-pkg_installed "$SELECTED" || fail "opkg nie potwierdził instalacji pakietu $SELECTED." "verify-package"
+    log "Aktualizacja bieżących feedów..."
+    opkg update >> "$LOG" 2>&1 || log "opkg update zwrócił błąd; kontynuuję."
+    refresh_package_lists
+    SELECTED=$(select_available_package 2>/dev/null || true)
+    [ -n "$SELECTED" ] || SELECTED=$(select_fuzzy_package 2>/dev/null || true)
 
-for CANDIDATE in \
-    /usr/softcams/oscam-emu \
-    /usr/softcams/oscam_emu \
-    /usr/softcams/oscam \
-    /usr/bin/oscam-emu \
-    /usr/bin/oscam_emu \
-    /usr/bin/oscam \
-    /usr/local/bin/oscam-emu \
-    /usr/local/bin/oscam
-do
-    if [ -x "$CANDIDATE" ]; then
-        BIN="$CANDIDATE"
-        break
+    if [ -z "$SELECTED" ]; then
+        log "Brak OSCam w bieżących feedach. Próba opcjonalnego feedu Softcam..."
+        AIO_SOFTCAM_LOCK_HELD=1 /bin/sh "$PLUGIN_DIR/install_softcam_feed_safe.sh" "$FEED_STATUS" >> "$LOG" 2>&1 || true
+        FEED_RESULT=$(cat "$FEED_STATUS" 2>/dev/null || true)
+        log "Wynik feedu: ${FEED_RESULT:-brak statusu}"
+        opkg update >> "$LOG" 2>&1 || true
+        refresh_package_lists
+        SELECTED=$(select_available_package 2>/dev/null || true)
+        [ -n "$SELECTED" ] || SELECTED=$(select_fuzzy_package 2>/dev/null || true)
     fi
-done
 
-if [ -z "$BIN" ]; then
-    for CANDIDATE in /usr/softcams/oscam* /usr/bin/oscam* /usr/local/bin/oscam*; do
-        [ -x "$CANDIDATE" ] || continue
-        BIN="$CANDIDATE"
-        break
-    done
+    if [ -n "$SELECTED" ]; then
+        log "Wybrany pakiet: $SELECTED"
+        if pkg_installed "$SELECTED"; then
+            log "Pakiet jest już zainstalowany; nie wymuszam reinstalacji."
+        else
+            opkg install "$SELECTED" >> "$LOG" 2>&1 || opkg install --force-overwrite "$SELECTED" >> "$LOG" 2>&1 || fail "Instalacja $SELECTED nie powiodła się." install
+        fi
+        refresh_package_lists
+        pkg_installed "$SELECTED" || fail "opkg nie potwierdził pakietu $SELECTED." verify-package
+    fi
+    find_binary || true
 fi
-[ -n "$BIN" ] || fail "Pakiet został zainstalowany, ale nie znaleziono wykonywalnej binarki OSCam." "binary"
+
+[ -n "$BIN" ] || fail "Nie znaleziono pakietu ani binarki OSCam dla tego obrazu i architektury. Pozostałe funkcje AIO Panel działają; ten krok można pominąć żółtym przyciskiem." unavailable
 chmod 755 "$BIN" 2>/dev/null || true
+write_active_cam_markers
 
-mkdir -p /usr/softcams 2>/dev/null || true
-if [ "$BIN" != "/usr/softcams/oscam" ]; then
-    ln -sfn "$BIN" /usr/softcams/oscam 2>/dev/null || cp -f "$BIN" /usr/softcams/oscam 2>/dev/null || true
-fi
-if [ ! -e /usr/bin/oscam ] && [ "$BIN" != "/usr/bin/oscam" ]; then
-    ln -sfn "$BIN" /usr/bin/oscam 2>/dev/null || true
-fi
-chmod 755 /usr/softcams/oscam 2>/dev/null || true
-chmod 755 /usr/bin/oscam 2>/dev/null || true
-
-# Ustaw OSCam jako aktywny emulator w najczęściej używanych managerach obrazów Enigma2.
-set_e2_setting "config.softcam.actCam" "oscam"
-set_e2_setting "config.plugins.softcamsetup.cam_name" "oscam"
-[ -f /etc/CurrentBhCamName ] && printf '%s\n' "oscam" > /etc/CurrentBhCamName 2>/dev/null || true
-[ -f /etc/active_cam ] && printf '%s\n' "oscam" > /etc/active_cam 2>/dev/null || true
-
-chmod 755 /etc/init.d/softcam 2>/dev/null || true
-chmod 755 /etc/init.d/oscam 2>/dev/null || true
-
-/etc/init.d/softcam stop 2>/dev/null || true
-/etc/init.d/oscam stop 2>/dev/null || true
-killall -9 oscam oscam-emu oscam_emu 2>/dev/null || true
-sleep 2
-
-STARTED=0
-if [ -x /etc/init.d/softcam ]; then
-    /etc/init.d/softcam start 2>/dev/null && STARTED=1
-    [ "$STARTED" -eq 1 ] || /etc/init.d/softcam restart 2>/dev/null && STARTED=1
-fi
-if [ "$STARTED" -eq 0 ] && [ -x /etc/init.d/oscam ]; then
-    /etc/init.d/oscam start 2>/dev/null && STARTED=1
-fi
-if command -v systemctl >/dev/null 2>&1; then
-    systemctl enable softcam 2>/dev/null || true
-    systemctl enable oscam 2>/dev/null || true
-    systemctl restart softcam 2>/dev/null && STARTED=1 || true
-    [ "$STARTED" -eq 1 ] || systemctl restart oscam 2>/dev/null && STARTED=1 || true
+if is_running; then
+    MANAGER=already-running
+    finish_ok "$SELECTED" "OSCam jest już uruchomiony."
 fi
 
-sleep 3
-if ! is_oscam_running; then
-    log "Manager Softcam nie uruchomił OSCam - używam bezpośredniego startu awaryjnego."
-    "$BIN" -b >/tmp/aio_oscam_direct_start.log 2>&1 &
-    sleep 4
+stop_oscam
+start_via_manager || true
+if ! is_running; then
+    ensure_minimal_config || fail "Nie udało się przygotować katalogu konfiguracji OSCam." config
+    log "Start bezpośredni: $BIN -b -c $CFG"
+    "$BIN" -b -c "$CFG" >> /tmp/aio_oscam_direct_start.log 2>&1 &
+    MANAGER=direct
+    sleep 5
 fi
-
-is_oscam_running || fail "OSCam został zainstalowany, ale proces nie wystartował. Sprawdź $LOG i /tmp/aio_oscam_direct_start.log." "start"
-success
+is_running || fail "OSCam został wykryty lub zainstalowany, ale proces nie wystartował. Sprawdź $LOG." start
+finish_ok "$SELECTED" "OSCam działa. Pakiet=$SELECTED, binarka=$BIN, manager=$MANAGER"

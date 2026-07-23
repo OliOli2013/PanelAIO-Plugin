@@ -21,6 +21,11 @@ import re
 import json
 import time
 import io
+import gc
+import tempfile
+import inspect
+import hashlib
+import base64
 from threading import Thread, Timer
 from twisted.internet import reactor
 
@@ -59,6 +64,33 @@ def ensure_unicode(val):
         return str(val)
     except Exception:
         return ""
+
+def _encode_action_payload(kind, url, bouquet_id, name):
+    payload = {'kind': ensure_unicode(kind), 'url': ensure_unicode(url), 'bouquet_id': ensure_unicode(bouquet_id), 'name': ensure_unicode(name)}
+    raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    token = base64.urlsafe_b64encode(raw)
+    if not isinstance(token, str):
+        token = token.decode('ascii')
+    return token.rstrip('=')
+
+
+def _decode_action_payload(token, expected_kind):
+    token = ensure_unicode(token).strip()
+    if not re.match(r'^[A-Za-z0-9_-]+$', token):
+        raise ValueError('invalid encoded action')
+    token += '=' * ((4 - len(token) % 4) % 4)
+    raw = base64.urlsafe_b64decode(token.encode('ascii'))
+    if not isinstance(raw, str):
+        raw = raw.decode('utf-8')
+    data = json.loads(raw)
+    if not isinstance(data, dict) or ensure_unicode(data.get('kind')) != ensure_unicode(expected_kind):
+        raise ValueError('unexpected action kind')
+    url = ensure_unicode(data.get('url', '')).strip()
+    bouquet_id = ensure_unicode(data.get('bouquet_id', '')).strip()
+    name = ensure_unicode(data.get('name', '')).strip()
+    if not url or not bouquet_id:
+        raise ValueError('incomplete action payload')
+    return url, bouquet_id, name
 
 def ensure_str(val):
     """Return native string type for UI widgets.
@@ -99,9 +131,12 @@ if IS_PY2:
 try:
     # Python 3
     from urllib.request import urlopen, Request
+    from urllib.parse import urlparse, quote
 except ImportError:
     # Python 2
     from urllib2 import urlopen, Request
+    from urlparse import urlparse
+    from urllib import quote
 
 # === POLYFILLS (Funkcje brakujące w Python 2) ===
 
@@ -178,6 +213,10 @@ from Screens.MessageBox import MessageBox
 from Screens.Standby import TryQuitMainloop
 from Screens.ChoiceBox import ChoiceBox
 from Screens.InputBox import InputBox
+try:
+    from Components.Input import Input
+except Exception:
+    Input = None
 from Components.ActionMap import ActionMap
 from Components.Label import Label
 try:
@@ -199,6 +238,8 @@ if config is not None:
                 default="off",
                 choices=[("off", "off"), ("10", "10"), ("30", "30"), ("60", "60")]
             )
+        if not hasattr(config.plugins.panelaio, 'language'):
+            config.plugins.panelaio.language = ConfigSelection(default='auto', choices=[('auto', 'auto'), ('PL', 'PL'), ('EN', 'EN')])
         # Show/Hide AIO Panel entry in receiver main/system menu
         if ConfigYesNo is not None and not hasattr(config.plugins.panelaio, "show_in_menu"):
             config.plugins.panelaio.show_in_menu = ConfigYesNo(default=True)
@@ -299,6 +340,30 @@ from Components.Pixmap import Pixmap
 from Plugins.Plugin import PluginDescriptor
 from Tools.Directories import fileExists
 try:
+    from Plugins.SystemPlugins.PanelAIO.core.runtime_safety import (
+        invoke_callback as _invoke_safe_callback,
+        run_commands as _run_commands_safe,
+        is_https_allowed as _is_https_allowed,
+        unique_tmp_dir as _unique_tmp_dir,
+        cleanup_owned_tmp as _cleanup_owned_tmp,
+        encode_service_url as _encode_service_url,
+        sanitize_service_name as _sanitize_service_name,
+        validate_identifier as _validate_identifier,
+        atomic_write as _atomic_write,
+    )
+except Exception:
+    from core.runtime_safety import (
+        invoke_callback as _invoke_safe_callback,
+        run_commands as _run_commands_safe,
+        is_https_allowed as _is_https_allowed,
+        unique_tmp_dir as _unique_tmp_dir,
+        cleanup_owned_tmp as _cleanup_owned_tmp,
+        encode_service_url as _encode_service_url,
+        sanitize_service_name as _sanitize_service_name,
+        validate_identifier as _validate_identifier,
+        atomic_write as _atomic_write,
+    )
+try:
     from Components.Network import iNetworkInfo, iNetworkInformation
     network = iNetworkInformation()
 except ImportError:
@@ -315,12 +380,13 @@ g_auto_ram_timer = eTimer()
 g_auto_ram_active = False
 
 def run_auto_ram_clean_task():
-    """Funkcja wykonywana cyklicznie przez timer"""
+    """Niedestrukcyjne zadanie konserwacyjne: GC i stare pliki AIO, bez drop_caches."""
     try:
-        os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
-        print("[AIO Panel] Auto RAM Cleaner: Pamięć wyczyszczona automatycznie.")
+        gc.collect()
+        removed = _cleanup_owned_tmp(PLUGIN_TMP_PATH, 86400)
+        print("[AIO Panel] Maintenance: removed {} stale AIO files.".format(removed))
     except Exception as e:
-        print("[AIO Panel] Auto RAM Cleaner Error:", e)
+        print("[AIO Panel] Maintenance Error:", e)
 
 # Obsługa timera zależnie od wersji E2 (callback vs timeout.connect)
 try:
@@ -729,11 +795,12 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
         _open_safe()
 
 # --- FUNKCJA URUCHAMIANIA W TLE (Dla zadań wewnętrznych) ---
-def run_command_in_background(session, title, cmd_list, callback_on_finish=None):
-    """
-    Uruchamia polecenia shella w osobnym wątku.
-    v13.0.3: nie używa już MessageBox(enable_input=False), bo ta kombinacja
-    powodowała crash na niektórych skinach FHD (np. Algare FHD).
+def run_command_in_background(session, title, cmd_list, callback_on_finish=None, stop_on_error=True, redact=None):
+    """Run shell commands asynchronously and propagate a structured result.
+
+    No success callback is silently fired after a failed command. Legacy no-argument
+    callbacks are invoked only on success; callbacks accepting one argument receive
+    the result on both success and failure.
     """
     wait_message = None
     try:
@@ -745,36 +812,43 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None)
         )
     except Exception as e:
         print("[AIO Panel] Wait MessageBox skipped:", e)
-        wait_message = None
+
+    state = {'result': None}
 
     def command_thread():
         try:
-            for cmd in cmd_list:
-                print("[AIO Panel] Uruchamianie w tle [{}]: {}".format(title, cmd))
-                process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-
-                if process.returncode != 0:
-                    print("[AIO Panel] Błąd w tle [{}]: {}".format(title, stderr))
-
-        except Exception as e:
-            print("[AIO Panel] Wyjątek w wątku [{}]: {}".format(title, e))
-        finally:
+            state['result'] = _run_commands_safe(cmd_list, stop_on_error=stop_on_error, redact=redact)
+        except Exception as exc:
+            state['result'] = {
+                'success': False, 'returncode': 127, 'stdout': '',
+                'stderr': ensure_unicode(exc), 'failed_command': '', 'commands': []
+            }
+        try:
             reactor.callFromThread(on_finish_thread)
+        except Exception:
+            on_finish_thread()
 
     def on_finish_thread():
         if wait_message is not None:
             try:
                 wait_message.close()
-            except Exception as e:
-                print("[AIO Panel] Wait MessageBox close skipped:", e)
+            except Exception:
+                pass
+        result = state.get('result') or {'success': False, 'returncode': 127, 'stderr': 'No result'}
+        if not result.get('success'):
+            print("[AIO Panel] Background task failed [{}]: {}".format(title, result.get('stderr', '')))
         if callback_on_finish:
             try:
-                callback_on_finish()
+                _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
             except Exception as e:
-                print("[AIO Panel] Błąd w callback po run_command_in_background:", e)
+                print("[AIO Panel] callback error:", e)
 
-    Thread(target=command_thread).start()
+    thread = Thread(target=command_thread)
+    try:
+        thread.setDaemon(True)
+    except Exception:
+        pass
+    thread.start()
 
 # Funkcja konsoli (teraz używana do diagnostyki i instalatorów zewnętrznych)
 def console_screen_open(session, title, cmds_with_args, callback=None, close_on_finish=False):
@@ -860,163 +934,55 @@ def _file_looks_like_html_error(path):
         return False
 
 def _download_shell_command(url, output_path, expected_type='file'):
-    """OpenPLi-safe shell downloader used by archive/list installation and online installers."""
-    url_q = _safe_shell_arg(url)
-    out_q = _safe_shell_arg(output_path)
-    typ_q = _safe_shell_arg(expected_type or 'file')
-    return r"""
+    """Build a strict HTTPS downloader command using the bundled safety helper."""
+    if not _is_https_allowed(url):
+        return "echo '[AIO Panel] ERROR: blocked non-HTTPS or untrusted download URL'; exit 64"
+    common = os.path.join(PLUGIN_PATH, 'aio_safe_common.sh')
+    validator = os.path.join(PLUGIN_PATH, 'core', 'archive_validator.py')
+    return r'''
+set -eu
+. %s
 URL=%s
 OUT=%s
 EXPECTED=%s
 rm -f "$OUT" "$OUT.tmp"
+aio_secure_download "$URL" "$OUT" 120 4
+aio_not_html "$OUT"
+case "$EXPECTED" in
+  ipk)
+    dd if="$OUT" bs=8 count=1 2>/dev/null | grep -q '^!<arch>'
+  ;;
+  zip|tar.gz|tgz)
+    PY=$(aio_python) || { echo '[AIO Panel] ERROR: Python unavailable for archive validation'; exit 65; }
+    "$PY" %s "$OUT"
+  ;;
+  script|sh)
+    [ -s "$OUT" ]
+    head -c 2 "$OUT" | grep -q '<!' && { echo '[AIO Panel] ERROR: HTML payload'; exit 66; } || true
+  ;;
+  file)
+    [ -s "$OUT" ]
+  ;;
+esac
+''' % (_safe_shell_arg(common), _safe_shell_arg(url), _safe_shell_arg(output_path), _safe_shell_arg(expected_type or 'file'), _safe_shell_arg(validator))
 
-aio_download_file() {
-    U="$1"
-    O="$2"
-    rm -f "$O" "$O.tmp"
-
-    echo "[AIO Panel] Pobieranie: $U"
-
-    if command -v wget >/dev/null 2>&1; then
-        wget -4 -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-        wget -4 --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-        wget --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-    fi
-
-    if command -v curl >/dev/null 2>&1; then
-        curl -L --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-        curl -L -k --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-    fi
-
-    if command -v python3 >/dev/null 2>&1; then
-        AIO_URL="$U" AIO_OUT="$O.tmp" python3 - <<'AIO_PY_DL'
-import os, sys, ssl
-try:
-    import urllib.request as u
-    url = os.environ.get("AIO_URL")
-    out = os.environ.get("AIO_OUT")
-    req = u.Request(url, headers={"User-Agent": "Enigma2"})
-    try:
-        ctx = ssl._create_unverified_context()
-    except Exception:
-        ctx = None
-    if ctx is not None:
-        data = u.urlopen(req, timeout=45, context=ctx).read()
-    else:
-        data = u.urlopen(req, timeout=45).read()
-    if not data:
-        sys.exit(1)
-    f = open(out, "wb")
-    f.write(data)
-    f.close()
-    sys.exit(0)
-except Exception:
-    sys.exit(1)
-AIO_PY_DL
-        [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-    fi
-
-    if command -v python >/dev/null 2>&1; then
-        AIO_URL="$U" AIO_OUT="$O.tmp" python - <<'AIO_PY2_DL'
-import os, sys, ssl
-try:
-    import urllib2 as u
-    url = os.environ.get("AIO_URL")
-    out = os.environ.get("AIO_OUT")
-    req = u.Request(url, headers={"User-Agent": "Enigma2"})
-    try:
-        ctx = ssl._create_unverified_context()
-        data = u.urlopen(req, timeout=45, context=ctx).read()
-    except Exception:
-        data = u.urlopen(req, timeout=45).read()
-    if not data:
-        sys.exit(1)
-    f = open(out, "wb")
-    f.write(data)
-    f.close()
-    sys.exit(0)
-except Exception:
-    sys.exit(1)
-AIO_PY2_DL
-        [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-    fi
-
-    rm -f "$O.tmp"
-    return 1
-}
-
-aio_download_is_html_error() {
-    H=$(dd if="$1" bs=512 count=1 2>/dev/null | tr 'A-Z' 'a-z')
-    case "$H" in
-        *"<html"*|*"<!doctype"*|*"404: not found"*|*"accessdenied"*|*"rate limit"*)
-            return 0
-        ;;
-    esac
-    return 1
-}
-
-aio_validate_download() {
-    F="$1"
-    T="$2"
-    [ -s "$F" ] || return 1
-    aio_download_is_html_error "$F" && return 1
-
-    case "$T" in
-        ipk)
-            dd if="$F" bs=8 count=1 2>/dev/null | grep -q '^!<arch>' || return 1
-        ;;
-        zip)
-            # Najpierw sprawdź podpis ZIP. Nie wszystkie obrazy mają pełny unzip
-            # obsługujący opcję -tqq (część używa wariantu BusyBox).
-            dd if="$F" bs=2 count=1 2>/dev/null | grep -q '^PK' || return 1
-            if command -v unzip >/dev/null 2>&1; then
-                unzip -t "$F" >/dev/null 2>&1 || unzip -l "$F" >/dev/null 2>&1 || return 1
-            elif command -v busybox >/dev/null 2>&1; then
-                busybox unzip -l "$F" >/dev/null 2>&1 || return 1
-            fi
-        ;;
-        tar.gz|tgz)
-            tar -tzf "$F" >/dev/null 2>&1 || return 1
-        ;;
-        script|sh|file)
-            :
-        ;;
-    esac
-    return 0
-}
-
-if ! aio_download_file "$URL" "$OUT"; then
-    echo "[AIO Panel] ERROR: Nie udało się pobrać pliku."
-    echo "[AIO Panel] URL: $URL"
-    rm -f "$OUT" "$OUT.tmp"
-    exit 1
-fi
-
-if ! aio_validate_download "$OUT" "$EXPECTED"; then
-    echo "[AIO Panel] ERROR: Pobrany plik jest pusty, uszkodzony albo jest stroną HTML/błędu."
-    echo "[AIO Panel] URL: $URL"
-    rm -f "$OUT" "$OUT.tmp"
-    exit 1
-fi
-""" % (url_q, out_q, typ_q)
-
-def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallback=True):
+def _download_url_to_file(url, path, timeout=30, tries=3, allow_insecure_fallback=False):
+    """Strict HTTPS download with normal certificate verification only."""
+    if not _is_https_allowed(url):
+        print('[AIO Panel] blocked download URL: {}'.format(url))
+        return False
     tmp_path = path + '.tmp'
     last_error = None
+    parent = os.path.dirname(path)
+    try:
+        if parent and not os.path.isdir(parent):
+            os.makedirs(parent)
+    except Exception:
+        return False
     for _idx in range(max(1, int(tries))):
         try:
-            request = Request(url, headers={'User-Agent': 'Enigma2'})
-            response = None
-            if IS_PY3 and allow_insecure_fallback:
-                try:
-                    import ssl
-                    ssl_context = ssl._create_unverified_context()
-                except Exception:
-                    ssl_context = None
-                if ssl_context is not None:
-                    response = urlopen(request, timeout=timeout, context=ssl_context)
-            if response is None:
-                response = urlopen(request, timeout=timeout)
+            request = Request(url, headers={'User-Agent': 'Enigma2/AIO-Panel-14'})
+            response = urlopen(request, timeout=timeout)
             try:
                 payload = response.read()
             finally:
@@ -1027,31 +993,30 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
             if payload and not _payload_looks_like_html_error(payload):
                 with open(tmp_path, 'wb') as handle:
                     handle.write(payload)
+                    handle.flush()
+                    try:
+                        os.fsync(handle.fileno())
+                    except Exception:
+                        pass
                 os.rename(tmp_path, path)
                 return True
-            elif payload:
-                last_error = 'HTML/error page returned instead of expected file'
+            last_error = 'empty or HTML/error response'
         except Exception as exc:
             last_error = exc
+
         tool_cmds = []
         if _command_exists('wget'):
-            tool_cmds.append(['wget', '--prefer-family=IPv4', '-U', 'Enigma2', '-q', '-T', str(timeout), '-O', tmp_path, url])
-            tool_cmds.append(['wget', '-4', '-U', 'Enigma2', '-q', '-T', str(timeout), '-O', tmp_path, url])
-            if allow_insecure_fallback:
-                tool_cmds.append(['wget', '--prefer-family=IPv4', '--no-check-certificate', '-U', 'Enigma2', '-q', '-T', str(timeout), '-O', tmp_path, url])
-                tool_cmds.append(['wget', '-4', '--no-check-certificate', '-U', 'Enigma2', '-q', '-T', str(timeout), '-O', tmp_path, url])
+            tool_cmds.append(['wget', '-4', '-U', 'Enigma2/AIO-Panel-14', '-q', '-T', str(timeout), '-t', '2', '-O', tmp_path, url])
         if _command_exists('curl'):
-            tool_cmds.append(['curl', '-L', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', tmp_path, url])
-            if allow_insecure_fallback:
-                tool_cmds.append(['curl', '-L', '-k', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', tmp_path, url])
+            tool_cmds.append(['curl', '-fL', '--ipv4', '-A', 'Enigma2/AIO-Panel-14', '--connect-timeout', '15', '--max-time', str(timeout), '-o', tmp_path, url])
         for cmd in tool_cmds:
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 _, stderr = process.communicate()
-                if process.returncode == 0 and os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0 and not _file_looks_like_html_error(tmp_path):
+                if process.returncode == 0 and os.path.isfile(tmp_path) and os.path.getsize(tmp_path) > 0 and not _file_looks_like_html_error(tmp_path):
                     os.rename(tmp_path, path)
                     return True
-                last_error = stderr if stderr else 'empty or invalid/HTML download'
+                last_error = _decode_bytes(stderr) or 'invalid download'
             except Exception as exc:
                 last_error = exc
         try:
@@ -1059,8 +1024,7 @@ def _download_url_to_file(url, path, timeout=20, tries=3, allow_insecure_fallbac
                 os.remove(tmp_path)
         except Exception:
             pass
-    if last_error:
-        print('[AIO Panel] download error for {}: {}'.format(url, last_error))
+    print('[AIO Panel] secure download error for {}: {}'.format(url, last_error))
     return False
 
 def _load_json_from_file(path):
@@ -1274,7 +1238,7 @@ def _fetch_json_url(url, timeout=20, tries=2):
     return None
 
 def _resolve_final_url(url, timeout=20, tries=2):
-    if not url:
+    if not url or not _is_https_allowed(url):
         return ""
     last_error = None
     for _idx in range(max(1, int(tries))):
@@ -1295,7 +1259,6 @@ def _resolve_final_url(url, timeout=20, tries=2):
         tool_cmds = []
         if _command_exists('curl'):
             tool_cmds.append(['curl', '-L', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', '/dev/null', '-w', '%{url_effective}', url])
-            tool_cmds.append(['curl', '-L', '-k', '--ipv4', '-A', 'Enigma2', '--max-time', str(timeout), '-o', '/dev/null', '-w', '%{url_effective}', url])
         for cmd in tool_cmds:
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -1327,23 +1290,29 @@ def _extract_remote_version(value, version_regex=""):
     return text
 
 def _load_custom_updates_manifest_entries():
-    # Prefer the bundled local manifest so GitHub/Custom checks keep working even
-    # when the remote raw file is missing, rate-limited or temporarily unavailable.
-    manifest = _load_json_from_file(CUSTOM_UPDATES_MANIFEST_LOCAL)
-    remote_payload = _fetch_json_url(CUSTOM_UPDATES_MANIFEST_REMOTE, timeout=20, tries=2)
-    if remote_payload is not None:
-        manifest = remote_payload
+    """Load the bundled trust-anchor manifest only.
 
+    Remote metadata may describe versions/assets later, but it can never replace
+    executable policy or inject shell commands.
+    """
+    manifest = _load_json_from_file(CUSTOM_UPDATES_MANIFEST_LOCAL)
     entries = []
     if isinstance(manifest, list):
         entries = manifest
     elif isinstance(manifest, dict):
-        for key in ("entries", "items", "plugins", "data"):
+        for key in ('entries', 'items', 'plugins', 'data'):
             value = manifest.get(key)
             if isinstance(value, list):
                 entries = value
                 break
-    return entries if isinstance(entries, list) else []
+    safe = []
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        clean = dict(entry)
+        clean.pop('install_cmd', None)
+        safe.append(clean)
+    return safe
 
 def _entry_local_package_name(entry):
     package = ensure_unicode(entry.get("package", "")).strip()
@@ -1421,37 +1390,21 @@ def _find_installed_package_for_entry(entry, installed_map):
     return ""
 
 def _resolve_latest_url_by_shell(url, timeout=20):
-    if not url:
-        return ""
-    timeout = max(5, int(timeout))
+    if not url or not _is_https_allowed(url):
+        return ''
     probes = []
-    if _command_exists("wget"):
-        probes.extend([
-            "wget -S --max-redirect=0 --no-check-certificate -U Enigma2 -T {t} -O /dev/null {u} 2>&1".format(
-                t=timeout, u=_safe_shell_arg(url)
-            ),
-            "wget -S --max-redirect=0 -U Enigma2 -T {t} -O /dev/null {u} 2>&1".format(
-                t=timeout, u=_safe_shell_arg(url)
-            ),
-        ])
-    if _command_exists("curl"):
-        probes.extend([
-            "curl -I -L -k --ipv4 -A Enigma2 --max-time {t} {u} 2>/dev/null".format(
-                t=timeout, u=_safe_shell_arg(url)
-            ),
-            "curl -I -L --ipv4 -A Enigma2 --max-time {t} {u} 2>/dev/null".format(
-                t=timeout, u=_safe_shell_arg(url)
-            ),
-        ])
-
+    if _command_exists('wget'):
+        probes.append("wget -S --max-redirect=0 -U Enigma2 -T {t} -O /dev/null {u} 2>&1".format(t=max(5, int(timeout)), u=_safe_shell_arg(url)))
+    if _command_exists('curl'):
+        probes.append("curl -fI -L --ipv4 -A Enigma2 --max-time {t} {u} 2>/dev/null".format(t=max(5, int(timeout)), u=_safe_shell_arg(url)))
     for cmd in probes:
         rc, out, err = _run_shell_capture(cmd)
         blob = ensure_unicode(out or err)
         for line in blob.splitlines():
-            m = re.search(r"Location:\s*(https?://\S+)", line, re.I)
-            if m:
-                return ensure_unicode(m.group(1)).strip()
-    return ""
+            match = re.search(r'Location:\s*(https://\S+)', line, re.I)
+            if match and _is_https_allowed(match.group(1)):
+                return ensure_unicode(match.group(1)).strip()
+    return ''
 
 def _entry_display_name(entry, lang="PL"):
     lang = "PL" if lang == "PL" else "EN"
@@ -1460,87 +1413,58 @@ def _entry_display_name(entry, lang="PL"):
     return ensure_unicode(entry.get("name_en") or entry.get("name") or entry.get("title") or "").strip()
 
 def _resolve_custom_remote_data(entry):
-    source = ensure_unicode(entry.get("source", "github_release")).strip() or "github_release"
-    version_regex = ensure_unicode(entry.get("version_regex", "")).strip()
-    remote_version = ""
-    install_cmd = ensure_unicode(entry.get("install_cmd", "")).strip()
-    download_url = ensure_unicode(entry.get("download_url", "")).strip()
+    source = ensure_unicode(entry.get('source', 'github_release')).strip() or 'github_release'
+    version_regex = ensure_unicode(entry.get('version_regex', '')).strip()
+    remote_version = ''
+    download_url = ensure_unicode(entry.get('download_url', '')).strip()
+    expected_sha256 = ensure_unicode(entry.get('sha256', '')).strip().lower()
+    package_regex = ensure_unicode(entry.get('expected_package_regex') or entry.get('package_regex') or '').strip()
 
-    if source == "github_release":
-        repo = ensure_unicode(entry.get("repo", "")).strip()
-        api_url = ensure_unicode(entry.get("api_url", "")).strip()
-        latest_url = ensure_unicode(entry.get("latest_url", "")).strip()
-        if not latest_url and repo:
-            latest_url = "https://github.com/{}/releases/latest".format(repo)
-        if not api_url and repo:
-            api_url = "https://api.github.com/repos/{}/releases/latest".format(repo)
-        payload = _fetch_json_url(api_url, timeout=20, tries=2)
+    if source == 'github_release':
+        repo = ensure_unicode(entry.get('repo', '')).strip()
+        api_url = ensure_unicode(entry.get('api_url', '')).strip() or ('https://api.github.com/repos/{}/releases/latest'.format(repo) if repo else '')
+        latest_url = ensure_unicode(entry.get('latest_url', '')).strip() or ('https://github.com/{}/releases/latest'.format(repo) if repo else '')
+        payload = _fetch_json_url(api_url, timeout=20, tries=2) if _is_https_allowed(api_url) else None
         if isinstance(payload, dict):
-            remote_version = _extract_remote_version(payload.get("tag_name") or payload.get("name") or "", version_regex)
-            asset_name = ensure_unicode(entry.get("asset_name", "")).strip()
-            assets = payload.get("assets", [])
-            if isinstance(assets, list):
-                for asset in assets:
-                    if not isinstance(asset, dict):
-                        continue
-                    asset_url = ensure_unicode(asset.get("browser_download_url", "")).strip()
-                    current_name = ensure_unicode(asset.get("name", "")).strip()
-                    if asset_name:
-                        if current_name == asset_name and asset_url:
-                            download_url = asset_url
-                            break
-                    elif asset_url:
-                        download_url = asset_url
-                        break
-        if not remote_version and latest_url:
-            final_url = _resolve_final_url(latest_url, timeout=20, tries=2)
-            match = re.search(r"/releases/tag/v?([^/?#]+)", ensure_unicode(final_url), re.I)
+            remote_version = _extract_remote_version(payload.get('tag_name') or payload.get('name') or '', version_regex)
+            asset_name = ensure_unicode(entry.get('asset_name', '')).strip()
+            for asset in payload.get('assets', []) if isinstance(payload.get('assets', []), list) else []:
+                if not isinstance(asset, dict):
+                    continue
+                candidate = ensure_unicode(asset.get('browser_download_url', '')).strip()
+                current_name = ensure_unicode(asset.get('name', '')).strip()
+                if candidate and _is_https_allowed(candidate) and ((not asset_name) or current_name == asset_name):
+                    download_url = candidate
+                    break
+        if not remote_version and latest_url and _is_https_allowed(latest_url):
+            final_url = _resolve_final_url(latest_url, timeout=20, tries=2) or _resolve_latest_url_by_shell(latest_url, timeout=20)
+            match = re.search(r'/releases/tag/v?([^/?#]+)', ensure_unicode(final_url), re.I)
             if match:
                 remote_version = _extract_remote_version(match.group(1), version_regex)
-        if not remote_version and latest_url:
-            latest_html = _fetch_text_url(latest_url, timeout=20, tries=2)
-            match = re.search(r"/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
-            if not match:
-                match = re.search(r"#\s*[^\n]*?v([0-9A-Za-z._-]+)", latest_html, re.I)
+    elif source == 'github_latest_redirect':
+        latest_url = ensure_unicode(entry.get('latest_url', '')).strip()
+        if _is_https_allowed(latest_url):
+            final_url = _resolve_final_url(latest_url, timeout=20, tries=2) or _resolve_latest_url_by_shell(latest_url, timeout=20)
+            match = re.search(r'/releases/tag/v?([^/?#]+)', ensure_unicode(final_url), re.I)
             if match:
                 remote_version = _extract_remote_version(match.group(1), version_regex)
-    elif source == "github_latest_redirect":
-        latest_url = ensure_unicode(entry.get("latest_url", "")).strip()
-        final_url = _resolve_final_url(latest_url, timeout=20, tries=2)
-        if not final_url:
-            final_url = _resolve_latest_url_by_shell(latest_url, timeout=20)
-        match = re.search(r"/releases/tag/v?([^/?#]+)", ensure_unicode(final_url), re.I)
-        if match:
-            remote_version = _extract_remote_version(match.group(1), version_regex)
-        if not remote_version:
-            latest_html = _fetch_text_url(latest_url, timeout=20, tries=2)
-            match = re.search(r"/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
-            if not match:
-                match = re.search(r"href=[\"']?/[^\"']+/releases/tag/v?([0-9A-Za-z._-]+)", latest_html, re.I)
-            if not match:
-                match = re.search(r"#\s*[^\n]*?v([0-9A-Za-z._-]+)", latest_html, re.I)
-            if match:
-                remote_version = _extract_remote_version(match.group(1), version_regex)
-    elif source == "version_text":
-        version_url = ensure_unicode(entry.get("version_url", "")).strip()
-        remote_version = _extract_remote_version(_fetch_text_url(version_url, timeout=20, tries=2), version_regex)
-    elif source == "static":
-        remote_version = _extract_remote_version(entry.get("remote_version", ""), version_regex)
+    elif source == 'version_text':
+        version_url = ensure_unicode(entry.get('version_url', '')).strip()
+        if _is_https_allowed(version_url):
+            remote_version = _extract_remote_version(_fetch_text_url(version_url, timeout=20, tries=2), version_regex)
+    elif source == 'static':
+        remote_version = _extract_remote_version(entry.get('remote_version', ''), version_regex)
 
-    if not install_cmd and download_url:
-        tmp_ipk = ensure_unicode(entry.get("tmp_ipk", "")).strip() or "/tmp/custom_update.ipk"
-        install_cmd = "wget -O {tmp} {url} && opkg install {tmp} && echo 'AIO Panel: restart wykonaj ręcznie po sprawdzeniu systemu.'".format(
-            tmp=tmp_ipk,
-            url=download_url
-        )
-
+    if download_url and not _is_https_allowed(download_url):
+        download_url = ''
     return {
-        "remote_version": remote_version,
-        "install_cmd": install_cmd,
-        "download_url": download_url
+        'remote_version': remote_version,
+        'download_url': download_url,
+        'expected_sha256': expected_sha256,
+        'expected_package_regex': package_regex
     }
 
-def _collect_custom_manifest_updates(installed_map, lang="PL"):
+def _collect_custom_manifest_updates(installed_map, lang='PL'):
     results = []
     for entry in _load_custom_updates_manifest_entries():
         try:
@@ -1549,26 +1473,32 @@ def _collect_custom_manifest_updates(installed_map, lang="PL"):
             package = _find_installed_package_for_entry(entry, installed_map)
             if not package:
                 continue
-            local_version = ensure_unicode(installed_map.get(package, "")).strip()
+            local_version = ensure_unicode(installed_map.get(package, '')).strip()
             remote_data = _resolve_custom_remote_data(entry)
-            remote_version = ensure_unicode(remote_data.get("remote_version", "")).strip()
-            install_cmd = ensure_unicode(remote_data.get("install_cmd", "")).strip()
-            if not install_cmd or not remote_version:
+            remote_version = ensure_unicode(remote_data.get('remote_version', '')).strip()
+            download_url = ensure_unicode(remote_data.get('download_url', '')).strip()
+            package_regex = ensure_unicode(remote_data.get('expected_package_regex', '')).strip()
+            if not remote_version or not download_url or not package_regex:
+                continue
+            try:
+                re.compile(package_regex)
+            except Exception:
                 continue
             if not _is_remote_version_newer(local_version, remote_version):
                 continue
-            name = _entry_display_name(entry, lang) or package
             results.append({
-                "type": "custom",
-                "package": package,
-                "name": name,
-                "current_version": local_version,
-                "remote_version": remote_version,
-                "install_cmd": install_cmd
+                'type': 'custom',
+                'package': package,
+                'name': _entry_display_name(entry, lang) or package,
+                'current_version': local_version,
+                'remote_version': remote_version,
+                'download_url': download_url,
+                'expected_sha256': ensure_unicode(remote_data.get('expected_sha256', '')).strip(),
+                'expected_package_regex': package_regex
             })
         except Exception as e:
-            print("[AIO Panel] Custom update entry skipped:", e)
-    results.sort(key=lambda item: ensure_unicode(item.get("name", item.get("package", ""))).lower())
+            print('[AIO Panel] Custom update entry skipped:', e)
+    results.sort(key=lambda item: ensure_unicode(item.get('name', item.get('package', ''))).lower())
     return results
 
 def _collect_plugin_updates_snapshot(lang="PL"):
@@ -1720,199 +1650,195 @@ def _build_compat_report(lang, image_type="unknown"):
     lines.extend(suggestions)
     return "\n".join(lines)
 
-# === FUNKCJA install_archive (GLOBALNA) ===
-def install_archive(session, title, url, callback_on_finish=None, picon_path=None):
-    """Download and install an archive with explicit result verification.
+def _download_s4_archive_shell_command(url, output_path, expected_type):
+    """Download a data-only S4a archive, then validate it before extraction."""
+    if not _s4a_archive_url_allowed(url):
+        return "echo '[AIO Panel] ERROR: invalid S4a archive URL'; exit 64"
+    validator = os.path.join(PLUGIN_PATH, 'core', 'archive_validator.py')
+    return r'''
+set -eu
+URL=%s
+OUT=%s
+EXPECTED=%s
+VALIDATOR=%s
+rm -f "$OUT" "$OUT.tmp"
+OK=0
+if command -v wget >/dev/null 2>&1; then
+    wget -4 -T 180 -t 3 -O "$OUT.tmp" "$URL" && OK=1 || true
+    if [ "$OK" -eq 0 ]; then wget -T 180 -t 3 -O "$OUT.tmp" "$URL" && OK=1 || true; fi
+fi
+if [ "$OK" -eq 0 ] && command -v curl >/dev/null 2>&1; then
+    curl -fL --ipv4 --connect-timeout 25 --max-time 240 --retry 3 -o "$OUT.tmp" "$URL" && OK=1 || true
+fi
+if [ "$OK" -eq 0 ]; then
+    PY=""
+    command -v python3 >/dev/null 2>&1 && PY=python3
+    [ -n "$PY" ] || { command -v python >/dev/null 2>&1 && PY=python; }
+    [ -n "$PY" ] || { echo '[AIO Panel] ERROR: no downloader available'; exit 65; }
+    AIO_URL="$URL" AIO_OUT="$OUT.tmp" "$PY" - <<'PY'
+from __future__ import print_function
+import os, sys
+try:
+    try:
+        from urllib.request import Request, urlopen
+    except ImportError:
+        from urllib2 import Request, urlopen
+    req = Request(os.environ['AIO_URL'], headers={'User-Agent': 'Enigma2/AIO-Panel-14'})
+    response = urlopen(req, timeout=240)
+    handle = open(os.environ['AIO_OUT'], 'wb')
+    try:
+        while True:
+            chunk = response.read(65536)
+            if not chunk:
+                break
+            handle.write(chunk)
+    finally:
+        handle.close()
+        try:
+            response.close()
+        except Exception:
+            pass
+    if os.path.getsize(os.environ['AIO_OUT']) <= 0:
+        raise ValueError('empty download')
+except Exception as exc:
+    print(exc, file=sys.stderr)
+    sys.exit(1)
+PY
+    OK=1
+fi
+[ "$OK" -eq 1 ] && [ -s "$OUT.tmp" ] || { rm -f "$OUT.tmp"; echo '[AIO Panel] ERROR: S4a archive download failed'; exit 66; }
+HEAD=$(dd if="$OUT.tmp" bs=1024 count=1 2>/dev/null | tr 'A-Z' 'a-z')
+case "$HEAD" in *'<html'*|*'<!doctype'*|*'404: not found'*|*'access denied'*) rm -f "$OUT.tmp"; echo '[AIO Panel] ERROR: server returned HTML'; exit 67 ;; esac
+mv -f "$OUT.tmp" "$OUT"
+PYBIN=""
+command -v python3 >/dev/null 2>&1 && PYBIN=python3
+[ -n "$PYBIN" ] || { command -v python >/dev/null 2>&1 && PYBIN=python; }
+[ -n "$PYBIN" ] || { echo '[AIO Panel] ERROR: Python unavailable for archive validation'; exit 68; }
+"$PYBIN" "$VALIDATOR" "$OUT" "$EXPECTED" 100000 2147483648
+''' % (_safe_shell_arg(url), _safe_shell_arg(output_path), _safe_shell_arg(expected_type), _safe_shell_arg(validator))
 
-    Channel-list installation writes a status file from install_archive_script.sh.
-    The UI reloads bouquets only after a confirmed success. On failure, the
-    previous list is restored by the shell script and the user receives a real
-    error instead of a misleading "reloaded" message.
-    """
+
+# === FUNKCJA install_archive (GLOBALNA) ===
+def install_archive(session, title, url, callback_on_finish=None, picon_path=None, action_type=None):
+    """Install a channel list, picon archive or IPK with verified completion."""
+    requested_type = ensure_unicode(action_type or '').strip().lower()
+    allow_s4a_data = requested_type == 'channels_s4a' and _s4a_archive_url_allowed(url)
     clean_url = ensure_unicode(url).split('?', 1)[0].split('#', 1)[0]
     lower_url = clean_url.lower()
+    if not _is_https_allowed(url) and not allow_s4a_data:
+        result = {'success': False, 'returncode': 64, 'stderr': 'Blocked non-HTTPS or untrusted URL', 'type': requested_type or 'archive'}
+        show_message_compat(session, 'Zablokowano niezabezpieczony lub niezaufany adres pobierania.', MessageBox.TYPE_ERROR)
+        _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+        return
     if lower_url.endswith('.zip'):
-        archive_type = 'zip'
-        archive_ext = 'zip'
+        archive_type, archive_ext = 'zip', 'zip'
     elif lower_url.endswith(('.tar.gz', '.tgz')):
-        archive_type = 'tar.gz'
-        archive_ext = 'tar.gz'
-    elif lower_url.endswith('.ipk'):
-        archive_type = 'ipk'
-        archive_ext = 'ipk'
+        archive_type, archive_ext = 'tar.gz', 'tar.gz'
+    elif lower_url.endswith('.ipk') and not allow_s4a_data:
+        archive_type, archive_ext = 'ipk', 'ipk'
     else:
-        show_message_compat(session, 'Nieobsługiwany format archiwum!', message_type=MessageBox.TYPE_ERROR)
-        if callback_on_finish:
-            callback_on_finish()
+        result = {'success': False, 'returncode': 65, 'stderr': 'Unsupported archive format'}
+        show_message_compat(session, 'Nieobsługiwany format archiwum!', MessageBox.TYPE_ERROR)
+        _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
         return
 
     prepare_tmp_dir()
     unique_id = '%s_%s' % (os.getpid(), int(time.time() * 1000))
-    tmp_archive_path = os.path.join(PLUGIN_TMP_PATH, 'aio_download_%s.%s' % (unique_id, archive_ext))
-    status_path = os.path.join(PLUGIN_TMP_PATH, 'channel_install_%s.status' % unique_id)
-    download_cmd = _download_shell_command(url, tmp_archive_path, archive_type)
-    # _download_shell_command() zwraca wieloliniowy skrypt zakończony znakiem nowej linii.
-    # Doklejenie do niego tekstu rozpoczynającego się od "&&" tworzyło na części obrazów
-    # niepoprawną składnię: "fi\n && ...". W efekcie plik mógł pozostać w /tmp,
-    # ale właściwy instalator listy w ogóle nie był uruchamiany. Osobny pod-shell
-    # pozwala bezpiecznie sprawdzić kod pobierania na każdym /bin/sh (BusyBox/ash/dash).
-    download_block = '(\n%s\n)' % download_cmd
+    status_path = os.path.join(PLUGIN_TMP_PATH, 'install_%s.status' % unique_id)
+    is_picon = requested_type == 'picons' or (not requested_type and 'picon' in ensure_unicode(title).lower())
 
-    if 'picon' in title.lower():
-        # Picony używają osobnego instalatora. Duża paczka nie jest już pobierana
-        # i rozpakowywana bezpośrednio w /tmp, co na tunerach z małą ilością RAM
-        # powodowało sporadyczne (około 10%) niepełne instalacje bez plików PNG.
-        picon_path = (picon_path or '/usr/share/enigma2/picon').strip()
-        if not picon_path:
-            picon_path = '/usr/share/enigma2/picon'
-        picon_script_path = os.path.join(PLUGIN_PATH, 'picon_install_script.sh')
-        picon_status_path = os.path.join(PLUGIN_TMP_PATH, 'picon_install_%s.status' % unique_id)
-        if not os.path.exists(picon_script_path):
-            show_message_compat(session, 'BŁĄD: Brak pliku picon_install_script.sh!', message_type=MessageBox.TYPE_ERROR)
+    if is_picon:
+        target = ensure_unicode(picon_path or '/usr/share/enigma2/picon').strip() or '/usr/share/enigma2/picon'
+        script_path = os.path.join(PLUGIN_PATH, 'picon_install_script.sh')
+        if not os.path.isfile(script_path):
+            result = {'success': False, 'returncode': 66, 'stderr': 'Missing picon installer'}
+            show_message_compat(session, 'BŁĄD: Brak pliku picon_install_script.sh!', MessageBox.TYPE_ERROR)
+            _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
             return
-        try:
-            if os.path.exists(picon_status_path):
-                os.remove(picon_status_path)
-        except Exception:
-            pass
+        command = '/bin/sh {script} {url} {target} {status}'.format(script=_safe_shell_arg(script_path), url=_safe_shell_arg(url), target=_safe_shell_arg(target), status=_safe_shell_arg(status_path))
 
-        full_command = (
-            'chmod 755 {script_path} && '
-            '/bin/sh {script_path} {url} {target} {status}'
-        ).format(
-            script_path=_safe_shell_arg(picon_script_path),
-            url=_safe_shell_arg(url),
-            target=_safe_shell_arg(picon_path),
-            status=_safe_shell_arg(picon_status_path)
-        )
-
-        def _picon_install_finished():
-            status = _read_text_file(picon_status_path, '').strip()
+        def finished(command_result):
+            status_value = _read_text_file(status_path, '').strip()
             try:
-                if os.path.exists(picon_status_path):
-                    os.remove(picon_status_path)
+                os.remove(status_path)
             except Exception:
                 pass
-
-            if status.startswith('OK|') or status == 'OK':
+            success = bool(command_result and command_result.get('success')) and (status_value.startswith('OK|') or status_value == 'OK')
+            result = dict(command_result or {})
+            result.update({'success': success, 'status': status_value, 'type': 'picons', 'target': target})
+            if success:
+                parts = status_value.split('|', 2)
+                result['count'] = parts[1] if len(parts) > 1 else '?'
                 if callback_on_finish:
-                    callback_on_finish()
+                    _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
                 else:
-                    details = status.split('|', 2)
-                    count = details[1] if len(details) > 1 else '?'
-                    target = details[2] if len(details) > 2 else picon_path
-                    show_message_compat(
-                        session,
-                        'Picony zostały zainstalowane.\n\nPliki: %s\nKatalog: %s' % (count, target),
-                        timeout=7
-                    )
-                return
-
-            detail = ''
-            if status.startswith('ERROR|'):
-                try:
-                    detail = status.split('|', 2)[1].strip()
-                except Exception:
-                    detail = ''
-            if not detail:
-                detail = 'Instalator nie potwierdził skopiowania plików PNG.'
-            show_message_compat(
-                session,
-                'Nie udało się zainstalować piconów.\n\n%s\n\nSzczegóły: /tmp/aio_picons_install.log' % detail,
-                message_type=MessageBox.TYPE_ERROR,
-                timeout=15
-            )
-
-        run_command_in_background(session, title, [full_command], callback_on_finish=_picon_install_finished)
+                    show_message_compat(session, 'Picony zostały zainstalowane.\n\nPliki: %s\nKatalog: %s' % (result['count'], target), timeout=7)
+            else:
+                status_parts = status_value.split('|', 2)
+                detail = status_parts[1] if status_value.startswith('ERROR|') and len(status_parts) > 1 else ensure_unicode(result.get('stderr') or 'Instalator nie potwierdził skopiowania piconów.')
+                show_message_compat(session, 'Nie udało się zainstalować piconów.\n\n%s\n\nLog: /tmp/aio_picons_install.log' % detail, MessageBox.TYPE_ERROR, timeout=15)
+                _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+        run_command_in_background(session, title, [command], callback_on_finish=finished)
         return
 
     if archive_type == 'ipk':
-        full_command = (
-            '{download_block}\n'
-            'DOWNLOAD_RC=$?\n'
-            'if [ "$DOWNLOAD_RC" -ne 0 ]; then exit "$DOWNLOAD_RC"; fi\n'
-            'opkg install --force-reinstall {archive_path} && rm -f {archive_path}'
-        ).format(
-            download_block=download_block,
-            archive_path=_safe_shell_arg(tmp_archive_path)
-        )
-        run_command_in_background(session, title, [full_command], callback_on_finish=callback_on_finish)
-        return
+        safe_script = os.path.join(PLUGIN_PATH, 'safe_ipk_install.sh')
+        expected = '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+        command = '/bin/sh {script} {url} {expected} {status}'.format(script=_safe_shell_arg(safe_script), url=_safe_shell_arg(url), expected=_safe_shell_arg(expected), status=_safe_shell_arg(status_path))
 
-    install_script_path = os.path.join(PLUGIN_PATH, 'install_archive_script.sh')
-    if not os.path.exists(install_script_path):
-        show_message_compat(session, 'BŁĄD: Brak pliku install_archive_script.sh!', message_type=MessageBox.TYPE_ERROR)
-        if callback_on_finish:
-            callback_on_finish()
-        return
-
-    try:
-        if os.path.exists(status_path):
-            os.remove(status_path)
-    except Exception:
-        pass
-
-    script_q = _safe_shell_arg(install_script_path)
-    archive_q = _safe_shell_arg(tmp_archive_path)
-    type_q = _safe_shell_arg(archive_type)
-    status_q = _safe_shell_arg(status_path)
-    full_command = (
-        "{download_block}\n"
-        "DOWNLOAD_RC=$?\n"
-        "if [ \"$DOWNLOAD_RC\" -ne 0 ]; then "
-        "printf '%s\\n' 'ERROR|Nie udało się pobrać lub zweryfikować archiwum listy.|download' > {status_path}; "
-        "exit \"$DOWNLOAD_RC\"; fi\n"
-        "if ! chmod 755 {script_path}; then "
-        "printf '%s\\n' 'ERROR|Nie można uruchomić skryptu instalacji listy.|chmod' > {status_path}; exit 1; fi\n"
-        "if ! /bin/sh {script_path} {archive_path} {archive_type} {status_path}; then "
-        "[ -s {status_path} ] || printf '%s\\n' 'ERROR|Skrypt instalacji listy zakończył się błędem.|script' > {status_path}; "
-        "exit 1; fi"
-    ).format(
-        download_block=download_block,
-        script_path=script_q,
-        archive_path=archive_q,
-        archive_type=type_q,
-        status_path=status_q
-    )
-
-
-    def _channel_install_finished():
-        status = _read_text_file(status_path, '').strip()
-        try:
-            if os.path.exists(status_path):
+        def ipk_finished(command_result):
+            status_value = _read_text_file(status_path, '').strip()
+            try:
                 os.remove(status_path)
+            except Exception:
+                pass
+            result = dict(command_result or {})
+            result.update({'success': bool(command_result and command_result.get('success')) and status_value.startswith('OK'), 'status': status_value, 'type': 'ipk'})
+            if not result['success']:
+                show_message_compat(session, 'Instalacja pakietu IPK nie powiodła się.\n\n%s' % (status_value or result.get('stderr', '')), MessageBox.TYPE_ERROR, timeout=14)
+            _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+        run_command_in_background(session, title, [command], callback_on_finish=ipk_finished)
+        return
+
+    archive_path = os.path.join(PLUGIN_TMP_PATH, 'aio_download_%s.%s' % (unique_id, archive_ext))
+    script_path = os.path.join(PLUGIN_PATH, 'install_archive_script.sh')
+    if not os.path.isfile(script_path):
+        result = {'success': False, 'returncode': 66, 'stderr': 'Missing channel list installer'}
+        show_message_compat(session, 'BŁĄD: Brak pliku install_archive_script.sh!', MessageBox.TYPE_ERROR)
+        _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+        return
+    if allow_s4a_data:
+        download = _download_s4_archive_shell_command(url, archive_path, archive_type)
+    else:
+        download = _download_shell_command(url, archive_path, archive_type)
+    command = 'set -eu\n(\n%s\n)\n/bin/sh %s %s %s %s\n' % (download, _safe_shell_arg(script_path), _safe_shell_arg(archive_path), _safe_shell_arg(archive_type), _safe_shell_arg(status_path))
+
+    def channel_finished(command_result):
+        status_value = _read_text_file(status_path, '').strip()
+        try:
+            os.remove(status_path)
         except Exception:
             pass
-
-        if status.startswith('OK|') or status == 'OK':
+        result = dict(command_result or {})
+        result.update({'success': bool(command_result and command_result.get('success')) and (status_value.startswith('OK|') or status_value == 'OK'), 'status': status_value, 'type': 'channels'})
+        if result['success']:
             if callback_on_finish:
-                callback_on_finish()
+                _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
             else:
-                show_message_compat(session, 'Lista kanałów została zainstalowana.', timeout=5)
-            return
+                show_message_compat(session, 'Lista kanałów została bezpiecznie zainstalowana.', timeout=6)
+        else:
+            status_parts = status_value.split('|', 2)
+            detail = status_parts[1] if status_value.startswith('ERROR|') and len(status_parts) > 1 else ensure_unicode(result.get('stderr') or 'Brak potwierdzenia poprawnej instalacji.')
+            show_message_compat(session, 'Nie udało się zainstalować listy kanałów.\n\n%s\n\nPoprzednia lista została zachowana lub przywrócona. Log: /tmp/aio_install.log' % detail, MessageBox.TYPE_ERROR, timeout=16)
+            _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+    run_command_in_background(session, title, [command], callback_on_finish=channel_finished)
 
-        detail = ''
-        if status.startswith('ERROR|'):
-            try:
-                detail = status.split('|', 2)[1].strip()
-            except Exception:
-                detail = ''
-        if not detail:
-            detail = 'Instalator nie potwierdził poprawnego zapisania listy.'
-        message = (
-            'Nie udało się zainstalować listy kanałów.\n\n%s\n\n'
-            'Poprzednia lista nie została usunięta albo została automatycznie przywrócona. '
-            'Szczegóły: /tmp/aio_install.log' % detail
-        )
-        show_message_compat(session, message, message_type=MessageBox.TYPE_ERROR, timeout=14)
-
-    run_command_in_background(session, title, [full_command], callback_on_finish=_channel_install_finished)
 
 def get_python_version():
     try:
         ver = sys.version_info
         return "{}.{}".format(ver[0], ver[1])
-    except:
+    except Exception:
         return None
 
 def get_e2kodi_package_name():
@@ -1967,33 +1893,32 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - najnowszy)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Wtyczki Online ---\c00ffffff", "SEPARATOR"),
-    ("📺 XStreamity - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("📺 XStreamity - Instalator", "opkg:enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Instalator", "CMD:INSTALL_IPTV_DREAM"),
-    ("🩺 E2 Doctor - Instalator (Python 3)", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh"),
+    ("🩺 E2 Doctor - Instalator (Python 3)", "remote_script:https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh"),
     ("⚙️ ServiceApp - Instalator", "CMD:INSTALL_SERVICEAPP"),
     ("📦 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
-    ("⚙️ StreamlinkProxy - Instalator", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("🛠 AJPanel - Instalator", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
-    ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
-    ("📅 EPG Import - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("📺 Simple IPTV EPG - Instalator", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
-    ("📡 PP Channel Sync - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh | /bin/sh"),
-    ("📻 NeoRadio Online - Instalator", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && echo 'AIO Panel: restart wykonaj ręcznie.'"),
-    ("📺 Bouquet Maker Xtream - Instalator", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && echo 'AIO Panel: restart wykonaj ręcznie.'"),
-    ("🔄 S4aUpdater - Instalator", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("🔄 MyUpdater v5.1 - Instalator", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
-    ("📺 JediMakerXtream - Instalator", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("▶️ YouTube - Instalator", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("⚙️ StreamlinkProxy - Instalator", "opkg:enigma2-plugin-extensions-streamlinkproxy"),
+    ("🛠 AJPanel - Instalator", "remote_script:https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh"),
+    ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "remote_script:https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh"),
+    ("📅 EPG Import - Instalator", "remote_script_bash:https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh"),
+    ("📺 Simple IPTV EPG - Instalator", "remote_script:https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh"),
+    ("📡 PP Channel Sync - Instalator", "remote_script:https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh"),
+    ("📻 NeoRadio Online - Instalator", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
+    ("📺 Bouquet Maker Xtream - Instalator", "CMD:INSTALL_BMX_SAFE"),
+    ("🔄 MyUpdater v5.1 - Instalator", "remote_script:https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh"),
+    ("📺 JediMakerXtream - Instalator", "remote_script:https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh"),
+    ("▶️ YouTube - Instalator", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
-    ("🖼️ Picon Updater - Instalator (Picony)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
-    ("🖼️ ChocholousekPicons - Instalator", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
-    ("🔑 CIEFP Oscam Editor - Instalator", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
-    ("📺 e-stralker - Instalator (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'Nie znaleziono EStalker w feedach (opkg).'; exit 1)))"),
-        ("▶️ VAVOO - Instalator", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh -O - | /bin/sh"),
-    ("📺 TV Garden - Instalator", "bash_raw:wget -q --no-check-certificate \"https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh\" -O - | /bin/sh"),
-    ("🔎 Simple ZOOM Panel - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh"),
-    ("⚽ FootOnsat - Instalator", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
+    ("🖼️ Picon Updater - Instalator (Picony)", "remote_script:https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh"),
+    ("🖼️ ChocholousekPicons - Instalator", "remote_script_bash:https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup|install"),
+    ("🔑 CIEFP Oscam Editor - Instalator", "remote_script:https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh"),
+    ("📺 e-stralker - Instalator (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
+        ("▶️ VAVOO - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
+    ("📺 TV Garden - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
+    ("🔎 Simple ZOOM Panel - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
+    ("⚽ FootOnsat - Instalator", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
 ]
 
 
@@ -2010,33 +1935,32 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📥 Oscam Levi45", "CMD:INSTALL_LEVI45_OSCAM"),
     ("📥 NCam (Feed - latest)", "CMD:INSTALL_NCAM_FEED"),
     (r"\c00FFD200--- Online Plugins ---\c00ffffff", "SEPARATOR"),
-    ("📺 XStreamity - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-xstreamity"),
+    ("📺 XStreamity - Installer", "opkg:enigma2-plugin-extensions-xstreamity"),
     ("📺 IPTV Dream - Installer", "CMD:INSTALL_IPTV_DREAM"),
-    ("🩺 E2 Doctor - Installer (Python 3)", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh"),
+    ("🩺 E2 Doctor - Installer (Python 3)", "remote_script:https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh"),
     ("⚙️ ServiceApp - Installer", "CMD:INSTALL_SERVICEAPP"),
     ("📦 IPTV Configuration - dependencies", "CMD:IPTV_DEPS"),
-    ("⚙️ StreamlinkProxy - Installer", "bash_raw:opkg update && opkg install enigma2-plugin-extensions-streamlinkproxy"),
-    ("🛠 AJPanel - Installer", "bash_raw:wget https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh -O - | /bin/sh"),
-    ("▶️ E2iPlayer Master - Install/Update", "bash_raw:wget -q 'https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh' -O - | /bin/sh"),
-    ("📅 EPG Import - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh -O - | /bin/bash"),
-    ("📺 Simple IPTV EPG - Installer", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh | /bin/sh"),
-    ("📡 PP Channel Sync - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh | /bin/sh"),
-    ("📻 NeoRadio Online - Installer", "bash_raw:wget -O /tmp/neoradio.ipk https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk && opkg install /tmp/neoradio.ipk && echo 'AIO Panel: restart wykonaj ręcznie.'"),
-    ("📺 Bouquet Maker Xtream - Installer", "bash_raw:wget https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz -O /tmp/bmx.tar.gz && tar -xzf /tmp/bmx.tar.gz -C /tmp && cp -r /tmp/Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream /usr/lib/enigma2/python/Plugins/Extensions/ && rm -rf /tmp/bmx.tar.gz /tmp/Bouquet_Maker_Xtream-1.76-20260510 && echo 'AIO Panel: restart wykonaj ręcznie.'"),
-    ("🔄 S4aUpdater - Installer", "bash_raw:wget http://s4aupdater.one.pl/instalujs4aupdater.sh -O - | /bin/sh"),
-    ("🔄 MyUpdater v5.1 - Installer", "bash_raw:wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh"),
-    ("📺 JediMakerXtream - Installer", "bash_raw:wget https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh -O - | /bin/sh"),
-    ("▶️ YouTube - Installer", "bash_raw:opkg install https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk"),
+    ("⚙️ StreamlinkProxy - Installer", "opkg:enigma2-plugin-extensions-streamlinkproxy"),
+    ("🛠 AJPanel - Installer", "remote_script:https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh"),
+    ("▶️ E2iPlayer Master - Install/Update", "remote_script:https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh"),
+    ("📅 EPG Import - Installer", "remote_script_bash:https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh"),
+    ("📺 Simple IPTV EPG - Installer", "remote_script:https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh"),
+    ("📡 PP Channel Sync - Installer", "remote_script:https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh"),
+    ("📻 NeoRadio Online - Installer", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
+    ("📺 Bouquet Maker Xtream - Installer", "CMD:INSTALL_BMX_SAFE"),
+    ("🔄 MyUpdater v5.1 - Installer", "remote_script:https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh"),
+    ("📺 JediMakerXtream - Installer", "remote_script:https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh"),
+    ("▶️ YouTube - Installer", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
-    ("🖼️ Picon Updater - Installer (Picons)", "bash_raw:wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh"),
-    ("🖼️ ChocholousekPicons - Installer", "bash_raw:wget -qO- --no-check-certificate 'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup' | bash -s install"),
-    ("🔑 CIEFP Oscam Editor - Installer", "bash_raw:wget -q --no-check-certificate 'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh' -O - | /bin/sh"),
-    ("📺 e-stralker - Installer (feed)", "bash_raw:opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker || (PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /^enigma2-plugin-extensions-estalker$/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /estalker/ {print $1; exit}'); [ -z \\\"$PKG\\\" ] && PKG=$(opkg list | awk 'BEGIN{IGNORECASE=1} $1 ~ /stalker/ {print $1; exit}'); [ -n \\\"$PKG\\\" ] && opkg install $PKG || (echo 'EStalker not found in feeds (opkg).'; exit 1)))"),
-        ("▶️ VAVOO - Installer", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh -O - | /bin/sh"),
-    ("📺 TV Garden - Installer", "bash_raw:wget -q --no-check-certificate \"https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh\" -O - | /bin/sh"),
-    ("🔎 Simple ZOOM Panel - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh"),
-    ("⚽ FootOnsat - Installer", "bash_raw:wget https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh -O - | /bin/sh"),
+    ("🖼️ Picon Updater - Installer (Picons)", "remote_script:https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh"),
+    ("🖼️ ChocholousekPicons - Installer", "remote_script_bash:https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup|install"),
+    ("🔑 CIEFP Oscam Editor - Installer", "remote_script:https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh"),
+    ("📺 e-stralker - Installer (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
+        ("▶️ VAVOO - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
+    ("📺 TV Garden - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
+    ("🔎 Simple ZOOM Panel - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
+    ("⚽ FootOnsat - Installer", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
 ]
 
 
@@ -2049,7 +1973,7 @@ SYSTEM_TOOLS_PL = [
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("🔎 Sprawdź aktualizacje zainstalowanych wtyczek", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("🖼️ Pobierz Picony (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🖼️ Pobierz Picony (Transparent)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 Monitor Systemowy", "CMD:SYSTEM_MONITOR"),
     ("📄 Przeglądarka Logów", "CMD:LOG_VIEWER"),
     ("⏰ Menedżer Cron", "CMD:CRON_MANAGER"),
@@ -2074,7 +1998,7 @@ SYSTEM_TOOLS_EN = [
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("🔎 Check updates for installed plugins", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("🖼️ Download Picons (Transparent)", "archive:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🖼️ Download Picons (Transparent)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 System Monitor", "CMD:SYSTEM_MONITOR"),
     ("📄 Log Viewer", "CMD:LOG_VIEWER"),
     ("⏰ Cron Manager", "CMD:CRON_MANAGER"),
@@ -2137,19 +2061,19 @@ DIAGNOSTICS_EN = [
 
 # === SKINS / SKÓRKI ===
 SKINS_PL = [
-    ("🎨 Algare FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
-    ("🎨 Fury FHD - Instalator", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
-    ("🎨 Luka FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
-    ("🎨 Maxy FHD - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
-    ("🎨 XDreamy - Instalator", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
+    ("🎨 Algare FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
+    ("🎨 Fury FHD - Instalator", "remote_script:https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh"),
+    ("🎨 Luka FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
+    ("🎨 Maxy FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
+    ("🎨 XDreamy - Instalator", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
 ]
 
 SKINS_EN = [
-    ("🎨 Algare FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh -O - | /bin/sh"),
-    ("🎨 Fury FHD - Installer", "bash_raw:wget -q \"--no-check-certificate\" https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh -O - | /bin/sh"),
-    ("🎨 Luka FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh -O - | /bin/sh"),
-    ("🎨 Maxy FHD - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh -O - | /bin/sh"),
-    ("🎨 XDreamy - Installer", "bash_raw:wget -q --no-check-certificate https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh -O - | /bin/sh"),
+    ("🎨 Algare FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
+    ("🎨 Fury FHD - Installer", "remote_script:https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh"),
+    ("🎨 Luka FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
+    ("🎨 Maxy FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
+    ("🎨 XDreamy - Installer", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
 ]
 
 
@@ -2161,17 +2085,13 @@ COL_TITLES = {
 
 
 
-# === SORTOWANIE LIST KANAŁÓW v14.0.0 ===
-# Zasady kolejności:
-# 1. wpisy Azman są całkowicie usuwane,
-# 2. wszystkie pozostałe listy są sortowane wyłącznie według daty — najnowsze u góry,
-# 3. listy Vhannibal/Vhanibal są zawsze przenoszone na sam dół.
-# Przy identycznej lub brakującej dacie zachowywana jest stabilna kolejność źródłowa.
-CHANNEL_LIST_REPO_ONLY_CREATORS = (
-    u"bzyk83", u"bzyk 83", u"jakitaki", u"jaki taki",
-    u"anom", u"pawel pawelek", u"pawel pawel ek", u"paweł pawełek"
+# === SORTOWANIE I FILTROWANIE LIST KANAŁÓW v14.0.0 ===
+# Repozytorium AIO pozostaje źródłem podstawowym. S4aUpdater uzupełnia je
+# wszystkimi listami z ostatnich 12 miesięcy. Listy Bzyk83 są wykluczone ze
+# wszystkich źródeł. Vhannibal pozostaje na końcu listy zgodnie z układem AIO.
+CHANNEL_LIST_EXCLUDED_CREATORS = (
+    u"bzyk83", u"bzyk 83", u"bzyk_83", u"bzyk-83"
 )
-CHANNEL_LIST_MIN_YEAR = 2026
 
 
 def _normalize_channel_sort_text(value):
@@ -2203,12 +2123,11 @@ def _channel_item_matches_creator(name, action, creator_names):
     return False
 
 
-def _is_azman_channel_list_item(name, action=""):
-    return _channel_item_matches_creator(name, action, (u"azman",))
+def _is_excluded_channel_list_item(name, action=""):
+    return _channel_item_matches_creator(name, action, CHANNEL_LIST_EXCLUDED_CREATORS)
 
 
 def _is_vhannibal_channel_list_item(name, action=""):
-    # Obie pisownie występują w źródłach i opisach użytkowników.
     return _channel_item_matches_creator(name, action, (u"vhannibal", u"vhanibal"))
 
 
@@ -2231,54 +2150,82 @@ def _extract_channel_date_key(name, action=""):
     text = ensure_unicode(name) + u" " + ensure_unicode(action)
     text = text.replace(u"_", u"-")
     keys = []
-    # 2026-04-23 / 2026.04.23 / 2026 04 23
-    for m in re.finditer(r"(?<!\d)((?:19|20)\d{2})[-\./ ]+([01]?\d)[-\./ ]+([0-3]?\d)(?!\d)", text):
-        key = _make_date_key(m.group(1), m.group(2), m.group(3))
+    # YYYY-MM-DD / YYYY.MM.DD / YYYY MM DD
+    for match in re.finditer(r"(?<!\d)((?:19|20)\d{2})[-./ ]+([01]?\d)[-./ ]+([0-3]?\d)(?!\d)", text):
+        key = _make_date_key(match.group(1), match.group(2), match.group(3))
         if key:
             keys.append(key)
-    # 23-04-2026 / 23.04.2026
-    for m in re.finditer(r"(?<!\d)([0-3]?\d)[-\./ ]+([01]?\d)[-\./ ]+((?:19|20)\d{2})(?!\d)", text):
-        key = _make_date_key(m.group(3), m.group(2), m.group(1))
+    # DD-MM-YYYY / DD.MM.YYYY
+    for match in re.finditer(r"(?<!\d)([0-3]?\d)[-./ ]+([01]?\d)[-./ ]+((?:19|20)\d{2})(?!\d)", text):
+        key = _make_date_key(match.group(3), match.group(2), match.group(1))
+        if key:
+            keys.append(key)
+    # DD-MM-YY / DD.MM.YY used by some S4a list descriptions.
+    for match in re.finditer(r"(?<!\d)([0-3]?\d)[-./ ]+([01]?\d)[-./ ]+(\d{2})(?!\d)", text):
+        year = int(match.group(3))
+        year += 2000 if year < 70 else 1900
+        key = _make_date_key(year, match.group(2), match.group(1))
         if key:
             keys.append(key)
     if keys:
         return max(keys)
-    # Wersje zawierające tylko rok pozostają sortowalne, lecz trafiają za pełne daty.
-    for m in re.finditer(r"(?<!\d)((?:19|20)\d{2})(?:--)?(?!\d)", text):
-        key = _make_date_key(m.group(1), 0, 0)
+    # A year-only marker is useful for sorting repo entries but is not precise
+    # enough to establish the rolling 12-month S4a cutoff.
+    for match in re.finditer(r"(?<!\d)((?:19|20)\d{2})(?!\d)", text):
+        key = _make_date_key(match.group(1), 0, 0)
         if key:
             keys.append(key)
     return max(keys) if keys else 0
 
 
-def _channel_date_year(date_key):
+def _date_key_to_date(date_key):
     try:
-        return int(date_key) // 10000
+        value = int(date_key)
+        year = value // 10000
+        month = (value // 100) % 100
+        day = value % 100
+        if month == 0 or day == 0:
+            return None
+        return datetime.date(year, month, day)
     except Exception:
-        return 0
+        return None
 
 
-def _channel_item_is_2026_or_newer(item):
+def _rolling_year_threshold(today=None):
+    today = today or datetime.date.today()
+    try:
+        return today.replace(year=today.year - 1)
+    except ValueError:
+        # 29 February -> 28 February in the previous year.
+        return today.replace(year=today.year - 1, day=28)
+
+
+def _channel_item_is_recent(item, source="repo", today=None):
     try:
         name, action = item[0], item[1]
     except Exception:
-        return True
+        return False
     if action == "SEPARATOR":
         return True
+    today = today or datetime.date.today()
     date_key = _extract_channel_date_key(name, action)
-    if not date_key:
-        # Wpis bez daty pozostaje — nie można potwierdzić, że jest starszy od 2026 roku.
-        return True
-    return _channel_date_year(date_key) >= CHANNEL_LIST_MIN_YEAR
-
-
-def _is_repo_only_creator_item(name, action=""):
-    return _channel_item_matches_creator(name, action, CHANNEL_LIST_REPO_ONLY_CREATORS)
+    date_value = _date_key_to_date(date_key)
+    if date_value is None:
+        # Controlled repo entries without a date (e.g. M3U/BOUQUET tools) stay
+        # available. For S4a, a current-year marker is accepted; older/undated
+        # entries cannot prove that they satisfy the rolling 12-month rule.
+        try:
+            year_only = int(date_key) // 10000
+        except Exception:
+            year_only = 0
+        return source == "repo" or (source == "s4a" and year_only == today.year)
+    return date_value >= _rolling_year_threshold(today)
 
 
 def _dedupe_channel_lists(items):
     result = []
-    seen = set()
+    seen_urls = set()
+    seen_names = set()
     for item in items or []:
         try:
             name, action = item[0], item[1]
@@ -2287,48 +2234,47 @@ def _dedupe_channel_lists(items):
         if action == "SEPARATOR":
             result.append(item)
             continue
+        normalized_action = ensure_unicode(action).strip()
+        url_key = ""
+        if ":" in normalized_action:
+            prefix, payload = normalized_action.split(":", 1)
+            if prefix in ("archive", "s4archive", "picons"):
+                url_key = payload.split("?", 1)[0].split("#", 1)[0].lower()
         norm_name = _normalize_channel_sort_text(name)
-        # Usuń zmienne daty i ogólne nazwy źródeł przed porównaniem duplikatów.
         norm_name = re.sub(u"\\b(?:19|20)\\d{2}(?:[ -]?[01]?\\d[ -]?[0-3]?\\d)?\\b", u" ", norm_name)
         norm_name = re.sub(u"\\b(?:brak daty|dodaj bukiet m3u|dodaj bukiet ref|s4aupdater|s4a|repo)\\b", u" ", norm_name)
         norm_name = re.sub(u"\\s+", u" ", norm_name).strip()
-        url = ensure_unicode(action)
-        if url.startswith("archive:"):
-            url_key = url.split(":", 1)[1].split("?", 1)[0].lower()
-        else:
-            url_key = ""
-        key = norm_name or url_key
-        if key in seen:
+        if url_key and url_key in seen_urls:
             continue
-        seen.add(key)
+        if norm_name and norm_name in seen_names:
+            continue
+        if url_key:
+            seen_urls.add(url_key)
+        if norm_name:
+            seen_names.add(norm_name)
         result.append(item)
     return result
 
 
 def _sort_channel_lists_v12(items):
-    """Sortuj wszystkie zwykłe listy po dacie, a Vhannibal zawsze umieść na końcu."""
     regular = []
     separators = []
     vhannibal = []
-    for idx, item in enumerate(items or []):
+    for index, item in enumerate(items or []):
         try:
             name, action = item[0], item[1]
         except Exception:
             continue
         if action == "SEPARATOR":
-            separators.append((idx, item))
+            separators.append((index, item))
             continue
-        date_key = _extract_channel_date_key(name, action)
-        row = (-date_key, idx, item)
+        row = (-_extract_channel_date_key(name, action), index, item)
         if _is_vhannibal_channel_list_item(name, action):
             vhannibal.append(row)
         else:
             regular.append(row)
-
-    # Python 2 i Python 3: jawny klucz nie porównuje obiektów item przy remisie.
     regular.sort(key=lambda row: (row[0], row[1]))
     vhannibal.sort(key=lambda row: (row[0], row[1]))
-
     ordered = [row[2] for row in regular]
     ordered.extend([row[1] for row in separators])
     ordered.extend([row[2] for row in vhannibal])
@@ -2342,9 +2288,9 @@ def _prepare_channel_lists_v1201(repo_lists, s4a_lists_full):
             name, action = item[0], item[1]
         except Exception:
             continue
-        if _is_azman_channel_list_item(name, action):
+        if _is_excluded_channel_list_item(name, action):
             continue
-        if _channel_item_is_2026_or_newer(item):
+        if _channel_item_is_recent(item, source="repo"):
             repo_filtered.append(item)
 
     s4a_filtered = []
@@ -2353,24 +2299,18 @@ def _prepare_channel_lists_v1201(repo_lists, s4a_lists_full):
             name, action = item[0], item[1]
         except Exception:
             continue
-        if _is_azman_channel_list_item(name, action):
+        if _is_excluded_channel_list_item(name, action):
             continue
-        if not _channel_item_is_2026_or_newer(item):
-            continue
-        if _is_repo_only_creator_item(name, action):
-            # Te listy są pobierane wyłącznie z repozytorium PanelAIO-Lists.
-            continue
-        s4a_filtered.append(item)
+        if _channel_item_is_recent(item, source="s4a"):
+            s4a_filtered.append(item)
 
-    final_channel_lists = _dedupe_channel_lists(repo_filtered + s4a_filtered)
-    # Ostateczny filtr zabezpiecza również wpisy, w których nazwa Azman występuje tylko w URL.
-    final_channel_lists = [
-        item for item in final_channel_lists
-        if not _is_azman_channel_list_item(item[0], item[1])
-    ]
-    return _sort_channel_lists_v12(final_channel_lists)
+    # Repo is first, so an identical list from S4a does not replace the
+    # maintained AIO copy. Every other current S4a creator remains visible.
+    return _sort_channel_lists_v12(_dedupe_channel_lists(repo_filtered + s4a_filtered))
+
 
 # === FUNKCJE ŁADOWANIA DANYCH (GLOBALNE) ===
+
 def _get_lists_from_repo_sync():
     manifest_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/manifest.json"
     tmp_json_path = os.path.join(PLUGIN_TMP_PATH, 'manifest.json')
@@ -2413,12 +2353,12 @@ def _get_lists_from_repo_sync():
             if item_type == 'M3U':
                 bouquet_id = ensure_unicode(item.get('bouquet_id', 'userbouquet.imported_m3u.tv')).strip() or 'userbouquet.imported_m3u.tv'
                 menu_title = '📺 {} - {} (Dodaj Bukiet M3U)'.format(name, author)
-                action = 'm3u:{}:{}:{}'.format(url, bouquet_id, name)
+                action = 'm3u_json:' + _encode_action_payload('m3u', url, bouquet_id, name)
                 lists_menu.append((menu_title, action))
             elif item_type == 'BOUQUET':
                 bouquet_id = ensure_unicode(item.get('bouquet_id', 'userbouquet.imported_ref.tv')).strip() or 'userbouquet.imported_ref.tv'
                 menu_title = '📺 {} - {} (Dodaj Bukiet REF)'.format(name, author)
-                action = 'bouquet:{}:{}:{}'.format(url, bouquet_id, name)
+                action = 'bouquet_json:' + _encode_action_payload('bouquet', url, bouquet_id, name)
                 lists_menu.append((menu_title, action))
             else:
                 version = ensure_unicode(item.get('version', '')).strip() or 'brak daty'
@@ -2432,37 +2372,190 @@ def _get_lists_from_repo_sync():
         return []
     return lists_menu
 
+def _s4a_metadata_url_allowed(url):
+    try:
+        parsed = urlparse(ensure_unicode(url).strip())
+        return parsed.scheme in ('http', 'https') and (parsed.hostname or '').lower() == 's4aupdater.one.pl' and parsed.path == '/s4aupdater_list.txt' and not parsed.username and not parsed.password
+    except Exception:
+        return False
+
+
+def _s4a_host_is_public_name(host):
+    host = ensure_unicode(host).strip().lower().rstrip('.')
+    if not host or host in ('localhost', 'localhost.localdomain'):
+        return False
+    if host.endswith(('.local', '.lan', '.home', '.internal')):
+        return False
+    # Raw IPv6 and local/private IPv4 destinations are not accepted from an
+    # unauthenticated catalog. Normal public DNS names remain supported.
+    if ':' in host:
+        return False
+    if re.match(r'^\d{1,3}(?:\.\d{1,3}){3}$', host):
+        try:
+            parts = [int(value) for value in host.split('.')]
+            if any(value < 0 or value > 255 for value in parts):
+                return False
+            if parts[0] in (0, 10, 127) or parts[0] >= 224:
+                return False
+            if parts[0] == 169 and parts[1] == 254:
+                return False
+            if parts[0] == 172 and 16 <= parts[1] <= 31:
+                return False
+            if parts[0] == 192 and parts[1] == 168:
+                return False
+        except Exception:
+            return False
+    return True
+
+
+def _s4a_archive_url_allowed(url):
+    try:
+        parsed = urlparse(ensure_unicode(url).strip())
+        if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+            return False
+        if parsed.username or parsed.password or not _s4a_host_is_public_name(parsed.hostname):
+            return False
+        path = ensure_unicode(parsed.path or '').lower()
+        return path.endswith('.zip') or path.endswith('.tar.gz') or path.endswith('.tgz')
+    except Exception:
+        return False
+
+
+def _download_s4a_metadata(url, destination, timeout=25):
+    """Download only the fixed S4a text catalog; never execute its content."""
+    if not _s4a_metadata_url_allowed(url):
+        return False
+    tmp_path = destination + '.tmp'
+    try:
+        request = Request(url, headers={'User-Agent': 'Enigma2/AIO-Panel-14'})
+        response = urlopen(request, timeout=timeout)
+        try:
+            final_url = ensure_unicode(response.geturl() if hasattr(response, 'geturl') else url)
+            if not _s4a_metadata_url_allowed(final_url):
+                return False
+            payload = response.read((2 * 1024 * 1024) + 1)
+        finally:
+            try:
+                response.close()
+            except Exception:
+                pass
+        if not payload or len(payload) > 2 * 1024 * 1024 or _payload_looks_like_html_error(payload):
+            return False
+        with open(tmp_path, 'wb') as handle:
+            handle.write(payload)
+            handle.flush()
+            try:
+                os.fsync(handle.fileno())
+            except Exception:
+                pass
+        os.rename(tmp_path, destination)
+        return True
+    except Exception as exc:
+        print('[AIO Panel] S4a catalog download failed from {}: {}'.format(url, exc))
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+        return False
+
+
+def _s4a_catalog_is_valid(path):
+    try:
+        if not os.path.isfile(path) or os.path.getsize(path) <= 0 or os.path.getsize(path) > 2 * 1024 * 1024:
+            return False
+        text = _read_text_file(path, '')
+        if not text or '<html' in text[:512].lower():
+            return False
+        return '_url:' in text and '_version:' in text
+    except Exception:
+        return False
+
+
 def _get_s4aupdater_lists_dynamic_sync():
-    s4aupdater_list_txt_url = 'http://s4aupdater.one.pl/s4aupdater_list.txt'
+    """Return all dated S4a channel lists; age/Bzyk filtering is applied later."""
     prepare_tmp_dir()
     tmp_list_file = os.path.join(PLUGIN_TMP_PATH, 's4aupdater_list.txt')
+    cache_candidates = [
+        '/etc/enigma2/.panelaio_s4aupdater_list.cache',
+        os.path.join(PLUGIN_TMP_PATH, 's4aupdater_list.cache'),
+        '/usr/lib/enigma2/python/Plugins/Extensions/S4aUpdater/s4aupdater_list.txt',
+        '/usr/lib/enigma2/python/Plugins/SystemPlugins/S4aUpdater/s4aupdater_list.txt',
+        '/etc/enigma2/s4aupdater_list.txt'
+    ]
+    downloaded = False
+    # Prefer HTTPS when the provider supports it, then its legacy read-only
+    # HTTP endpoint. Only plain text metadata is accepted from HTTP.
+    for source_url in (
+        'https://s4aupdater.one.pl/s4aupdater_list.txt',
+        'http://s4aupdater.one.pl/s4aupdater_list.txt'
+    ):
+        if _download_s4a_metadata(source_url, tmp_list_file) and _s4a_catalog_is_valid(tmp_list_file):
+            downloaded = True
+            break
+
+    source_path = tmp_list_file if downloaded else ''
+    if downloaded:
+        for cache_path in cache_candidates[:2]:
+            try:
+                parent = os.path.dirname(cache_path)
+                if parent and not os.path.isdir(parent):
+                    os.makedirs(parent)
+                shutil.copyfile(tmp_list_file, cache_path + '.tmp')
+                os.rename(cache_path + '.tmp', cache_path)
+            except Exception:
+                try:
+                    os.remove(cache_path + '.tmp')
+                except Exception:
+                    pass
+    else:
+        for candidate in cache_candidates:
+            if _s4a_catalog_is_valid(candidate):
+                source_path = candidate
+                print('[AIO Panel] Using cached/local S4aUpdater catalog: {}'.format(candidate))
+                break
+
+    if not source_path:
+        print('[AIO Panel] S4aUpdater catalog unavailable and no valid cache was found.')
+        return []
+
+    urls_dict = {}
+    versions_dict = {}
+    try:
+        with io.open(source_path, 'r', encoding='utf-8', errors='ignore') as handle:
+            for raw_line in handle:
+                clean_line = raw_line.strip()
+                if not clean_line or clean_line.startswith('#'):
+                    continue
+                match = re.match(r'^([A-Za-z0-9_]+_(?:url|version))\s*:\s*(.*?)\s*$', clean_line, re.I)
+                if not match:
+                    continue
+                key = ensure_unicode(match.group(1)).lower()
+                value = ensure_unicode(match.group(2)).strip().strip('"').strip("'")
+                if key.endswith('_url'):
+                    urls_dict[key] = value
+                elif key.endswith('_version'):
+                    versions_dict[key] = value
+    except Exception as exc:
+        print('[AIO Panel] Błąd parsowania katalogu S4aUpdater: {}'.format(exc))
+        return []
+
     lists = []
-    try:
-        cmd = "wget --no-check-certificate -q -T 20 -O {} {}".format(tmp_list_file, s4aupdater_list_txt_url)
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process.communicate()
-        if not (process.returncode == 0 and os.path.exists(tmp_list_file) and os.path.getsize(tmp_list_file) > 0):
-             return []
-    except Exception:
-        return []
-    
-    try:
-        urls_dict, versions_dict = {}, {}
-        # UNIVERSAL FIX: Use io.open
-        with io.open(tmp_list_file, 'r', encoding='utf-8', errors='ignore') as f:
-            for line in f:
-                clean_line = line.strip()
-                if "_url:" in clean_line: parts = clean_line.split(':', 1); urls_dict[parts[0].strip()] = parts[1].strip()
-                elif "_version:" in clean_line: parts = clean_line.split(':', 1); versions_dict[parts[0].strip()] = parts[1].strip()
-        for var_name, url_value in urls_dict.items():
-            display_name_base = var_name.replace('_url', '').replace('_', ' ').title()
-            version_key = var_name.replace('_url', '_version')
-            date_info = versions_dict.get(version_key, "brak daty")
-            lists.append(("📡 {} - {}".format(display_name_base, date_info), "archive:{}".format(url_value)))
-    except Exception as e: 
-        print("[AIO Panel] Błąd parsowania listy S4aUpdater:", e)
-        return []
+    for key in sorted(urls_dict.keys()):
+        url_value = urls_dict.get(key, '')
+        if not _s4a_archive_url_allowed(url_value):
+            print('[AIO Panel] Pominięto nieprawidłowy adres archiwum S4a: {}'.format(url_value))
+            continue
+        base_name = key[:-4]
+        display_name = base_name.replace('_', ' ').strip().title() or 'S4aUpdater'
+        date_info = versions_dict.get(base_name + '_version', '').strip()
+        title = '📡 {} - {}'.format(display_name, date_info or 'brak daty')
+        action = 's4archive:{}'.format(url_value)
+        if _is_excluded_channel_list_item(title, action):
+            continue
+        lists.append((title, action))
+    print('[AIO Panel] S4aUpdater: wczytano {} wpisów przed filtrem daty.'.format(len(lists)))
     return lists
+
 
 def _get_best_oscam_version_info_sync():
     try:
@@ -2570,321 +2663,263 @@ class WizardProgressScreen(Screen):
     def __init__(self, session, steps, **kwargs):
         Screen.__init__(self, session)
         self.session = session
-        self.reboot_mode = kwargs.get("reboot_mode", "full")  # "full" or "gui"
-        self.wizard_queue = list(steps)
-        self.wizard_total_steps = len(steps)
-        self.wizard_current_step = 0
-        self.wizard_channel_list_url = kwargs.get("channel_list_url", "")
-        self.wizard_channel_list_name = kwargs.get("channel_list_name", "")
-        self.wizard_picon_url = kwargs.get("picon_url", "")
-        self["message"] = Label("Trwa automatyczna instalacja...\nProszę czekać.\n\nNie wyłączaj tunera.\nPo zakończeniu nastąpi automatyczny restart.")
+        self.lang = kwargs.get('lang', 'PL') if kwargs.get('lang', 'PL') in ('PL', 'EN') else 'PL'
+        self.steps = list(steps or [])
+        self.index = 0
+        self.current_key = None
+        self.running = False
+        self.failed = False
+        self.cancelled = False
+        self.wizard_warnings = []
+        self.wizard_channel_list_url = kwargs.get('channel_list_url', '')
+        self.wizard_channel_list_name = kwargs.get('channel_list_name', 'Polska 13E AIO Panel')
+        self.wizard_picon_url = kwargs.get('picon_url', '')
+        self.wizard_picon_path = kwargs.get('picon_path', '/usr/share/enigma2/picon')
+        self['message'] = Label(self._txt(
+            'Przygotowanie bezpiecznej instalacji...\n\nCZERWONY: Anuluj',
+            'Preparing safe installation...\n\nRED: Cancel'))
+        self['actions'] = ActionMap(['OkCancelActions', 'ColorActions'], {
+            'cancel': self.cancel_wizard, 'red': self.cancel_wizard,
+            'green': self.retry_step, 'yellow': self.skip_step,
+        }, -1)
         self.onShown.append(self.start_wizard)
 
-    def start_wizard(self):
-        self._wizard_run_next_step()
+    def _txt(self, pl, en):
+        return pl if self.lang == 'PL' else en
 
-    def _wizard_run_next_step(self, *args, **kwargs):
-        if not self.wizard_queue:
+    def start_wizard(self):
+        if not self.running and not self.cancelled:
+            self._run_current_step()
+
+    def _step_title(self, task):
+        return 'Super Konfigurator [{}/{}]: {}'.format(min(self.index + 1, len(self.steps)), len(self.steps), task)
+
+    def _set_progress(self, pl, en):
+        controls = self._txt('\n\nCZERWONY: Anuluj', '\n\nRED: Cancel')
+        self['message'].setText(self._txt(pl, en) + controls)
+
+    def _run_current_step(self):
+        if self.cancelled or self.running:
+            return
+        if self.index >= len(self.steps):
             self._on_wizard_finish()
             return
+        self.current_key = self.steps[self.index]
+        self.failed = False
+        self.running = True
+        func = {
+            'deps': self._wizard_step_deps,
+            'channel_list': self._wizard_step_channel_list,
+            'install_softcam': self._wizard_step_install_softcam,
+            'install_oscam': self._wizard_step_install_oscam,
+            'picons': self._wizard_step_picons,
+            'reload_settings': self._wizard_step_reload_settings,
+        }.get(self.current_key)
+        if func is None:
+            self._step_done({'success': False, 'stderr': 'Unknown wizard step'})
+            return
+        reactor.callLater(0.2, func)
 
-        next_step = self.wizard_queue.pop(0)
-        self.wizard_current_step += 1
-        
-        step_functions = {
-            "deps": self._wizard_step_deps, 
-            "channel_list": self._wizard_step_channel_list,
-                "install_softcam": self._wizard_step_install_softcam,
-                "install_oscam": self._wizard_step_install_oscam, 
-            "picons": self._wizard_step_picons,
-            "reload_settings": self._wizard_step_reload_settings
-        }
-        
-        func_to_run = step_functions.get(next_step)
-        if func_to_run:
-            reactor.callLater(0.5, func_to_run)
-        else:
-            print("[AIO Panel] Nieznany krok w Super Konfiguratorze:", next_step)
-            self._wizard_run_next_step()
+    def _step_done(self, result):
+        self.running = False
+        success = bool(result and result.get('success'))
+        if success:
+            self.index += 1
+            self.current_key = None
+            reactor.callLater(0.25, self._run_current_step)
+            return
+        self.failed = True
+        detail = ensure_unicode((result or {}).get('stderr') or (result or {}).get('status') or 'Nieznany błąd')
+        self['message'].setText(self._txt(
+            'Krok został zatrzymany.\n\n%s\n\nZIELONY: Ponów   ŻÓŁTY: Pomiń   CZERWONY/EXIT: Anuluj' % detail,
+            'The step was stopped.\n\n%s\n\nGREEN: Retry   YELLOW: Skip   RED/EXIT: Cancel' % detail))
 
-    def _get_wizard_title(self, task_name):
-        return "Super Konfigurator [{}/{}]: {}".format(self.wizard_current_step, self.wizard_total_steps, task_name)
+    def retry_step(self):
+        if self.failed and not self.running:
+            self.failed = False
+            self._run_current_step()
+
+    def skip_step(self):
+        if not self.failed or self.running:
+            return
+        # Only the channel-list step is mandatory. OSCam availability depends on
+        # the image, architecture and external feed, so it must not trap the user.
+        if self.current_key in ('channel_list',):
+            show_message_compat(self.session, self._txt('Tego krytycznego kroku nie można pominąć.', 'This critical step cannot be skipped.'), MessageBox.TYPE_ERROR)
+            return
+        self.failed = False
+        self.index += 1
+        self.current_key = None
+        self._run_current_step()
+
+    def cancel_wizard(self):
+        if self.running:
+            show_message_compat(self.session, self._txt('Poczekaj na zakończenie bieżącej operacji. Zostanie bezpiecznie zatrzymana po tym kroku.', 'Wait for the current operation to finish. It will stop safely after this step.'), MessageBox.TYPE_INFO, timeout=8)
+        self.cancelled = True
+        if not self.running:
+            self.close()
 
     def _wizard_step_deps(self):
-        title = self._get_wizard_title("Instalacja zależności")
-        self["message"].setText("Krok [{}/{}]:\nInstalacja zależności systemowych...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps))
-        cmd = """
-        echo 'Krok 1/3: Aktualizacja listy pakietów...'
-        opkg update
-        echo 'Krok 2/3: Instalacja/Aktualizacja wget i certyfikatów SSL...'
-        opkg install wget ca-certificates
-        echo 'Krok 3/3: Sprawdzanie tar i unzip...'
-        opkg install tar || echo 'Info: Pakiet tar nie znaleziony (lub już jest), pomijam błąd.'
-        opkg install unzip || echo 'Info: Pakiet unzip nie znaleziony (lub już jest), pomijam błąd.'
-        echo 'Zakończono sprawdzanie zależności.'
-        sleep 1
-        """
-        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
+        self._set_progress('Instalacja wymaganych zależności systemowych...', 'Installing required system dependencies...')
+        cmd = "opkg update && opkg install wget ca-certificates && (command -v tar >/dev/null 2>&1 || opkg install tar) && (command -v unzip >/dev/null 2>&1 || opkg install unzip)"
+        run_command_in_background(self.session, self._step_title('Zależności'), [cmd], callback_on_finish=self._step_done)
 
     def _wizard_step_channel_list(self):
-        title = self._get_wizard_title("Instalacja listy '{}'".format(self.wizard_channel_list_name))
-        url = self.wizard_channel_list_url
-        
-        start_msg_pl = "Krok [{}/{}]:\nInstalacja listy kanałów '{}'...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
-        start_msg_en = "Step [{}/{}]:\nInstalling channel list '{}'...\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps, self.wizard_channel_list_name)
-        parent_lang = 'PL'
-        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
-            parent_lang = self.session.current_dialog.lang
-        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        self["message"].setText(start_msg)
-        
-        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
+        self._set_progress("Instalacja listy kanałów '%s' z kopią i rollbackiem..." % self.wizard_channel_list_name, "Installing channel list '%s' with backup and rollback..." % self.wizard_channel_list_name)
+        install_archive(self.session, self._step_title(self.wizard_channel_list_name), self.wizard_channel_list_url, callback_on_finish=self._step_done, action_type='channels')
 
     def _wizard_step_install_softcam(self):
-        title = self._get_wizard_title("Instalacja Softcam")
-        self["message"].setText(
-            "Krok [{}/{}]:\nInstalacja feedu i obsługi Softcam...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
-        )
+        self._set_progress('Instalacja feedu Softcam z polecenia mynonpublic...', 'Installing the Softcam feed using the mynonpublic command...')
+        status = os.path.join(PLUGIN_TMP_PATH, 'wizard_softcam_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s %s' % (_safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_softcam_feed_safe.sh')), _safe_shell_arg(status))
+        def finished(result):
+            text = _read_text_file(status, '').strip()
+            try: os.remove(status)
+            except Exception: pass
+            merged = dict(result or {})
+            merged['status'] = text
+            accepted = text.startswith('OK') or text.startswith('WARN')
+            merged['success'] = accepted
+            if text.startswith('WARN'):
+                self.wizard_warnings.append(text)
+            if not merged['success'] and not merged.get('stderr'):
+                merged['stderr'] = text or 'Softcam feed installation failed'
+            self._step_done(merged)
+        run_command_in_background(self.session, self._step_title('Softcam'), [cmd], callback_on_finish=finished)
 
-        feed_tmp = os.path.join(PLUGIN_TMP_PATH, 'aio_softcam_feed_%s.sh' % int(time.time() * 1000))
-        download = _download_shell_command('http://updates.mynonpublic.com/oea/feed', feed_tmp, 'script')
-        cmd = r"""
-            echo "=== Softcam feed installation (AIO Wizard) ==="
-            opkg update || true
-            opkg install wget ca-certificates || true
-            {download}
-            if [ -s {feed_tmp} ]; then
-                chmod 755 {feed_tmp} 2>/dev/null || true
-                if command -v bash >/dev/null 2>&1; then bash {feed_tmp} || echo "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; else /bin/sh {feed_tmp} || echo "Ostrzeżenie: instalator feedu Softcam zwrócił błąd."; fi
-            fi
-            rm -f {feed_tmp} 2>/dev/null || true
-            mkdir -p /usr/softcams 2>/dev/null || true
-            chmod 755 /etc/init.d/softcam 2>/dev/null || true
-            sync
-            sleep 1
-        """.format(download=download, feed_tmp=_safe_shell_arg(feed_tmp))
-        run_command_in_background(self.session, title, [cmd], callback_on_finish=self._wizard_run_next_step)
+    def _activate_oscam_config(self):
+        changed = False
+        try:
+            candidates = [
+                ('softcam', 'actCam', 'oscam'),
+                ('plugins', 'softcamsetup', None),
+            ]
+            if hasattr(config, 'softcam') and hasattr(config.softcam, 'actCam'):
+                config.softcam.actCam.value = 'oscam'; config.softcam.actCam.save(); changed = True
+            if hasattr(config.plugins, 'softcamsetup') and hasattr(config.plugins.softcamsetup, 'cam_name'):
+                config.plugins.softcamsetup.cam_name.value = 'oscam'; config.plugins.softcamsetup.cam_name.save(); changed = True
+            if changed and configfile is not None:
+                configfile.save()
+        except Exception as exc:
+            print('[AIO Panel] OSCam config activation note:', exc)
+        return True
 
     def _wizard_step_install_oscam(self):
-        title = self._get_wizard_title("Instalacja i uruchomienie OSCam-Emu")
-        self["message"].setText(
-            "Krok [{}/{}]:\nInstalacja OSCam-Emu, wybór jako aktywny softcam i uruchomienie...\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
-        )
-
-        script_path = os.path.join(PLUGIN_PATH, 'install_oscam_emu_script.sh')
-        status_path = os.path.join(PLUGIN_TMP_PATH, 'wizard_oscam_%s.status' % int(time.time() * 1000))
-        if not os.path.exists(script_path):
-            show_message_compat(self.session, 'BŁĄD: Brak pliku install_oscam_emu_script.sh!', MessageBox.TYPE_ERROR)
-            return
-        cmd = 'chmod 755 {script} && /bin/sh {script} {status}'.format(
-            script=_safe_shell_arg(script_path),
-            status=_safe_shell_arg(status_path)
-        )
-        run_command_in_background(
-            self.session,
-            title,
-            [cmd],
-            callback_on_finish=lambda: self._wizard_oscam_finished(status_path)
-        )
-
-    def _wizard_oscam_finished(self, status_path):
-        status = _read_text_file(status_path, '').strip()
-        try:
-            if os.path.exists(status_path):
-                os.remove(status_path)
-        except Exception:
-            pass
-        if status.startswith('OK|') or status == 'OK':
-            self._wizard_run_next_step()
-            return
-
-        detail = ''
-        if status.startswith('ERROR|'):
-            try:
-                detail = status.split('|', 2)[1].strip()
-            except Exception:
-                detail = ''
-        if not detail:
-            detail = 'Nie potwierdzono instalacji i uruchomienia procesu OSCam.'
-        self["message"].setText(
-            "Instalacja została zatrzymana.\n\nOSCam nie został uruchomiony.\n%s\n\nLog: /tmp/aio_oscam_install.log" % detail
-        )
-        show_message_compat(
-            self.session,
-            'Nie udało się zainstalować lub uruchomić OSCam-Emu.\n\n%s\n\nSzczegóły: /tmp/aio_oscam_install.log' % detail,
-            MessageBox.TYPE_ERROR,
-            timeout=15
-        )
+        self._set_progress('Instalacja OSCam-Emu, uruchomienie i kontrola procesu...', 'Installing OSCam-Emu, starting it and checking the process...')
+        status = os.path.join(PLUGIN_TMP_PATH, 'wizard_oscam_%s.status' % int(time.time() * 1000))
+        script = os.path.join(PLUGIN_PATH, 'install_oscam_emu_script.sh')
+        cmd = '/bin/sh %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status))
+        def finished(result):
+            text = _read_text_file(status, '').strip()
+            try: os.remove(status)
+            except Exception: pass
+            merged = dict(result or {})
+            merged['status'] = text
+            merged['success'] = bool(result and result.get('success')) and text.startswith('OK')
+            if merged['success']:
+                self._activate_oscam_config()
+            elif not merged.get('stderr'):
+                merged['stderr'] = text or 'OSCam-Emu did not start'
+            self._step_done(merged)
+        run_command_in_background(self.session, self._step_title('OSCam-Emu'), [cmd], callback_on_finish=finished)
 
     def _wizard_step_picons(self):
-        title = self._get_wizard_title("Instalacja Picon (Transparent)")
-        url = self.wizard_picon_url
+        self._set_progress('Instalacja piconów do:\n%s' % self.wizard_picon_path, 'Installing picons to:\n%s' % self.wizard_picon_path)
+        install_archive(self.session, self._step_title('Picony'), self.wizard_picon_url, callback_on_finish=self._step_done, picon_path=self.wizard_picon_path, action_type='picons')
 
-        start_msg_pl = "Krok [{}/{}]:\nInstalacja Picon (Transparent)...\n(To może potrwać kilka minut)\nProszę czekać.".format(self.wizard_current_step, self.wizard_total_steps)
-        start_msg_en = "Step [{}/{}]:\nInstalling Picons (Transparent)...\n(This may take a few minutes)\nPlease wait.".format(self.wizard_current_step, self.wizard_total_steps)
-        parent_lang = 'PL'
-        if hasattr(self.session, 'current_dialog') and hasattr(self.session.current_dialog, 'lang'):
-             parent_lang = self.session.current_dialog.lang
-        start_msg = start_msg_pl if parent_lang == 'PL' else start_msg_en
-        self["message"].setText(start_msg)
-
-        install_archive(self.session, title, url, callback_on_finish=self._wizard_run_next_step)
-        
     def _wizard_step_reload_settings(self):
         try:
             eDVBDB.getInstance().reloadServicelist()
             eDVBDB.getInstance().reloadBouquets()
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas przeładowywania list w wizardzie:", e)
-        self._wizard_run_next_step()
+            self._step_done({'success': True})
+        except Exception as exc:
+            self._step_done({'success': False, 'stderr': ensure_unicode(exc)})
 
-
-    def _on_wizard_finish(self, *args, **kwargs):
-        self["message"].setText(
-            "Instalacja zakończona.\n\nAIO Panel 14.0.0 nie wymusza restartu, żeby ograniczyć ryzyko bootloopa.\nSprawdź komunikaty instalatora i wykonaj restart ręcznie, jeżeli system działa stabilnie.\n\n"
-            "Installation completed.\n\nAIO Panel 14.0.0 does not force a reboot to reduce boot-loop risk.\nCheck installer messages and reboot manually if the system is stable."
-        )
-        reactor.callLater(6, self.close)
-
-    def do_restart_and_close(self):
-        # Pozostawione dla kompatybilności starszych wywołań, ale bez wymuszonego restartu.
-        try:
-            self["message"].setText("Restart automatyczny został pominięty. Wykonaj restart ręcznie.")
-        except Exception:
-            pass
-        try:
-            reactor.callLater(2, self.close)
-        except Exception:
-            self.close()
+    def _on_wizard_finish(self):
+        self.running = False
+        warning_pl = ''
+        warning_en = ''
+        if self.wizard_warnings:
+            warning_pl = '\n\nUwaga: zewnętrzny feed Softcam był niedostępny lub niepotwierdzony. Pozostałe zadania zostały wykonane; OSCam został obsłużony niezależnie albo pominięty przez użytkownika.'
+            warning_en = '\n\nNote: the external Softcam feed was unavailable or unconfirmed. Other tasks were completed; OSCam was handled independently or skipped by the user.'
+        self['message'].setText(self._txt(
+            'Konfiguracja zakończona.\n\nAutomatyczny restart nie został wykonany. Sprawdź działanie tunera i uruchom GUI ręcznie tylko wtedy, gdy jest to potrzebne.' + warning_pl,
+            'Configuration completed.\n\nNo automatic restart was performed. Check the receiver and restart the GUI manually only if needed.' + warning_en))
+        reactor.callLater(8, self.close)
 
 # === NOWA KLASA EKRANU ŁADOWANIA ===
 class AIOLoadingScreen(Screen):
     skin = """
-    <screen position="center,center" size="700,200" title="Panel AIO">
-        <widget name="message" position="20,20" size="660,160" font="Regular;26" halign="center" valign="center" />
+    <screen position="center,center" size="700,220" title="Panel AIO">
+        <widget name="message" position="20,20" size="660,180" font="Regular;24" halign="center" valign="center" />
     </screen>"""
 
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session
-        self["message"] = Label("Ładowanie...\nCzekaj, trwa ładowanie danych Panel AIO...\n\nLoading...\nPlease wait, loading AIO Panel data...")
+        self['message'] = Label('Ładowanie danych AIO Panel...\n\nLoading AIO Panel data...')
         self.fetched_data_cache = None
         self._panel_opened = False
         self._loading_timeout_call = None
-        
-        self.flag_file = os.path.join(PLUGIN_PATH, ".deps_ok")
-        
+        self._dependency_prompt_open = False
+        self.flag_file = os.path.join(PLUGIN_PATH, '.deps_ok')
         self.onShown.append(self.start_loading_process)
 
-    def start_loading_process(self):
-        if self._loading_timeout_call is None:
-            self._loading_timeout_call = reactor.callLater(25, self._loading_timeout_fallback)
-        self.check_dependencies()
+    def _has_cmd(self, cmd):
+        try:
+            return shutil_which(cmd) is not None
+        except Exception:
+            return False
 
     def _deps_present(self):
-        """Verify runtime prerequisites on the current image."""
-        # Używamy polyfill shutil_which jeśli shutil.which nie istnieje (Py2)
-        which_func = shutil_which 
+        ca_paths = ['/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/certs/ca-bundle.crt', '/etc/ssl/cert.pem', '/etc/ssl/certs/ca-certificates.pem']
+        return all(self._has_cmd(x) for x in ('wget', 'tar', 'unzip')) and any(os.path.exists(x) for x in ca_paths)
 
-        def _has_cmd(cmd):
-            try:
-                if which_func is not None:
-                    return which_func(cmd) is not None
-            except Exception:
-                pass
-            # Fallback
-            try:
-                return os.system("which %s >/dev/null 2>&1" % cmd) == 0
-            except Exception:
-                return False
-
-        has_wget = _has_cmd("wget")
-        has_tar = _has_cmd("tar")
-        has_unzip = _has_cmd("unzip")
-
-        ca_paths = [
-            "/etc/ssl/certs/ca-certificates.crt",
-            "/etc/ssl/certs/ca-bundle.crt",
-            "/etc/ssl/cert.pem",
-            "/etc/ssl/certs/ca-certificates.pem",
-        ]
-        has_ca = any(os.path.exists(p) for p in ca_paths)
-
-        return has_wget and has_tar and has_unzip and has_ca
-
-    def check_dependencies(self):
-        if os.path.exists(self.flag_file) and self._deps_present():
+    def start_loading_process(self):
+        if self._deps_present():
             self.start_async_data_load()
             return
+        self._dependency_prompt_open = True
+        text = ('Brakuje części zależności (wget/tar/unzip/certyfikaty).\n\nZainstalować je teraz? Panel może zostać otwarty bez instalacji, ale funkcje sieciowe mogą nie działać.' )
+        self.session.openWithCallback(self._dependency_answer, MessageBox, text, MessageBox.TYPE_YESNO)
 
-        if os.path.exists(self.flag_file):
-            try:
-                os.remove(self.flag_file)
-            except Exception:
-                pass
-
-        self["message"].setText("Pierwsze uruchomienie:\nInstalacja/Aktualizacja kluczowych zależności (SSL)...\nProszę czekać, to może potrwać minutę...\n\n(Instalacja odbywa się w tle)")
-        
-        cmd = """
-        echo "AIO Panel: Cicha instalacja zależności (bez opkg update)..."
-        opkg install wget ca-certificates ca-bundle > /dev/null 2>&1
-        opkg install tar > /dev/null 2>&1 || echo 'Info: Pakiet tar pominięty.'
-        opkg install unzip > /dev/null 2>&1 || echo 'Info: Pakiet unzip pominięty.'
-        echo "AIO Panel: Zakończono."
-        """
-        
-        Thread(target=self._run_deps_in_background, args=(cmd,)).start()
-
-    def _run_deps_in_background(self, cmd):
-        try:
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate()
-        except Exception as e:
-            print("[AIO Panel] Błąd podczas cichej instalacji zależności:", e)
-        
-        reactor.callFromThread(self.on_dependencies_installed_safe)
-
-    def on_dependencies_installed_safe(self, *args):
-        try:
-            with open(self.flag_file, 'w') as f:
-                f.write('ok')
-        except Exception as e:
-            print("[AIO Panel] Nie można utworzyć pliku flagi .deps_ok:", e)
-            
-        self.start_async_data_load()
+    def _dependency_answer(self, answer):
+        self._dependency_prompt_open = False
+        if not answer:
+            self.start_async_data_load()
+            return
+        self['message'].setText('Instalacja zależności...\n\nNie zamykaj tunera.')
+        cmd = "opkg update && opkg install wget ca-certificates && (command -v tar >/dev/null 2>&1 || opkg install tar) && (command -v unzip >/dev/null 2>&1 || opkg install unzip)"
+        def done(result):
+            if result and result.get('success') and self._deps_present():
+                try:
+                    _atomic_write(self.flag_file, 'ok\n')
+                except Exception:
+                    pass
+            else:
+                show_message_compat(self.session, 'Nie udało się zainstalować wszystkich zależności. Panel zostanie otwarty w trybie ograniczonym.', MessageBox.TYPE_ERROR, timeout=10)
+            self.start_async_data_load()
+        run_command_in_background(self.session, 'Zależności AIO Panel', [cmd], callback_on_finish=done)
 
     def start_async_data_load(self):
+        if self._loading_timeout_call is None:
+            self._loading_timeout_call = reactor.callLater(30, self._loading_timeout_fallback)
         thread = Thread(target=self._background_data_loader)
+        try: thread.setDaemon(True)
+        except Exception: pass
         thread.start()
 
     def _background_data_loader(self):
-        repo_lists, s4a_lists_full, best_oscam_version, local_oscam_version = [], [], "N/A", "Online"
-        try:
-            repo_lists = _get_lists_from_repo_sync()
-        except Exception as e:
-            print("[AIO Panel] Błąd pobierania list repo:", e)
-            repo_lists = [(TRANSLATIONS["PL"]["loading_error_text"] + " (REPO)", "SEPARATOR")] 
-        try:
-            s4a_lists_full = _get_s4aupdater_lists_dynamic_sync()
-        except Exception as e:
-            print("[AIO Panel] Błąd pobierania list S4a:", e)
-        try:
-            best_oscam_version = _get_best_oscam_version_info_sync()
-        except Exception as e:
-            print("[AIO Panel] Błąd pobierania wersji Oscam:", e)
-            best_oscam_version = "Error"
-        try:
-            local_oscam_version = _get_local_oscam_version_info_sync()
-        except Exception as e:
-            print("[AIO Panel] Błąd sprawdzania lokalnej wersji Oscam:", e)
-            local_oscam_version = "Online"
-
-        self.fetched_data_cache = {
-            "repo_lists": repo_lists,
-            "s4a_lists_full": s4a_lists_full,
-            "best_oscam_version": best_oscam_version,
-            "local_oscam_version": local_oscam_version
-        }
+        repo_lists, s4a_lists_full, best_oscam_version, local_oscam_version = [], [], 'N/A', 'Online'
+        try: repo_lists = _get_lists_from_repo_sync()
+        except Exception as exc: print('[AIO Panel] repo list load:', exc)
+        try: s4a_lists_full = _get_s4aupdater_lists_dynamic_sync()
+        except Exception as exc: print('[AIO Panel] S4a list load:', exc)
+        try: best_oscam_version = _get_best_oscam_version_info_sync()
+        except Exception as exc: print('[AIO Panel] OSCam version load:', exc)
+        try: local_oscam_version = _get_local_oscam_version_info_sync()
+        except Exception as exc: print('[AIO Panel] local OSCam version:', exc)
+        self.fetched_data_cache = {'repo_lists': repo_lists, 's4a_lists_full': s4a_lists_full, 'best_oscam_version': best_oscam_version, 'local_oscam_version': local_oscam_version}
         reactor.callFromThread(self._on_data_loaded)
 
     def _open_panel_safe(self, fetched_data=None):
@@ -2892,29 +2927,15 @@ class AIOLoadingScreen(Screen):
             return
         self._panel_opened = True
         try:
-            if self._loading_timeout_call is not None and self._loading_timeout_call.active():
-                self._loading_timeout_call.cancel()
-        except Exception:
-            pass
-        data = fetched_data or self.fetched_data_cache or {
-            "repo_lists": [],
-            "s4a_lists_full": [],
-            "best_oscam_version": "Auto",
-            "local_oscam_version": "Online"
-        }
+            if self._loading_timeout_call is not None and self._loading_timeout_call.active(): self._loading_timeout_call.cancel()
+        except Exception: pass
+        data = fetched_data or self.fetched_data_cache or {'repo_lists': [], 's4a_lists_full': [], 'best_oscam_version': 'Auto', 'local_oscam_version': 'Online'}
         self.session.open(PanelAIO, data)
         self.close()
 
     def _loading_timeout_fallback(self):
-        if self._panel_opened:
-            return
-        print("[AIO Panel] Loading watchdog fallback activated.")
-        self._open_panel_safe({
-            "repo_lists": [],
-            "s4a_lists_full": [],
-            "best_oscam_version": "Auto",
-            "local_oscam_version": "Online"
-        })
+        if not self._panel_opened:
+            self._open_panel_safe()
 
     def _on_data_loaded(self):
         self._open_panel_safe(self.fetched_data_cache)
@@ -3007,7 +3028,7 @@ class AIOInfoScreen(Screen):
         found_version_tag = "" 
         
         try:
-            cmd_log = "wget --no-check-certificate -O {} {}".format(tmp_changelog_path, changelog_url)
+            cmd_log = "wget -O {} {}".format(tmp_changelog_path, changelog_url)
             process = subprocess.Popen(cmd_log, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             process.communicate() 
 
@@ -3064,15 +3085,23 @@ class AIOInfoScreen(Screen):
 
 
 class AIOTextViewerScreen(Screen):
-    skin = """
+    skin_large = """
     <screen position="center,center" size="900,560" title="AIO Viewer">
         <widget name="title" position="20,10" size="860,36" font="Regular;28" />
         <widget name="text" position="20,55" size="860,455" font="Regular;24" />
         <widget name="help" position="20,520" size="860,28" font="Regular;22" />
     </screen>
     """
+    skin_small = """
+    <screen position="center,center" size="690,430" title="AIO Viewer">
+        <widget name="title" position="15,8" size="660,30" font="Regular;21" />
+        <widget name="text" position="15,46" size="660,330" font="Regular;18" />
+        <widget name="help" position="15,390" size="660,25" font="Regular;17" />
+    </screen>
+    """
 
     def __init__(self, session, title, content, help_text=None):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.setTitle(title)
         self["title"] = Label(title)
@@ -3177,12 +3206,17 @@ class AIOTipPopupScreen(Screen):
 # === NOWE EKRANY v5.0 ===
 
 class SystemMonitorScreen(Screen):
-    skin = """
+    skin = ("""
+    <screen position="center,center" size="680,480" title="System Monitor">
+        <widget name="title" position="16,10" size="648,34" font="Regular;24" />
+        <widget name="info" position="16,54" size="648,370" font="Regular;21" />
+        <widget name="help" position="16,440" size="648,26" font="Regular;18" />
+    </screen>""" if _is_small_ui() else """
     <screen position="center,center" size="900,520" title="System Monitor">
-        <widget name="title" position="20,10" size="860,40" font="Regular;32" halign="left" />
-        <widget name="info" position="20,60" size="860,420" font="Regular;26" halign="left" valign="top" />
-        <widget name="help" position="20,485" size="860,30" font="Regular;22" halign="left" />
-    </screen>"""
+        <widget name="title" position="20,10" size="860,40" font="Regular;32" />
+        <widget name="info" position="20,60" size="860,420" font="Regular;26" />
+        <widget name="help" position="20,485" size="860,30" font="Regular;22" />
+    </screen>""")
 
     def __init__(self, session, lang="PL"):
         Screen.__init__(self, session)
@@ -3198,6 +3232,8 @@ class SystemMonitorScreen(Screen):
             self._timer.callback.append(self._update)
         self._interval = 10
         self._prev_cpu = None
+        self._closed = False
+        self.onClose.append(self._stop_timer)
         self["actions"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions", "InfoActions"], {
             "ok": self._update,
             "cancel": self.close,
@@ -3207,7 +3243,13 @@ class SystemMonitorScreen(Screen):
         }, -1)
         self.onShown.append(self._start)
 
+    def _stop_timer(self):
+        self._closed = True
+        try: self._timer.stop()
+        except Exception: pass
+
     def _start(self):
+        if self._closed: return
         self._update()
         self._timer.start(self._interval * 1000, True)
 
@@ -3329,12 +3371,17 @@ class SystemMonitorScreen(Screen):
 
 
 class LogViewerScreen(Screen):
-    skin = """
+    skin = ("""
+    <screen position="center,center" size="690,500" title="Log Viewer">
+        <widget name="title" position="16,10" size="658,34" font="Regular;23" />
+        <widget name="log" position="16,52" size="658,390" font="Regular;18" />
+        <widget name="help" position="16,458" size="658,26" font="Regular;17" />
+    </screen>""" if _is_small_ui() else """
     <screen position="center,center" size="1050,650" title="Log Viewer">
-        <widget name="title" position="20,10" size="1010,40" font="Regular;30" halign="left" />
-        <widget name="log" position="20,60" size="1010,540" font="Regular;22" halign="left" valign="top" />
-        <widget name="help" position="20,610" size="1010,30" font="Regular;22" halign="left" />
-    </screen>"""
+        <widget name="title" position="20,10" size="1010,40" font="Regular;30" />
+        <widget name="log" position="20,60" size="1010,540" font="Regular;22" />
+        <widget name="help" position="20,610" size="1010,30" font="Regular;22" />
+    </screen>""")
 
     SOURCES = [
         ("messages", "/var/log/messages"),
@@ -3356,6 +3403,7 @@ class LogViewerScreen(Screen):
             self["log"] = Label("")
         self["help"] = Label("◄/► Source  🟡AutoRefresh  OK=Refresh  ▲/▼ Scroll  EXIT=Back")
         self._auto = False
+        self._closed = False
         self._timer = eTimer()
         try:
             self._timer_conn = self._timer.timeout.connect(self._on_timer)
@@ -3371,6 +3419,12 @@ class LogViewerScreen(Screen):
             "yellow": self.toggle_auto,
         }, -1)
         self.onShown.append(self.refresh)
+        self.onClose.append(self._stop_timer)
+
+    def _stop_timer(self):
+        self._closed = True
+        try: self._timer.stop()
+        except Exception: pass
 
     def _on_timer(self):
         if self._auto:
@@ -3415,7 +3469,7 @@ class LogViewerScreen(Screen):
             self["log"].setText(data)
         else:
             self["log"].setText(data)
-        if self._auto:
+        if self._auto and not self._closed:
             self._timer.start(5000, True)
 
     def page_up(self):
@@ -3445,16 +3499,23 @@ def _get_cron_file_path():
 
 
 class CronManagerScreen(Screen):
-    skin = """
+    skin_large = """
     <screen position="center,center" size="950,620" title="Cron Manager">
         <widget name="title" position="20,10" size="910,40" font="Regular;30" />
         <widget name="list" position="20,60" size="910,500" scrollbarMode="showOnDemand" />
         <widget name="help" position="20,570" size="910,40" font="Regular;22" />
     </screen>"""
+    skin_small = """
+    <screen position="center,center" size="690,440" title="Cron Manager">
+        <widget name="title" position="15,8" size="660,32" font="Regular;22" />
+        <widget name="list" position="15,48" size="660,330" scrollbarMode="showOnDemand" />
+        <widget name="help" position="15,392" size="660,30" font="Regular;17" />
+    </screen>"""
 
     DISABLED_PREFIX = "#AIO_DISABLED# "
 
     def __init__(self, session, lang="PL"):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.session = session
         self.lang = lang or "PL"
@@ -3483,8 +3544,14 @@ class CronManagerScreen(Screen):
 
     def _write_lines(self, lines):
         try:
-            with open(self.cron_path, "w") as f:
-                f.write("\n".join(lines).rstrip("\n") + "\n")
+            parent = os.path.dirname(self.cron_path)
+            if parent and not os.path.isdir(parent):
+                os.makedirs(parent)
+            _atomic_write(self.cron_path, "\n".join(lines).rstrip("\n") + "\n")
+            try:
+                os.chmod(self.cron_path, 0o600)
+            except Exception:
+                pass
             self._reload_daemon()
             return True
         except Exception as e:
@@ -3492,11 +3559,24 @@ class CronManagerScreen(Screen):
             return False
 
     def _reload_daemon(self):
-        os.system("killall -HUP crond 2>/dev/null || true")
-        os.system("/etc/init.d/cron restart 2>/dev/null || true")
-        os.system("/etc/init.d/crond restart 2>/dev/null || true")
-        os.system("systemctl restart cron 2>/dev/null || true")
-        os.system("systemctl restart crond 2>/dev/null || true")
+        for script in ('/etc/init.d/cron', '/etc/init.d/crond'):
+            if os.path.isfile(script) and os.access(script, os.X_OK):
+                subprocess.call([script, 'restart'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                return
+        if shutil_which('systemctl'):
+            for unit in ('cron.service', 'crond.service'):
+                try:
+                    out = subprocess.check_output(['systemctl', 'show', unit, '--property=LoadState', '--value'], stderr=subprocess.STDOUT)
+                    value = out.decode('utf-8', 'ignore').strip() if not isinstance(out, str) else out.strip()
+                    if value == 'loaded':
+                        subprocess.call(['systemctl', 'restart', unit], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        return
+                except Exception:
+                    continue
+        try:
+            subprocess.call(['killall', '-HUP', 'crond'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            pass
 
     def reload(self):
         self.lines = [l for l in self._read_lines() if l.strip() and not l.strip().startswith("#") or l.strip().startswith(self.DISABLED_PREFIX)]
@@ -3593,11 +3673,17 @@ class CronManagerScreen(Screen):
 
 
 class ServiceManagerScreen(Screen):
-    skin = """
+    skin_large = """
     <screen position="center,center" size="950,620" title="Service Manager">
         <widget name="title" position="20,10" size="910,40" font="Regular;30" />
         <widget name="list" position="20,60" size="910,500" scrollbarMode="showOnDemand" />
         <widget name="help" position="20,570" size="910,40" font="Regular;22" />
+    </screen>"""
+    skin_small = """
+    <screen position="center,center" size="690,440" title="Service Manager">
+        <widget name="title" position="15,8" size="660,32" font="Regular;22" />
+        <widget name="list" position="15,48" size="660,330" scrollbarMode="showOnDemand" />
+        <widget name="help" position="15,392" size="660,30" font="Regular;17" />
     </screen>"""
 
     SERVICES = [
@@ -3610,6 +3696,7 @@ class ServiceManagerScreen(Screen):
     ]
 
     def __init__(self, session, lang="PL"):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.session = session
         self.lang = lang or "PL"
@@ -3664,44 +3751,71 @@ class ServiceManagerScreen(Screen):
             return None
         return self.SERVICES[i][1]
 
+    def _detect_service_backend(self, names):
+        for name in names or []:
+            unit = name + '.service'
+            if self._is_systemd():
+                try:
+                    proc = subprocess.Popen(['systemctl', 'show', unit, '--property=LoadState', '--value'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    output, _error = proc.communicate()
+                    if IS_PY3 and not isinstance(output, str):
+                        output = output.decode('utf-8', 'ignore')
+                    state = ensure_unicode(output).strip().lower()
+                    if proc.returncode == 0 and state == 'loaded':
+                        return ('systemd', unit, name)
+                except Exception:
+                    pass
+            script = '/etc/init.d/' + name
+            if os.path.isfile(script) and os.access(script, os.X_OK):
+                return ('init', script, name)
+        for name in names or []:
+            if self._is_active(name):
+                return ('process', name, name)
+        return (None, None, names[0] if names else '')
+
     def _action(self, act):
         names = self._get_selected_service_names()
         if not names:
             return
-        # choose first existing service unit/script
-        svc = names[0]
-        cmd_parts = []
-        if self._is_systemd():
-            cmd_parts.append("systemctl %s %s 2>/dev/null" % (act, svc))
-            # also try alternates
-            for alt in names[1:]:
-                cmd_parts.append("systemctl %s %s 2>/dev/null" % (act, alt))
-        # init.d fallbacks
-        for n in names:
-            cmd_parts.append("/etc/init.d/%s %s 2>/dev/null" % (n, act))
-        cmd = " || ".join(cmd_parts) + " || true; sleep 1"
-        self.session.openWithCallback(lambda *a: self.refresh(), Console, title="Service: %s (%s)" % (svc, act), cmdlist=[cmd], closeOnSuccess=False)
+        backend, target, display = self._detect_service_backend(names)
+        if backend == 'systemd':
+            cmd = 'systemctl %s %s' % (act, _safe_shell_arg(target))
+        elif backend == 'init':
+            cmd = '%s %s' % (_safe_shell_arg(target), act)
+        else:
+            show_message_compat(self.session, ('Nie znaleziono usługi: %s' if self.lang == 'PL' else 'Service not found: %s') % ', '.join(names), MessageBox.TYPE_ERROR)
+            return
+        self.session.openWithCallback(lambda *a: self.refresh(), Console, title='Service: %s (%s)' % (display, act), cmdlist=[cmd], closeOnSuccess=False)
 
     def show_status(self):
         names = self._get_selected_service_names()
         if not names:
             return
-        svc = names[0]
-        if self._is_systemd():
-            cmd = "systemctl status %s --no-pager | tail -n 60" % svc
+        backend, target, display = self._detect_service_backend(names)
+        if backend == 'systemd':
+            cmd = 'systemctl status %s --no-pager | tail -n 60' % _safe_shell_arg(target)
+        elif backend == 'init':
+            cmd = '%s status 2>/dev/null || ps | grep -E %s | grep -v grep' % (_safe_shell_arg(target), _safe_shell_arg('|'.join(names)))
         else:
-            cmd = "ps | grep -E '%s' | grep -v grep" % "|".join(names)
-        self.session.open(Console, title="Status: %s" % svc, cmdlist=[cmd], closeOnSuccess=False)
+            cmd = 'ps | grep -E %s | grep -v grep || true' % _safe_shell_arg('|'.join(names))
+        self.session.open(Console, title='Status: %s' % display, cmdlist=[cmd], closeOnSuccess=False)
 
 class SystemInfoScreen(Screen):
-    skin = """
+    skin_large = """
     <screen position="center,center" size="1050,650" title="System Information">
         <widget name="title" position="20,10" size="1010,40" font="Regular;30" />
-        <widget name="info" position="20,60" size="1010,560" font="Regular;22" halign="left" valign="top" />
-        <widget name="help" position="20,620" size="1010,25" font="Regular;22" />
+        <widget name="info" position="20,60" size="1010,530" font="Regular;22" halign="left" valign="top" />
+        <widget name="help" position="20,610" size="1010,25" font="Regular;22" />
+    </screen>"""
+    skin_small = """
+    <screen position="center,center" size="690,440" title="System Information">
+        <widget name="title" position="15,8" size="660,30" font="Regular;21" />
+        <widget name="info" position="15,46" size="660,330" font="Regular;17" halign="left" valign="top" />
+        <widget name="help" position="15,394" size="660,25" font="Regular;17" />
     </screen>"""
 
     def __init__(self, session, lang="PL"):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.session = session
         self.lang = lang or "PL"
@@ -3802,14 +3916,21 @@ class SystemInfoScreen(Screen):
             pass
 
 class UninstallManagerScreen(Screen):
-    skin = """
+    skin_large = """
     <screen name="UninstallManagerScreen" position="center,center" size="1100,660" title="Uninstall">
         <widget name="list" position="20,20" size="1060,560" scrollbarMode="showOnDemand" />
         <widget name="status" position="20,595" size="1060,40" font="Regular;24" halign="left" valign="center" />
     </screen>
     """
+    skin_small = """
+    <screen name="UninstallManagerScreen" position="center,center" size="690,440" title="Uninstall">
+        <widget name="list" position="15,15" size="660,340" scrollbarMode="showOnDemand" />
+        <widget name="status" position="15,374" size="660,45" font="Regular;17" halign="left" valign="center" />
+    </screen>
+    """
 
     def __init__(self, session, lang='PL'):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.lang = lang or 'PL'
         self.session = session
@@ -3896,7 +4017,10 @@ class UninstallManagerScreen(Screen):
     def _do_uninstall(self, answer, pkg):
         if not answer:
             return
-        cmd = "opkg remove %s" % pkg
+        if not _validate_identifier(pkg):
+            show_message_compat(self.session, self._t_no_sel, MessageBox.TYPE_ERROR)
+            return
+        cmd = "opkg remove %s" % _safe_shell_arg(pkg)
         console_screen_open(
             self.session,
             ("Odinstalowanie: %s" % pkg) if self.lang == 'PL' else ("Removing: %s" % pkg),
@@ -3909,20 +4033,29 @@ class UninstallManagerScreen(Screen):
 
 
 class PluginUpdateManagerScreen(Screen):
-    skin = """
+    skin_large = """
     <screen name="PluginUpdateManagerScreen" position="center,center" size="1160,690" title="Plugin Updates">
         <widget name="list" position="20,20" size="1120,560" scrollbarMode="showOnDemand" />
         <widget name="status" position="20,595" size="1120,35" font="Regular;24" halign="left" valign="center" />
         <widget name="hint" position="20,635" size="1120,35" font="Regular;22" halign="left" valign="center" />
     </screen>
     """
+    skin_small = """
+    <screen name="PluginUpdateManagerScreen" position="center,center" size="690,445" title="Plugin Updates">
+        <widget name="list" position="15,15" size="660,330" scrollbarMode="showOnDemand" />
+        <widget name="status" position="15,355" size="660,32" font="Regular;18" halign="left" valign="center" />
+        <widget name="hint" position="15,398" size="660,32" font="Regular;17" halign="left" valign="center" />
+    </screen>
+    """
 
     def __init__(self, session, lang='PL'):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.lang = lang or 'PL'
         self.session = session
         self._load_started = False
         self._loading = False
+        self._closed = False
         self._worker_state = {"done": False, "result": None, "error": None}
 
         if self.lang == 'PL':
@@ -3983,6 +4116,12 @@ class PluginUpdateManagerScreen(Screen):
                 pass
 
         self.onShown.append(self._start_reload_once)
+        self.onClose.append(self._stop_polling)
+
+    def _stop_polling(self):
+        self._closed = True
+        try: self._poll_timer.stop()
+        except Exception: pass
 
     def _start_reload_once(self):
         if self._load_started:
@@ -4062,6 +4201,8 @@ class PluginUpdateManagerScreen(Screen):
             pass
 
     def _poll_worker(self):
+        if self._closed:
+            return
         if not self._worker_state.get("done"):
             try:
                 self._poll_timer.start(250, True)
@@ -4116,26 +4257,30 @@ class PluginUpdateManagerScreen(Screen):
     def _run_update(self, answer, entry):
         if not answer:
             return
-        entry_type = ensure_unicode(entry.get("type", "")).strip()
-        package = ensure_unicode(entry.get("package", "")).strip()
-        display_name = ensure_unicode(entry.get("name") or package).strip()
-
-        if entry_type == "opkg":
-            cmd = "opkg update && opkg upgrade {pkg}".format(pkg=package)
+        entry_type = ensure_unicode(entry.get('type', '')).strip()
+        package = ensure_unicode(entry.get('package', '')).strip()
+        display_name = ensure_unicode(entry.get('name') or package).strip()
+        if entry_type == 'opkg':
+            if not _validate_identifier(package):
+                show_message_compat(self.session, self._t_error, MessageBox.TYPE_ERROR)
+                return
+            cmd = 'opkg update && opkg upgrade %s' % _safe_shell_arg(package)
         else:
-            cmd = ensure_unicode(entry.get("install_cmd", "")).strip()
-
-        if not cmd:
-            show_message_compat(self.session, self._t_error)
-            return
-
-        console_screen_open(
-            self.session,
-            self._t_running.format(name=display_name),
-            [cmd],
-            callback=lambda *args: self.reload_list(),
-            close_on_finish=True
-        )
+            url = ensure_unicode(entry.get('download_url', '')).strip()
+            expected = ensure_unicode(entry.get('expected_package_regex', '')).strip()
+            checksum = ensure_unicode(entry.get('expected_sha256', '')).strip()
+            if not _is_https_allowed(url) or not expected:
+                show_message_compat(self.session, self._t_error, MessageBox.TYPE_ERROR)
+                return
+            status = os.path.join(PLUGIN_TMP_PATH, 'custom_update_%s.status' % int(time.time() * 1000))
+            cmd = '/bin/sh %s %s %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'safe_ipk_install.sh'), url, expected, status, checksum))
+        def finished(result):
+            if result and result.get('success'):
+                show_message_compat(self.session, ('Aktualizacja zakończona. Restart wykonaj ręcznie po sprawdzeniu działania.' if self.lang == 'PL' else 'Update completed. Restart manually after checking operation.'), timeout=8)
+                self.reload_list()
+            else:
+                show_message_compat(self.session, self._t_error + '\n\n' + ensure_unicode((result or {}).get('stderr', '')), MessageBox.TYPE_ERROR, timeout=14)
+        run_command_in_background(self.session, self._t_running.format(name=display_name), [cmd], callback_on_finish=finished)
 
 
 # === OPISY FUNKCJI DLA SYSTEMU TOOLTIP (v6.1) ===
@@ -4155,7 +4300,7 @@ FUNCTION_DESCRIPTIONS = {
         "🧹 Kasuj hasło Oscam": "Czyści hasło dostępu do WWW Oscam (jeśli jest ustawione).\nUłatwia odzyskanie dostępu do panelu bez reinstalacji.",
         "⚙️ oscam.dvbapi - kasowanie zawartości": "Czyści (kasuje zawartość) pliku oscam.dvbapi w konfiguracji Oscam.\nPrzydatne, gdy plik zawiera błędne wpisy lub chcesz zacząć od zera.",
         "⚙️ oscam.dvbapi - aktualizacja Poland": "Podmienia oscam.dvbapi na gotową konfigurację Poland dołączoną do AIO Panel.\nPrzed podmianą tworzy kopię starego pliku i próbuje odświeżyć usługę Softcam/Oscam.",
-        "📥 Softcam - Instalator": "Instaluje Softcam za pomocą skryptu (wget | bash).\nPo instalacji możesz doinstalować/wybrać emulator oraz przejść do instalacji Oscam z feed.",
+        "📥 Softcam - Instalator": "Uruchamia oficjalne polecenie feedu Softcam: wget -O - -q http://updates.mynonpublic.com/oea/feed | bash.\nNastępnie odświeża OPKG i umożliwia instalację OSCam.",
         "📥 OSCam-Emu - Instalator i aktywacja": "Preferuje OSCam-Emu z feedu, instaluje lub naprawczo przeinstalowuje pakiet, ustawia go jako aktywny softcam i sprawdza, czy proces faktycznie wystartował.\nLog diagnostyczny: /tmp/aio_oscam_install.log.",
         "📥 Oscam Levi45": "Instaluje Oscam Levi45 z oficjalnego instalatora Levi45Emulator.\nAIO pokazuje tylko nazwę Oscam Levi45 oraz wykryty numer lokalnej binarki, bez technicznej komendy w menu.",
         "📥 NCam 15.6 (Instalator)": "Instaluje NCam 15.6 z feedu/instalatora.\nPo instalacji zalecany restart GUI i wybór emu w ustawieniach Softcam.",
@@ -4179,7 +4324,7 @@ FUNCTION_DESCRIPTIONS = {
         # Narzędzia Systemowe
         "⚙️ Narzędzia Systemowe": "Zaawansowane narzędzia administracyjne systemu",
         "✨ Super Konfigurator (Pierwsza Instalacja)": "Asystent pierwszej konfiguracji tunera",
-        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Polska 13E AIO Panel)\n- instalację obsługi Softcam\n- instalację OSCam-Emu, ustawienie jako aktywny softcam i uruchomienie\n- pobranie piconów (Transparent)\nNa końcu uruchamia pełny restart systemu tunera.",
+        ">>> Super Konfigurator (Pierwsza Instalacja)": "Automatyczna pierwsza konfiguracja tunera.\n\nWykonuje kolejno:\n- instalację listy kanałów (Polska 13E AIO Panel)\n- instalację obsługi Softcam\n- instalację OSCam-Emu, ustawienie jako aktywny softcam i uruchomienie\n- pobranie piconów (Transparent)\nNa końcu przeładowuje listę kanałów. Restart GUI wykonujesz ręcznie tylko wtedy, gdy jest potrzebny.",
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "🔎 Sprawdź aktualizacje zainstalowanych wtyczek": "Sprawdza zainstalowane wtyczki i pokazuje dwie sekcje aktualizacji: OPKG oraz GitHub/Custom.\nPozwala uruchomić aktualizację tylko dla pozycji, dla których wykryto nowszą wersję.",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
@@ -4231,7 +4376,7 @@ FUNCTION_DESCRIPTIONS = {
         "🧹 Clear Oscam Password": "Clears the Oscam WebIF password (if configured).\nHelps regain panel access without reinstalling.",
         "⚙️ oscam.dvbapi - clear file": "Clears/truncates the oscam.dvbapi file in Oscam config directories.\nUseful if the file contains wrong entries or you want a clean start.",
         "⚙️ oscam.dvbapi - Poland update": "Replaces oscam.dvbapi with the bundled Poland profile from AIO Panel.\nCreates a backup of the previous file and tries to refresh Softcam/Oscam afterwards.",
-        "📥 Softcam - Installer": "Installs Softcam using the installer script (wget | bash).\nAfter install you can proceed with installing Oscam from your feed.",
+        "📥 Softcam - Installer": "Runs the official Softcam feed command: wget -O - -q http://updates.mynonpublic.com/oea/feed | bash.\nThen refreshes OPKG and enables OSCam installation.",
         "📥 OSCam-Emu - Install and activate": "Prefers OSCam-Emu from the feed, installs or repairs the package, selects it as the active softcam and verifies that the process is actually running.\nDiagnostic log: /tmp/aio_oscam_install.log.",
         "📥 NCam 15.6 (Installer)": "Installs NCam 15.6 via feed/installer.\nGUI restart recommended; then select the emulator in Softcam settings.",
         "📥 NCam (Feed - latest)": "Installs the latest NCam from your system feed (opkg).\nGUI restart recommended; then select the emulator in Softcam settings.",
@@ -4254,7 +4399,7 @@ FUNCTION_DESCRIPTIONS = {
         # System Tools
         "⚙️ System Tools": "Advanced system administration tools",
         "✨ Super Setup Wizard (First Installation)": "First time tuner setup assistant",
-        ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Polska 13E AIO Panel)\n- install Softcam support\n- install OSCam-Emu, select it as the active softcam and start it\n- download picons (Transparent)\nFinally triggers a full system reboot.",
+        ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Polska 13E AIO Panel)\n- install Softcam support\n- install OSCam-Emu, select it as the active softcam and start it\n- download picons (Transparent)\nFinally reloads the channel list. Restart the GUI manually only if required.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
         "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set covering 13E, 19.2E and IPTV, then asks for the target folder before installation.\nYou can keep the default path or choose an external device; GUI restart or a full reboot is recommended after larger changes.",
@@ -4356,6 +4501,12 @@ class PanelAIO(Screen):
         self.setTitle("Panel AIO " + VER)
         self.sess = session
         self.lang = 'PL'
+        try:
+            saved_lang = config.plugins.panelaio.language.value if config is not None and hasattr(config.plugins.panelaio, 'language') else 'auto'
+            if saved_lang in ('PL', 'EN'):
+                self.lang = saved_lang
+        except Exception:
+            pass
         
         # Logika detekcji obrazu
         self.image_type = "unknown"
@@ -4365,14 +4516,14 @@ class PanelAIO(Screen):
                     issue_content = f.read()
                 if "Hyperion" in issue_content:
                     self.image_type = "hyperion"
-            except: pass
+            except Exception: pass
         if self.image_type == "unknown" and fileExists("/etc/image-version"):
             try:
                 with open("/etc/image-version", "r") as f:
                     img_info = f.read().lower()
                 if "openatv" in img_info: self.image_type = "openatv"
                 elif "openpli" in img_info: self.image_type = "openpli"
-            except: pass
+            except Exception: pass
         if self.image_type == "unknown" and fileExists("/etc/vtiversion.info"):
             self.image_type = "vti"
 
@@ -4408,12 +4559,14 @@ class PanelAIO(Screen):
             pass
 
         # health timer
+        self._closed = False
         self._health_timer = eTimer()
         try:
             self._health_timer_conn = self._health_timer.timeout.connect(self._update_health)
         except Exception:
             self._health_timer.callback.append(self._update_health)
         self.onShown.append(self._start_health_timer)
+        self.onClose.append(self._stop_health_timer)
         self.onLayoutFinish.append(self._apply_focus)
         self["function_description"] = Label("") # Tooltip z opisem funkcji
         self["legend"] = Label(" ") 
@@ -4533,7 +4686,7 @@ class PanelAIO(Screen):
                              # W Py2 emoji to bajty, trudniej usuwać bez biblioteki regex/emoji
                              pass 
                     description = descriptions.get(clean_name.strip(), "")
-                except:
+                except Exception:
                     pass
 
             self["function_description"].setText(description)
@@ -4571,7 +4724,14 @@ class PanelAIO(Screen):
             pass
         self.update_function_description()
     def set_language(self, lang):
-        self.lang = lang
+        self.lang = lang if lang in ('PL', 'EN') else 'PL'
+        try:
+            if config is not None and hasattr(config.plugins.panelaio, 'language'):
+                config.plugins.panelaio.language.value = self.lang
+                config.plugins.panelaio.language.save()
+                if configfile is not None: configfile.save()
+        except Exception as exc:
+            print('[AIO Panel] language save:', exc)
         self.set_lang_headers_and_legends()
         
         try:
@@ -4583,8 +4743,8 @@ class PanelAIO(Screen):
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
             
-            # v12.0.1: usuń duplikaty z S4aUpdater dla repo-only, ukryj listy starsze niż 2026
-            # i zachowaj kolejność od najnowszej do najstarszej.
+            # v14.0.0: repo + wszystkie datowane listy S4a z ostatnich 12 miesięcy;
+            # Bzyk83 jest wykluczony globalnie, a kolejność pozostaje datowa.
             final_channel_lists = _prepare_channel_lists_v1201(repo_lists, s4a_lists_full)
             
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
@@ -4916,7 +5076,13 @@ class PanelAIO(Screen):
             self.switch_tab(idx)
 
 
+    def _stop_health_timer(self):
+        self._closed = True
+        try: self._health_timer.stop()
+        except Exception: pass
+
     def _start_health_timer(self):
+        if self._closed: return
         self._update_health()
         try:
             self._health_timer.start(2000, True)
@@ -4985,7 +5151,8 @@ class PanelAIO(Screen):
         except Exception:
             pass
         try:
-            self._health_timer.start(2000, True)
+            if not self._closed:
+                self._health_timer.start(2000, True)
         except Exception:
             pass
 
@@ -5002,7 +5169,7 @@ class PanelAIO(Screen):
             "CMD:SHOW_AIO_INFO", "CMD:NETWORK_DIAGNOSTICS", "CMD:FREE_SPACE_DISPLAY", 
             "CMD:UNINSTALL_MANAGER", "CMD:MANAGE_DVBAPI", "CMD:CHECK_FOR_UPDATES", 
             "CMD:SUPER_SETUP_WIZARD", "CMD:UPDATE_SATELLITES_XML", "CMD:INSTALL_SERVICEAPP", "CMD:IPTV_DEPS", 
-            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO", "CMD:CLEAR_TMP_CACHE", "CMD:CLEAR_RAM_CACHE",
+            "CMD:INSTALL_E2KODI", "CMD:INSTALL_J00ZEK_REPO",
             "CMD:INSTALL_SOFTCAM_SCRIPT", "CMD:INSTALL_IPTV_DREAM", "CMD:SETUP_AUTO_RAM",
             "CMD:FEED_MANAGER", "CMD:POSTINSTALL_REPAIR", "CMD:TOGGLE_MENU_VISIBILITY", "CMD:SHOW_PENDING_AIO_UPDATE"
         ]
@@ -5016,15 +5183,16 @@ class PanelAIO(Screen):
             self.sess.openWithCallback(lambda ret: self.execute_action(name, action) if ret else None, MessageBox, "Czy wykonać akcję:\n'{}'?".format(name), type=MessageBox.TYPE_YESNO)
 
     def clear_ram_memory(self):
-        os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
-        self.sess.open(MessageBox, "Pamięć RAM została wyczyszczona.", MessageBox.TYPE_INFO)
+        gc.collect()
+        show_message_compat(self.sess, ('Uruchomiono bezpieczne porządkowanie pamięci Pythona. Cache systemu Linux nie został destrukcyjnie opróżniony.' if self.lang == 'PL' else 'Safe Python memory cleanup was run. The Linux filesystem cache was not destructively dropped.'), MessageBox.TYPE_INFO, timeout=8)
 
     def clear_tmp_cache(self):
         try:
-            os.system("rm -rf /tmp/*.ipk /tmp/*.zip /tmp/*.tar.gz /tmp/*.tgz /tmp/epg.dat")
-            self.sess.open(MessageBox, "Wyczyszczono pamięć podręczną /tmp.", MessageBox.TYPE_INFO)
-        except Exception as e:
-            self.sess.open(MessageBox, "Błąd: {}".format(e), MessageBox.TYPE_ERROR)
+            removed = _cleanup_owned_tmp(PLUGIN_TMP_PATH, 0)
+            gc.collect()
+            show_message_compat(self.sess, ('Usunięto pliki robocze należące do AIO Panel: %s.' % removed if self.lang == 'PL' else 'Removed AIO Panel temporary items: %s.' % removed), MessageBox.TYPE_INFO)
+        except Exception as exc:
+            show_message_compat(self.sess, 'Błąd: {}'.format(exc), MessageBox.TYPE_ERROR)
 
     def show_auto_ram_menu(self):
         current = "off"
@@ -5169,43 +5337,16 @@ class PanelAIO(Screen):
     def _do_update_action(self, confirmed):
         if not confirmed:
             return
-
-        installer_url = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh"
-        tmp_installer = "/tmp/panelaio_installer.sh"
-        cmd = """
-            URL=%s
-            OUT=%s
-            rm -f "$OUT" "$OUT.tmp"
-            aio_download_file() {
-                U="$1"; O="$2"; rm -f "$O" "$O.tmp"
-                if command -v wget >/dev/null 2>&1; then
-                    wget -4 -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-                    wget -4 --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-                    wget --no-check-certificate -U "Enigma2" -T 30 -t 2 -O "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-                fi
-                if command -v curl >/dev/null 2>&1; then
-                    curl -L --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-                    curl -L -k --ipv4 -A "Enigma2" --connect-timeout 15 --max-time 60 -o "$O.tmp" "$U" >/dev/null 2>&1 && [ -s "$O.tmp" ] && mv -f "$O.tmp" "$O" && return 0
-                fi
-                rm -f "$O.tmp"; return 1
-            }
-            aio_download_is_html_error() {
-                H=$(dd if="$1" bs=512 count=1 2>/dev/null | tr 'A-Z' 'a-z')
-                case "$H" in *"<html"*|*"<!doctype"*|*"404: not found"*|*"accessdenied"*) return 0;; esac
-                return 1
-            }
-            if aio_download_file "$URL" "$OUT" && ! aio_download_is_html_error "$OUT"; then
-                chmod 755 "$OUT"
-                /bin/sh "$OUT"
-            else
-                echo "Błąd pobierania aktualizacji AIO Panel z GitHub/OpenPLi."
-                echo "Sprawdź wget/curl/SSL/IPv4 albo zainstaluj IPK ręcznie."
-                rm -f "$OUT" "$OUT.tmp"
-                exit 1
-            fi
-        """ % (_safe_shell_arg(installer_url), _safe_shell_arg(tmp_installer))
-
-        console_screen_open(self.sess, "Aktualizacja AIO Panel", [cmd], callback=lambda *args: reactor.callLater(1, lambda: self.sess.open(TryQuitMainloop, 2)), close_on_finish=True)
+        url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh'
+        status = os.path.join(PLUGIN_TMP_PATH, 'aio_self_update_%s.status' % int(time.time() * 1000))
+        command = '/bin/sh %s %s %s /bin/sh' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'run_remote_script_safe.sh'), url, status))
+        def finished(result):
+            if result and result.get('success'):
+                self.update_info = None
+                show_message_compat(self.sess, ('Aktualizacja została zainstalowana. Sprawdź system i wykonaj restart GUI ręcznie.' if self.lang == 'PL' else 'The update was installed. Check the system and restart the GUI manually.'), MessageBox.TYPE_INFO, timeout=10)
+            else:
+                show_message_compat(self.sess, ('Aktualizacja nie powiodła się. Log: /tmp/aio_remote_script.log' if self.lang == 'PL' else 'Update failed. Log: /tmp/aio_remote_script.log'), MessageBox.TYPE_ERROR, timeout=14)
+        run_command_in_background(self.sess, 'Aktualizacja AIO Panel', [command], callback_on_finish=finished)
 
     def _get_picon_target_candidates(self):
         mounts = []
@@ -5279,76 +5420,223 @@ class PanelAIO(Screen):
             return
         install_archive(self.sess, title, url, callback_on_finish=self.reload_settings_python, picon_path=target)
 
+    def _safe_legacy_action_command(self, title, raw):
+        """Translate legacy menu commands to audited local installers; never run raw shell."""
+        raw = ensure_unicode(raw).strip()
+        status = os.path.join(PLUGIN_TMP_PATH, 'legacy_action_%s_%s.status' % (os.getpid(), int(time.time() * 1000)))
+        # Fixed plugin archive installer.
+        if 'Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz' in raw:
+            script = os.path.join(PLUGIN_PATH, 'install_plugin_archive_safe.sh')
+            url = 'https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz'
+            source = 'Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream'
+            target = '/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream'
+            return '/bin/sh %s %s %s %s plugin.py %s' % tuple(_safe_shell_arg(x) for x in (script, url, source, target, status))
+
+        # Direct IPK URL is installed only after package metadata validation.
+        ipk_match = re.search(r'(https://[^\s"\']+\.ipk(?:\?[^\s"\']*)?)', raw, re.I)
+        if ipk_match:
+            url = ipk_match.group(1)
+            if not _is_https_allowed(url):
+                return None
+            expected = '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+            if 'neoradio' in url.lower():
+                expected = '^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$'
+            elif 'youtube' in url.lower():
+                expected = '^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$'
+            return '/bin/sh %s %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'safe_ipk_install.sh'), url, expected, status))
+
+        # Downloaded scripts are never piped directly to a shell.
+        url_match = re.search(r'(https://[^\s"\']+)', raw, re.I)
+        if url_match and ('| /bin/sh' in raw or '| sh' in raw or '| /bin/bash' in raw or '| bash' in raw):
+            url = url_match.group(1).rstrip(');')
+            if not _is_https_allowed(url):
+                return None
+            shell_bin = '/bin/bash' if ('bash' in raw and os.path.exists('/bin/bash')) else '/bin/sh'
+            extra = ''
+            if re.search(r'\bbash\s+-s\s+install\b', raw):
+                extra = ' install'
+            return '/bin/sh %s %s %s %s%s' % (
+                _safe_shell_arg(os.path.join(PLUGIN_PATH, 'run_remote_script_safe.sh')),
+                _safe_shell_arg(url), _safe_shell_arg(status), _safe_shell_arg(shell_bin), extra)
+
+        # Strict OPKG allowlist: package identifiers only, no substitutions/redirections.
+        compact = re.sub(r'\s+', ' ', raw).strip()
+        if re.match(r'^opkg update\s*&&\s*opkg install\s+[A-Za-z0-9_.+@ -]+$', compact):
+            packages = compact.split('opkg install', 1)[1].strip().split()
+            if packages and all(_validate_identifier(pkg) for pkg in packages):
+                return 'opkg update && opkg install ' + ' '.join(_safe_shell_arg(pkg) for pkg in packages)
+        if compact.startswith('opkg update') and 'estalker' in compact.lower():
+            return "opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker)"
+        return None
+
+    def _show_action_result(self, result):
+        if result and result.get('success'):
+            msg = ('Operacja zakończona poprawnie. Restart GUI wykonaj ręcznie tylko wtedy, gdy jest wymagany.'
+                   if self.lang == 'PL' else
+                   'Operation completed successfully. Restart the GUI manually only when required.')
+            show_message_compat(self.sess, msg, timeout=8)
+        else:
+            detail = ''
+            if result:
+                detail = ensure_unicode(result.get('error') or result.get('stderr') or result.get('output') or '').strip()
+            msg = ('Operacja nie powiodła się.' if self.lang == 'PL' else 'Operation failed.')
+            if detail:
+                msg += '\n\n' + detail[-900:]
+            show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=14)
+
+    def _run_safe_legacy_action(self, title, raw):
+        command = self._safe_legacy_action_command(title, raw)
+        if not command:
+            msg = ('Ta pozycja została zablokowana, ponieważ źródło używa HTTP albo komenda nie spełnia zasad bezpieczeństwa.'
+                   if self.lang == 'PL' else
+                   'This item was blocked because its source uses HTTP or the command does not meet the safety policy.')
+            show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=14)
+            return
+        def done(result):
+            if result and result.get('success'):
+                show_message_compat(self.sess, ('Operacja zakończona poprawnie. Restart wykonaj ręcznie, jeśli jest wymagany.' if self.lang == 'PL' else 'Operation completed successfully. Restart manually if required.'), timeout=7)
+            else:
+                show_message_compat(self.sess, ('Operacja nie powiodła się. Sprawdź log instalatora w /tmp.' if self.lang == 'PL' else 'Operation failed. Check the installer log in /tmp.'), MessageBox.TYPE_ERROR, timeout=12)
+        run_command_in_background(self.sess, title, [command], callback_on_finish=done)
+
     # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
         title = name
-        if action.startswith("archive:"):
-            archive_url = action.split(':', 1)[1]
-            if archive_url == "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip" or "picon" in title.lower():
-                self._prompt_picon_target(title, archive_url)
-            else:
-                install_archive(self.sess, title, archive_url, callback_on_finish=self.reload_settings_python)
-        elif action.startswith("m3u:"):
-            parts = action.split(':', 3)
-            self.install_m3u_as_bouquet(title, parts[1] + ":" + parts[2], parts[3].split(':', 1)[0], parts[3].split(':', 1)[1] if len(parts[3].split(':', 1)) > 1 else parts[3].split(':', 1)[0])
-        elif action.startswith("bouquet:"):
-            parts = action.split(':', 3)
-            self.install_bouquet_reference(title, parts[1] + ":" + parts[2], parts[3].split(':', 1)[0], parts[3].split(':', 1)[1] if len(parts[3].split(':', 1)) > 1 else parts[3].split(':', 1)[0])
-        elif action.startswith("bash_raw:"):
-            self._open_console_install_action(title, [action.split(':', 1)[1]])
-        elif action.startswith("CMD:"):
+        if action.startswith('picons:'):
+            self._prompt_picon_target(title, action.split(':', 1)[1])
+        elif action.startswith('s4archive:'):
+            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python, action_type='channels_s4a')
+        elif action.startswith('archive:'):
+            install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python, action_type='channels')
+        elif action.startswith('m3u_json:'):
+            try:
+                url, bid, bname = _decode_action_payload(action.split(':', 1)[1], 'm3u')
+            except Exception as e:
+                show_message_compat(self.sess, 'Nieprawidłowa definicja M3U: %s' % e, MessageBox.TYPE_ERROR)
+                return
+            self.install_m3u_as_bouquet(title, url, bid, bname)
+        elif action.startswith('bouquet_json:'):
+            try:
+                url, bid, bname = _decode_action_payload(action.split(':', 1)[1], 'bouquet')
+            except Exception as e:
+                show_message_compat(self.sess, 'Nieprawidłowa definicja bukietu: %s' % e, MessageBox.TYPE_ERROR)
+                return
+            self.install_bouquet_reference(title, url, bid, bname)
+        elif action.startswith('m3u:'):
+            # Backward compatibility for cached legacy menu entries.
+            try:
+                url, bid, bname = action.split(':', 1)[1].rsplit(':', 2)
+            except Exception:
+                show_message_compat(self.sess, 'Nieprawidłowa definicja M3U.', MessageBox.TYPE_ERROR)
+                return
+            self.install_m3u_as_bouquet(title, url, bid, bname)
+        elif action.startswith('bouquet:'):
+            try:
+                url, bid, bname = action.split(':', 1)[1].rsplit(':', 2)
+            except Exception:
+                show_message_compat(self.sess, 'Nieprawidłowa definicja bukietu.', MessageBox.TYPE_ERROR)
+                return
+            self.install_bouquet_reference(title, url, bid, bname)
+        elif action.startswith('opkg:'):
+            package_spec = action.split(':', 1)[1].strip()
+            packages = [item for item in package_spec.replace(',', ' ').split() if item]
+            if not packages or not all(_validate_identifier(item) for item in packages):
+                show_message_compat(self.sess, 'Nieprawidłowa nazwa pakietu OPKG.', MessageBox.TYPE_ERROR)
+                return
+            command = 'opkg update && opkg install ' + ' '.join(_safe_shell_arg(item) for item in packages)
+            run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
+        elif action.startswith('remote_script_bash:') or action.startswith('remote_script:'):
+            use_bash = action.startswith('remote_script_bash:')
+            spec = action.split(':', 1)[1]
+            parts = spec.split('|', 1)
+            url = parts[0].strip()
+            script_arg = parts[1].strip() if len(parts) > 1 else ''
+            if not _is_https_allowed(url) or (script_arg and not _validate_identifier(script_arg)):
+                show_message_compat(self.sess, 'Nieprawidłowe lub niezaufane źródło instalatora.', MessageBox.TYPE_ERROR)
+                return
+            status = os.path.join(PLUGIN_TMP_PATH, 'remote_action_%s_%s.status' % (os.getpid(), int(time.time() * 1000)))
+            shell_bin = '/bin/bash' if use_bash and os.path.exists('/bin/bash') else '/bin/sh'
+            command = '/bin/sh %s %s %s %s%s' % (
+                _safe_shell_arg(os.path.join(PLUGIN_PATH, 'run_remote_script_safe.sh')),
+                _safe_shell_arg(url), _safe_shell_arg(status), _safe_shell_arg(shell_bin),
+                (' ' + _safe_shell_arg(script_arg)) if script_arg else '')
+            run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
+        elif action.startswith('safe_ipk:'):
+            spec = action.split(':', 1)[1]
+            parts = spec.split('|', 1)
+            url = parts[0].strip()
+            expected = parts[1].strip() if len(parts) > 1 else '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+            if not _is_https_allowed(url):
+                show_message_compat(self.sess, 'Nieprawidłowe źródło IPK.', MessageBox.TYPE_ERROR)
+                return
+            status = os.path.join(PLUGIN_TMP_PATH, 'ipk_action_%s_%s.status' % (os.getpid(), int(time.time() * 1000)))
+            command = '/bin/sh %s %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'safe_ipk_install.sh'), url, expected, status))
+            run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
+        elif action.startswith('bash_raw:'):
+            # Compatibility only for old cached menu data; raw shell is translated through a strict allowlist.
+            self._run_safe_legacy_action(title, action.split(':', 1)[1])
+        elif action.startswith('blocked:'):
+            show_message_compat(self.sess, action.split(':', 1)[1], MessageBox.TYPE_ERROR, timeout=12)
+        elif action.startswith('CMD:'):
             key = action.split(':', 1)[1]
-            if key == "SUPER_SETUP_WIZARD": self.run_super_setup_wizard()
-            elif key == "CHECK_FOR_UPDATES": self.check_for_updates_manual()
-            elif key == "SHOW_PENDING_AIO_UPDATE": self.show_detected_update_prompt()
-            elif key == "UPDATE_SATELLITES_XML": run_command_in_background(self.sess, title, ["/bin/sh " + os.path.join(PLUGIN_PATH, "update_satellites_xml.sh")], callback_on_finish=self.reload_settings_python)
-            elif key == "INSTALL_SERVICEAPP": run_command_in_background(self.sess, title, ["opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall"])
-            elif key == "IPTV_DEPS": self.install_iptv_deps()
-            elif key == "INSTALL_BEST_OSCAM": self.install_best_oscam()
-            elif key == "INSTALL_LEVI45_OSCAM": self.install_levi45_oscam()
-            elif key == "INSTALL_SOFTCAM_SCRIPT": self.install_softcam_script()
-            elif key == "INSTALL_NCAM_FEED": self.install_ncam_feed()
-            elif key == "INSTALL_IPTV_DREAM": self.install_iptv_dream_simplified()
-            elif key == "MANAGE_DVBAPI": self.manage_dvbapi()
-            elif key == "UPDATE_DVBAPI_POLAND": self.update_oscam_dvbapi_poland()
-            elif key == "UNINSTALL_MANAGER": self.show_uninstall_manager()
-            elif key == "PLUGIN_UPDATE_MANAGER": self.show_plugin_update_manager()
-            elif key == "CLEAR_OSCAM_PASS": self.clear_oscam_password() 
-            elif key == "CLEAR_FTP_PASS": run_command_in_background(self.sess, title, ["passwd -d root"])
-            elif key == "SET_SYSTEM_PASSWORD": self.set_system_password()
-            elif key == "RESTART_OSCAM": self.restart_oscam()
-            elif key == "SETUP_AUTO_RAM": self.show_auto_ram_menu()
-            elif key == "TOGGLE_MENU_VISIBILITY": self.toggle_menu_visibility()
-            elif key == "CLEAR_TMP_CACHE": self.clear_tmp_cache()
-            elif key == "CLEAR_RAM_CACHE": self.clear_ram_memory()
-            elif key == "INSTALL_E2KODI": install_e2kodi(self.sess)
-            elif key == "INSTALL_J00ZEK_REPO": self.install_j00zek_repo()
-            elif key == "SHOW_AIO_INFO": self.show_info_screen()
-            elif key == "BACKUP_LIST": self.backup_lists()
-            elif key == "BACKUP_OSCAM": self.backup_oscam()
-            elif key == "FEED_MANAGER": self.open_feed_manager()
-            elif key == "POSTINSTALL_REPAIR": self.open_postinstall_repair()
-            elif key == "RESTORE_LIST": self.restore_lists()
-            elif key == "RESTORE_OSCAM": self.restore_oscam()
-            elif key == "SYSTEM_MONITOR": self.open_system_monitor()
-            elif key == "LOG_VIEWER": self.open_log_viewer()
-            elif key == "CRON_MANAGER": self.open_cron_manager()
-            elif key == "SERVICE_MANAGER": self.open_service_manager()
-            # REMOVED: NETWORK_TOOLS
-            elif key == "SYSTEM_INFO": self.open_system_info()
-            # REMOVED: AUTO_BACKUP
-            elif key == "NETWORK_DIAGNOSTICS": self.run_network_diagnostics()
-            elif key == "FREE_SPACE_DISPLAY": console_screen_open(self.sess, "Wolne miejsce", ["df -h"], close_on_finish=False)
-            elif key == "SMART_CLEANUP": self.smart_cleanup()
-            elif key == "BROKEN_PLUGIN_CLEANER": self.clean_broken_plugins()
-            elif key == "AIO_QUICKSTART": self.open_aio_quickstart()
-            elif key == "COMPATIBILITY_CHECK": self.open_compatibility_check()
-            elif key == "SHOW_AIO_TIP": self.show_aio_tip()
-            elif key == "LOCAL_CHANGELOG": self.show_local_changelog()
-            
-            # --- ZMIANY TUTAJ: Obsługa nowych funkcji ---
-            elif key == "UPDATE_SRVID": self.update_oscam_srvid_files() # Poprawiona
-            elif key == "INSTALL_SOFTCAMKEY_ONLINE": self.install_softcam_key_online() # Nowa
+            if key == 'SUPER_SETUP_WIZARD': self.run_super_setup_wizard()
+            elif key == 'CHECK_FOR_UPDATES': self.check_for_updates_manual()
+            elif key == 'SHOW_PENDING_AIO_UPDATE': self.show_detected_update_prompt()
+            elif key == 'UPDATE_SATELLITES_XML': run_command_in_background(self.sess, title, ['/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'update_satellites_xml.sh'))], callback_on_finish=self.reload_settings_python)
+            elif key == 'INSTALL_SERVICEAPP': run_command_in_background(self.sess, title, ['opkg update && opkg install enigma2-plugin-systemplugins-serviceapp exteplayer3 gstplayer && opkg install uchardet --force-reinstall'])
+            elif key == 'IPTV_DEPS': self.install_iptv_deps()
+            elif key == 'INSTALL_BEST_OSCAM': self.install_best_oscam()
+            elif key == 'INSTALL_LEVI45_OSCAM': self.install_levi45_oscam()
+            elif key == 'INSTALL_SOFTCAM_SCRIPT': self.install_softcam_script()
+            elif key == 'INSTALL_NCAM_FEED': self.install_ncam_feed()
+            elif key == 'INSTALL_IPTV_DREAM': self.install_iptv_dream_simplified()
+            elif key == 'MANAGE_DVBAPI': self.manage_dvbapi()
+            elif key == 'UPDATE_DVBAPI_POLAND': self.update_oscam_dvbapi_poland()
+            elif key == 'UNINSTALL_MANAGER': self.show_uninstall_manager()
+            elif key == 'PLUGIN_UPDATE_MANAGER': self.show_plugin_update_manager()
+            elif key == 'CLEAR_OSCAM_PASS': self.clear_oscam_password()
+            elif key == 'CLEAR_FTP_PASS': run_command_in_background(self.sess, title, ['passwd -d root'])
+            elif key == 'SET_SYSTEM_PASSWORD': self.set_system_password()
+            elif key == 'RESTART_OSCAM': self.restart_oscam()
+            elif key == 'SETUP_AUTO_RAM': self.show_auto_ram_menu()
+            elif key == 'TOGGLE_MENU_VISIBILITY': self.toggle_menu_visibility()
+            elif key == 'CLEAR_TMP_CACHE': self.clear_tmp_cache()
+            elif key == 'CLEAR_RAM_CACHE': self.clear_ram_memory()
+            elif key == 'INSTALL_E2KODI': install_e2kodi(self.sess)
+            elif key == 'INSTALL_J00ZEK_REPO': self.install_j00zek_repo()
+            elif key == 'SHOW_AIO_INFO': self.show_info_screen()
+            elif key == 'BACKUP_LIST': self.backup_lists()
+            elif key == 'BACKUP_OSCAM': self.backup_oscam()
+            elif key == 'FEED_MANAGER': self.open_feed_manager()
+            elif key == 'POSTINSTALL_REPAIR': self.open_postinstall_repair()
+            elif key == 'RESTORE_LIST': self.restore_lists()
+            elif key == 'RESTORE_OSCAM': self.restore_oscam()
+            elif key == 'SYSTEM_MONITOR': self.open_system_monitor()
+            elif key == 'LOG_VIEWER': self.open_log_viewer()
+            elif key == 'CRON_MANAGER': self.open_cron_manager()
+            elif key == 'SERVICE_MANAGER': self.open_service_manager()
+            elif key == 'SYSTEM_INFO': self.open_system_info()
+            elif key == 'NETWORK_DIAGNOSTICS': self.run_network_diagnostics()
+            elif key == 'FREE_SPACE_DISPLAY': console_screen_open(self.sess, 'Wolne miejsce', ['df -h'], close_on_finish=False)
+            elif key == 'SMART_CLEANUP': self.smart_cleanup()
+            elif key == 'BROKEN_PLUGIN_CLEANER': self.clean_broken_plugins()
+            elif key == 'AIO_QUICKSTART': self.open_aio_quickstart()
+            elif key == 'COMPATIBILITY_CHECK': self.open_compatibility_check()
+            elif key == 'SHOW_AIO_TIP': self.show_aio_tip()
+            elif key == 'LOCAL_CHANGELOG': self.show_local_changelog()
+            elif key == 'UPDATE_SRVID': self.update_oscam_srvid_files()
+            elif key == 'INSTALL_SOFTCAMKEY_ONLINE': self.install_softcam_key_online()
+            elif key == 'INSTALL_BMX_SAFE':
+                status = os.path.join(PLUGIN_TMP_PATH, 'bmx_install_%s.status' % os.getpid())
+                command = '/bin/sh %s %s %s %s plugin.py %s' % tuple(_safe_shell_arg(x) for x in (
+                    os.path.join(PLUGIN_PATH, 'install_plugin_archive_safe.sh'),
+                    'https://github.com/kiddac/Bouquet_Maker_Xtream/archive/refs/tags/1.76-20260510.tar.gz',
+                    'Bouquet_Maker_Xtream-1.76-20260510/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream',
+                    '/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream', status))
+                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
+            elif key == 'INSTALL_ESTALKER_SAFE':
+                command = 'opkg update && (opkg install enigma2-plugin-extensions-estalker || opkg install enigma2-plugin-extensions-e-stralker || opkg install enigma2-plugin-extensions-e-stalker)'
+                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
 
     # --- FUNKCJE INSTALACYJNE I POMOCNICZE ---
     
@@ -5356,83 +5644,67 @@ class PanelAIO(Screen):
     def run_super_setup_wizard(self):
         lang = self.lang
         options = [
-            (TRANSLATIONS[lang]["sk_option_deps"], "deps_only"),
-            (TRANSLATIONS[lang]["sk_option_basic_no_picons"], "install_basic_no_picons"),
-            (TRANSLATIONS[lang]["sk_option_full_picons"], "install_with_picons"),
-            (TRANSLATIONS[lang]["sk_option_cancel"], "cancel")
+            (TRANSLATIONS[lang]['sk_option_deps'], 'deps_only'),
+            (TRANSLATIONS[lang]['sk_option_basic_no_picons'], 'install_basic_no_picons'),
+            (TRANSLATIONS[lang]['sk_option_full_picons'], 'install_with_picons'),
+            (TRANSLATIONS[lang]['sk_option_cancel'], 'cancel')
         ]
-
-        # Mapa opisów dla opcji
         desc_map = {
-            "deps_only": "Tylko podstawowe pakiety systemowe (wget, tar, unzip).\nNie zmienia konfiguracji kanałów ani softcamu.",
-            "install_basic_no_picons": "Konfiguracja standardowa:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n- Pełny restart tunera\nSzybka instalacja.",
-            "install_with_picons": "Konfiguracja pełna:\n- Lista kanałów\n- Instalacja Softcam (skrypt)\n- Instalacja i aktywacja OSCam-Emu\n- PICONY (Transparent)\nUWAGA: Trwa dłużej i wymaga restartu systemu.",
-            "cancel": "Powrót do menu."
+            'deps_only': ('Instaluje wyłącznie brakujące zależności. Nie zmienia list, piconów ani softcamu.' if lang == 'PL' else 'Installs missing dependencies only. It does not change lists, picons or softcam.'),
+            'install_basic_no_picons': ('Bezpiecznie instaluje listę Polska 13E AIO Panel, feed Softcam i OSCam-Emu. Każdy krok jest sprawdzany; bez automatycznego restartu.' if lang == 'PL' else 'Safely installs Polska 13E AIO Panel, the Softcam feed and OSCam-Emu. Every step is verified; no automatic restart.'),
+            'install_with_picons': ('Pełna konfiguracja jak START oraz picony do wybranego katalogu. Wymaga wolnego miejsca; bez automatycznego restartu.' if lang == 'PL' else 'Full START configuration plus picons in a selected folder. Requires free space; no automatic restart.'),
+            'cancel': ('Powrót do menu.' if lang == 'PL' else 'Return to menu.')
         }
-        if lang != "PL":
-            desc_map = {
-                "deps_only": "Install only basic system packages (wget, tar, unzip).\nDoes not change channel lists or softcam.",
-                "install_basic_no_picons": "Standard configuration:\n- Channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n- Full receiver reboot\nFast installation.",
-                "install_with_picons": "Full configuration:\n- Channel list\n- Install Softcam (script)\n- Install and activate OSCam-Emu\n- PICONS (Transparent)\nNOTE: Takes longer and requires full system reboot.",
-                "cancel": "Back to menu."
-            }
-
-        # Użycie nowej klasy zamiast standardowego ChoiceBox
-        self.sess.openWithCallback(
-            self._super_wizard_selected,
-            SuperWizardChoiceScreen,
-            options=options,
-            title=TRANSLATIONS[lang]["sk_choice_title"],
-            description_map=desc_map
-        )
+        self.sess.openWithCallback(self._super_wizard_selected, SuperWizardChoiceScreen, options=options, title=TRANSLATIONS[lang]['sk_choice_title'], description_map=desc_map)
 
     def _super_wizard_selected(self, choice):
-        if not choice or choice[1] == "cancel":
+        if not choice or choice[1] == 'cancel':
             return
+        key = choice[1]
+        if key == 'install_with_picons':
+            choices = []
+            default = '/usr/share/enigma2/picon'
+            choices.append((('Pamięć wewnętrzna: ' if self.lang == 'PL' else 'Internal flash: ') + default, default))
+            for mount in self._get_picon_target_candidates():
+                target = os.path.join(mount, 'picon')
+                choices.append((('Nośnik zewnętrzny: ' if self.lang == 'PL' else 'External device: ') + target, target))
+            choices.append((('Wskaż własną ścieżkę...' if self.lang == 'PL' else 'Choose a custom path...'), '__custom__'))
+            self.sess.openWithCallback(lambda selected: self._start_super_wizard(key, selected), ChoiceBox, title=('Wybierz katalog piconów' if self.lang == 'PL' else 'Choose the picon folder'), list=choices)
+        else:
+            self._start_super_wizard(key, None)
 
-        key, lang = choice[1], self.lang
-        steps = []
+    def _start_super_wizard(self, key, picon_choice):
+        if picon_choice and picon_choice[1] == '__custom__':
+            self.sess.openWithCallback(lambda value: self._start_super_wizard_custom(key, value), InputBox, title=('Podaj katalog piconów' if self.lang == 'PL' else 'Enter picon folder'), text='/media/hdd/picon')
+            return
+        picon_path = picon_choice[1] if picon_choice else '/usr/share/enigma2/picon'
+        steps = {'deps_only': ['deps'], 'install_basic_no_picons': ['deps', 'channel_list', 'install_softcam', 'install_oscam', 'reload_settings'], 'install_with_picons': ['deps', 'channel_list', 'install_softcam', 'install_oscam', 'picons', 'reload_settings']}.get(key, [])
+        if not steps:
+            return
+        channel_url = 'https://github.com/OliOli2013/PanelAIO-Lists/raw/main/archives/Polska_13E_AIO_Panel.zip'
+        try:
+            for item in self.fetched_data_cache.get('repo_lists', []):
+                if not (isinstance(item, (list, tuple)) and len(item) >= 2):
+                    continue
+                action = ensure_unicode(item[1])
+                if not action.startswith('archive:'):
+                    continue
+                item_url = action.split(':', 1)[1]
+                normalized = re.sub(r'[^a-z0-9]+', ' ', ensure_unicode(item[0]).replace(u'📡 ', '').lower()).strip()
+                if normalized == 'polska 13e aio panel' or 'Polska_13E_AIO_Panel.zip' in item_url:
+                    channel_url = item_url
+                    break
+        except Exception:
+            pass
+        self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_url, channel_list_name='Polska 13E AIO Panel', picon_url='https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip', picon_path=picon_path, lang=self.lang)
 
-        if key == "deps_only":
-            steps = ["deps"]
-        elif key == "install_basic_no_picons":
-            steps = ["deps", "channel_list", "install_softcam", "install_oscam", "reload_settings"]
-        elif key == "install_with_picons":
-            steps = ["deps", "channel_list", "install_softcam", "install_oscam", "picons", "reload_settings"]
-
-        if steps:
-            picon_url = 'https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip'
-            channel_list_url = 'https://github.com/OliOli2013/PanelAIO-Lists/raw/main/archives/Polska_13E_AIO_Panel.zip'
-            list_name = 'Polska 13E AIO Panel'
-
-            # Preferuj dokładnie listę Polska 13E AIO Panel z aktualnego manifestu.
-            # Nie wybieraj wariantów 13E+19.2E ani innych list zawierających podobną nazwę.
-            try:
-                repo_lists = self.fetched_data_cache.get("repo_lists", [])
-                for item in repo_lists:
-                    if not (isinstance(item, (list, tuple)) and len(item) >= 2):
-                        continue
-                    action = ensure_unicode(item[1])
-                    if not action.startswith("archive:"):
-                        continue
-                    title_txt = ensure_unicode(item[0]).replace(u"📡 ", "").strip()
-                    url_txt = action.split(':', 1)[1]
-                    normalized_title = re.sub(r'[^a-z0-9]+', ' ', title_txt.lower()).strip()
-                    if normalized_title == 'polska 13e aio panel' or 'Polska_13E_AIO_Panel.zip' in url_txt:
-                        channel_list_url = url_txt
-                        list_name = 'Polska 13E AIO Panel'
-                        break
-            except Exception:
-                pass
-
-            self.sess.open(
-                WizardProgressScreen,
-                steps=steps,
-                channel_list_url=channel_list_url,
-                channel_list_name=list_name,
-                picon_url=picon_url,
-                reboot_mode=("full" if key != "deps_only" else "gui")
-            )
+    def _start_super_wizard_custom(self, key, value):
+        value = ensure_unicode(value).strip()
+        allowed = value.startswith('/usr/share/enigma2/picon') or re.match(r'^/media/[A-Za-z0-9_.-]+/picon(?:/.*)?$', value)
+        if not value or not allowed:
+            show_message_compat(self.sess, ('Niedozwolony katalog piconów.' if self.lang == 'PL' else 'The picon folder is not allowed.'), MessageBox.TYPE_ERROR)
+            return
+        self._start_super_wizard(key, ('custom', value))
 
     def toggle_menu_visibility(self):
         # Toggle visibility of AIO Panel entry in receiver main/system menu (WHERE_MENU)
@@ -5466,238 +5738,120 @@ class PanelAIO(Screen):
         run_command_in_background(self.sess, "J00Zek Repo", [cmd])
 
     def install_m3u_as_bouquet(self, title, url, bouquet_id, bouquet_name):
-        tmp = os.path.join(PLUGIN_TMP_PATH, "temp.m3u")
-        run_command_in_background(self.sess, title, [_download_shell_command(url, tmp, "file")], 
-                                  callback_on_finish=lambda: Thread(target=self._parse_m3u_thread, args=(tmp, bouquet_id, bouquet_name)).start())
+        if not _is_https_allowed(url) or not re.match(r'^userbouquet\.[A-Za-z0-9_.-]+\.tv$', ensure_unicode(bouquet_id)):
+            show_message_compat(self.sess, 'Nieprawidłowy URL HTTPS lub identyfikator bukietu.', MessageBox.TYPE_ERROR)
+            return
+        work = _unique_tmp_dir('m3u-')
+        tmp_path = os.path.join(work, 'source.m3u')
+        def downloaded(result):
+            if not result or not result.get('success'):
+                shutil.rmtree(work, ignore_errors=True)
+                show_message_compat(self.sess, 'Nie udało się pobrać listy M3U.', MessageBox.TYPE_ERROR)
+                return
+            thread = Thread(target=self._parse_m3u_thread, args=(tmp_path, bouquet_id, bouquet_name, work))
+            try: thread.setDaemon(True)
+            except Exception: pass
+            thread.start()
+        run_command_in_background(self.sess, title, [_download_shell_command(url, tmp_path, 'file')], callback_on_finish=downloaded)
 
-    def _parse_m3u_thread(self, tmp_path, bid, bname):
+    def _parse_m3u_thread(self, tmp_path, bid, bname, work=None):
+        result = {'success': False, 'stderr': ''}
         try:
-            if not os.path.exists(tmp_path): return
-            e2 = ["#NAME {}\n".format(bname)]
-            with io.open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
-                name = "N/A"
-                for line in f:
-                    l = line.strip()
-                    if l.startswith('#EXTINF:'): name = l.split(',')[-1].strip()
-                    elif l.startswith('http'): e2.append("#SERVICE 4097:0:1:0:0:0:0:0:0:0:{}:{}\n".format(l.replace(':', '%3a'), name)); name="N/A"
-            if len(e2) > 1:
-                t_bq = os.path.join(PLUGIN_TMP_PATH, bid)
-                with open(t_bq, 'w') as f: f.writelines(e2)
-                reactor.callFromThread(self._install_parsed_bouquet, t_bq, bid)
-        except Exception: pass
+            if not os.path.isfile(tmp_path) or os.path.getsize(tmp_path) <= 0:
+                raise ValueError('Pusty plik M3U')
+            entries = ['#NAME {}\n'.format(_sanitize_service_name(bname, 'IPTV'))]
+            current_name = 'Kanał IPTV'
+            with io.open(tmp_path, 'r', encoding='utf-8-sig', errors='ignore') as handle:
+                for raw in handle:
+                    line = ensure_unicode(raw).strip()
+                    if line.upper().startswith('#EXTINF:'):
+                        current_name = _sanitize_service_name(line.split(',', 1)[1] if ',' in line else 'Kanał IPTV')
+                    elif re.match(r'^https?://', line, re.I):
+                        if not line.lower().startswith('https://'):
+                            continue
+                        entries.append('#SERVICE 4097:0:1:0:0:0:0:0:0:0:{}:{}\n'.format(_encode_service_url(line), current_name))
+                        entries.append('#DESCRIPTION {}\n'.format(current_name))
+                        current_name = 'Kanał IPTV'
+            if len(entries) <= 1:
+                raise ValueError('Brak prawidłowych strumieni HTTPS w M3U')
+            staged = os.path.join(work or PLUGIN_TMP_PATH, bid + '.new')
+            with io.open(staged, 'w', encoding='utf-8') as handle:
+                handle.writelines(entries)
+                handle.flush()
+                try: os.fsync(handle.fileno())
+                except Exception: pass
+            result = {'success': True, 'staged': staged, 'count': len(entries) - 1, 'work': work}
+        except Exception as exc:
+            result = {'success': False, 'stderr': ensure_unicode(exc), 'work': work}
+        reactor.callFromThread(self._install_parsed_bouquet, result, bid)
 
-    def _install_parsed_bouquet(self, t_bq, bid):
+    def _install_parsed_bouquet(self, result, bid):
+        work = (result or {}).get('work')
         try:
-            shutil.move(t_bq, os.path.join("/etc/enigma2", bid))
-            with open("/etc/enigma2/bouquets.tv", 'r+') as f:
-                if bid not in f.read(): f.write('#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bid))
+            if not result or not result.get('success'):
+                raise ValueError((result or {}).get('stderr') or 'Błąd parsowania M3U')
+            target = os.path.join('/etc/enigma2', bid)
+            bouquets = '/etc/enigma2/bouquets.tv'
+            stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            if os.path.isfile(target):
+                shutil.copy2(target, target + '.aio-bak-' + stamp)
+            os.rename(result['staged'], target)
+            current = _read_text_file(bouquets, '#NAME Bouquets (TV)\n')
+            reference = '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bid)
+            if reference not in current:
+                _atomic_write(bouquets, current.rstrip('\n') + '\n' + reference)
             self.reload_settings_python()
-        except Exception: pass
+            show_message_compat(self.sess, 'Dodano kanały IPTV: %s' % result.get('count', '?'), timeout=6)
+        except Exception as exc:
+            show_message_compat(self.sess, 'Import M3U nie powiódł się:\n%s' % exc, MessageBox.TYPE_ERROR, timeout=12)
+        finally:
+            if work:
+                shutil.rmtree(work, ignore_errors=True)
 
     def install_bouquet_reference(self, title, url, bid, bname):
-        cmd = "wget -qO \"/etc/enigma2/{b}\" \"{u}\" && (grep -q \"{b}\" /etc/enigma2/bouquets.tv || echo '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET \"{b}\" ORDER BY bouquet' >> /etc/enigma2/bouquets.tv)".format(b=bid, u=url)
-        run_command_in_background(self.sess, title, [cmd], callback_on_finish=self.reload_settings_python)
+        if not _is_https_allowed(url) or not re.match(r'^userbouquet\.[A-Za-z0-9_.-]+\.tv$', ensure_unicode(bid)):
+            show_message_compat(self.sess, 'Nieprawidłowy URL HTTPS lub identyfikator bukietu.', MessageBox.TYPE_ERROR)
+            return
+        work = _unique_tmp_dir('bouquet-')
+        staged = os.path.join(work, bid)
+        def finished(result):
+            try:
+                if not result or not result.get('success') or not os.path.isfile(staged):
+                    raise ValueError('Pobieranie bukietu nie powiodło się')
+                data = _read_text_file(staged, '')
+                if '#SERVICE' not in data and '#NAME' not in data:
+                    raise ValueError('Pobrany plik nie jest bukietem Enigma2')
+                target = os.path.join('/etc/enigma2', bid)
+                stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                if os.path.isfile(target): shutil.copy2(target, target + '.aio-bak-' + stamp)
+                os.rename(staged, target)
+                bfile = '/etc/enigma2/bouquets.tv'
+                current = _read_text_file(bfile, '#NAME Bouquets (TV)\n')
+                ref = '#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "{}" ORDER BY bouquet\n'.format(bid)
+                if ref not in current: _atomic_write(bfile, current.rstrip('\n') + '\n' + ref)
+                self.reload_settings_python()
+            except Exception as exc:
+                show_message_compat(self.sess, 'Instalacja bukietu nie powiodła się:\n%s' % exc, MessageBox.TYPE_ERROR)
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+        run_command_in_background(self.sess, title, [_download_shell_command(url, staged, 'file')], callback_on_finish=finished)
 
     # --- NOWA, NAPRAWIONA FUNKCJA SRVID (Źródło: Aktualne repozytoria) ---
     def update_oscam_srvid_files(self):
-        title = "Aktualizacja oscam.srvid / oscam.srvid2"
-        dst_dir = "/etc/tuxbox/config"
-
-        # Stabilne źródła
-        srvid_urls = [
-            "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid",
-            "https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid",
-        ]
-        srvid2_urls = [
-            "https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid2",
-        ]
-
-        cmd = r"""            set -e
-
-            {helpers}
-            aio_require_oscam_dirs
-
-            WORK="/tmp/aio_srvid_work"
-            STAMP=$(date +%Y%m%d_%H%M%S)
-            mkdir -p "$WORK"
-
-            echo "Tworzenie kopii w katalogach docelowych..."
-            echo "$DIRS" | while IFS= read -r D; do
-                [ -d "$D" ] || continue
-                [ -f "$D/oscam.srvid" ]  && cp -a "$D/oscam.srvid"  "$D/oscam.srvid.aio-bak-$STAMP"  || true
-                [ -f "$D/oscam.srvid2" ] && cp -a "$D/oscam.srvid2" "$D/oscam.srvid2.aio-bak-$STAMP" || true
-            done
-
-            is_valid_srvid() {{
-                # odrzucamy HTML / puste / podejrzane pliki
-                [ -s "$1" ] || return 1
-                head -n 5 "$1" | grep -qiE '^\s*<|<!doctype|<html' && return 1
-                grep -qE '^[0-9A-Fa-f,]+:[0-9A-Fa-f]+' "$1" || return 1
-                return 0
-            }}
-
-            is_valid_srvid2() {{
-                [ -s "$1" ] || return 1
-                head -n 5 "$1" | grep -qiE '^\s*<|<!doctype|<html' && return 1
-                grep -qE '^[0-9A-Fa-f]+:[0-9A-Fa-f]+' "$1" || return 1
-                return 0
-            }}
-
-            echo "Pobieranie oscam.srvid z repo (jeśli dostępne)..."
-            SRVID_OK=0
-            for URL in {srvid_urls}; do
-                echo " - $URL"
-                if wget -q --no-check-certificate -U "Enigma2" -O "$WORK/oscam.srvid.tmp" "$URL"; then
-                    if is_valid_srvid "$WORK/oscam.srvid.tmp"; then
-                        SRVID_OK=1
-                        break
-                    else
-                        echo "   (pomijam: plik nie wygląda jak oscam.srvid)"
-                    fi
-                fi
-            done
-
-            if [ "$SRVID_OK" -ne 1 ]; then
-                echo "Repo nie dało poprawnego pliku – generowanie z KingOfSat..."
-                rm -f "$WORK/oscam.srvid.tmp"
-                echo "# Generated by AIO Panel - $(date)" > "$WORK/oscam.srvid.tmp"
-                echo "# Source: KingOfSat.net (fallback)" >> "$WORK/oscam.srvid.tmp"
-                echo "" >> "$WORK/oscam.srvid.tmp"
-
-                PACKS="polsat:0B01,0B02,0B03,0B04 canal:0100,0500,1803,1813,0D00,0D01"
-
-                for PACK in $PACKS; do
-                    PACK_NAME=$(echo "$PACK" | cut -d: -f1)
-                    CAIDS=$(echo "$PACK" | cut -d: -f2)
-                    echo "Pobieranie danych dla $PACK_NAME..."
-                    if wget -q --user-agent="Mozilla/5.0" -O "/tmp/kos_${{PACK_NAME}}.html" "http://en.kingofsat.net/pack-${{PACK_NAME}}.php" 2>/dev/null; then
-                        grep -o 'href="channel.php[^"]*">[^<]*</a>' "/tmp/kos_${{PACK_NAME}}.html" | \
-                            sed -e 's/.*channel\.php[^>]*>\([^<]*\)<\/a>.*/\1/' | \
-                            head -n 2000 > "/tmp/channels_${{PACK_NAME}}.txt" || true
-
-                        grep -o 'serviceid=[0-9A-Fa-f]\{{4\}}' "/tmp/kos_${{PACK_NAME}}.html" | \
-                            sed -e 's/serviceid=//' | \
-                            head -n 2000 > "/tmp/sids_${{PACK_NAME}}.txt" || true
-
-                        paste -d'|' "/tmp/sids_${{PACK_NAME}}.txt" "/tmp/channels_${{PACK_NAME}}.txt" | \
-                            while IFS='|' read -r SID CH; do
-                                [ -n "$SID" ] && [ -n "$CH" ] && echo "${{CAIDS}}:${{SID}}|${{PACK_NAME}}|${{CH}}|TV|" >> "$WORK/oscam.srvid.tmp"
-                            done
-                    fi
-                done
-
-                rm -f /tmp/kos_*.html /tmp/channels_*.txt /tmp/sids_*.txt || true
-
-                if ! is_valid_srvid "$WORK/oscam.srvid.tmp"; then
-                    echo "Błąd: Nie udało się pobrać/wygenerować poprawnego oscam.srvid."
-                    exit 1
-                fi
-            fi
-
-            echo "Pobieranie oscam.srvid2 z repo (jeśli istnieje)..."
-            SRVID2_OK=0
-            for URL in {srvid2_urls}; do
-                echo " - $URL"
-                if wget -q --no-check-certificate -U "Enigma2" -O "$WORK/oscam.srvid2.tmp" "$URL"; then
-                    if is_valid_srvid2 "$WORK/oscam.srvid2.tmp"; then
-                        SRVID2_OK=1
-                        break
-                    else
-                        echo "   (pomijam: plik nie wygląda jak oscam.srvid2)"
-                    fi
-                fi
-            done
-
-            if [ "$SRVID2_OK" -ne 1 ]; then
-                echo "Generowanie oscam.srvid2 z oscam.srvid..."
-                rm -f "$WORK/oscam.srvid2.tmp"
-                echo "# Generated by AIO Panel - $(date)" > "$WORK/oscam.srvid2.tmp"
-                echo "# Source: oscam.srvid (local convert)" >> "$WORK/oscam.srvid2.tmp"
-                echo "" >> "$WORK/oscam.srvid2.tmp"
-
-                awk -F'[:|]' 'BEGIN{{OFS=""}}
-                    $0 ~ /^#/ {{next}}
-                    NF >= 2 {{
-                        caids=$1; sid=$2;
-                        provider=(NF>=3)?$3:"";
-                        name=(NF>=4)?$4:"";
-                        type=(NF>=5)?$5:"";
-                        desc=(NF>=6)?$6:"";
-                        if (name == "" && provider != "") {{ name=provider; provider="" }}
-                        print sid ":" caids "|" name "|" type "|" desc "|" provider
-                    }}
-                ' "$WORK/oscam.srvid.tmp" >> "$WORK/oscam.srvid2.tmp"
-
-                if ! is_valid_srvid2 "$WORK/oscam.srvid2.tmp"; then
-                    echo "Błąd: Nie udało się utworzyć poprawnego oscam.srvid2."
-                    exit 1
-                fi
-            fi
-
-            echo "Instalacja plików do katalogów:"
-            echo "$DIRS" | while IFS= read -r D; do
-                [ -d "$D" ] || continue
-                echo " - $D"
-                cp -f "$WORK/oscam.srvid.tmp"  "$D/oscam.srvid"
-                cp -f "$WORK/oscam.srvid2.tmp" "$D/oscam.srvid2"
-                chmod 644 "$D/oscam.srvid" "$D/oscam.srvid2" 2>/dev/null || true
-            done
-
-            rm -f "$WORK/oscam.srvid.tmp" "$WORK/oscam.srvid2.tmp" 2>/dev/null || true
-
-            echo "Zakończono. Odświeżam softcam (jeśli uruchomiony)..."
-            aio_soft_restart_oscam
-            sleep 2""".format(
-            helpers=_oscam_detect_shell_functions(),
-            srvid_urls=" ".join(['"%s"' % u for u in srvid_urls]),
-            srvid2_urls=" ".join(['"%s"' % u for u in srvid2_urls]),
-        )
-        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+        srvid = ['https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid', 'https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid']
+        srvid2 = ['https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid2']
+        script = os.path.join(PLUGIN_PATH, 'update_oscam_data_safe.sh')
+        status1 = os.path.join(PLUGIN_TMP_PATH, 'srvid_%s.status' % int(time.time() * 1000))
+        status2 = os.path.join(PLUGIN_TMP_PATH, 'srvid2_%s.status' % int(time.time() * 1000))
+        cmd1 = '/bin/sh %s srvid %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status1), ' '.join(_safe_shell_arg(x) for x in srvid))
+        cmd2 = '/bin/sh %s srvid2 %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status2), ' '.join(_safe_shell_arg(x) for x in srvid2))
+        run_command_in_background(self.sess, 'Aktualizacja oscam.srvid/srvid2', [cmd1, cmd2])
     def install_softcam_key_online(self):
-        title = "Aktualizacja SoftCam.Key (Online)" if self.lang == 'PL' else "Update SoftCam.Key (Online)"
-        url = "https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key"
-        url_alt = "https://raw.githubusercontent.com/PAKO34/softcam.key/master/softcam.key"
-        cmd = r'''
-            URL="{url}"
-            URL_ALT="{url_alt}"
-            STAMP=$(date +%Y%m%d_%H%M%S)
-            {helpers}
-            aio_require_oscam_dirs
-            TARGETS_FILE="/tmp/aio_softcamkey_targets_$$"
-            : > "$TARGETS_FILE"
-            echo "$DIRS" >> "$TARGETS_FILE"
-            for D in /usr/keys /var/keys /etc/tuxbox/config; do
-                [ -d "$D" ] && echo "$D" >> "$TARGETS_FILE"
-            done
-            TARGETS=$(sort -u "$TARGETS_FILE")
-            rm -f "$TARGETS_FILE" 2>/dev/null || true
-            echo "Pobieranie SoftCam.Key z repozytorium MOHAMED19OS (SoftCam_Emu)..."
-            if ! wget --no-check-certificate -U "Enigma2" -qO /tmp/SoftCam.Key.dl "$URL"; then
-                echo "Główne źródło niedostępne, próbuję alternatywnego źródła..."
-                echo "Pobieranie SoftCam.Key z repozytorium PAKO34..."
-                if ! wget --no-check-certificate -U "Enigma2" -qO /tmp/SoftCam.Key.dl "$URL_ALT"; then
-                    echo "BŁĄD: Nie udało się pobrać pliku SoftCam.Key z żadnego źródła."
-                    exit 1
-                fi
-            fi
-            [ -s "/tmp/SoftCam.Key.dl" ] || {{ echo "BŁĄD: Pobrany SoftCam.Key jest pusty."; exit 1; }}
-            head -n 5 /tmp/SoftCam.Key.dl | grep -qiE '^\s*<|<!doctype|<html' && {{ echo "BŁĄD: Pobrano HTML zamiast SoftCam.Key."; exit 1; }}
-            echo "$TARGETS" | while IFS= read -r T; do
-                [ -n "$T" ] || continue
-                [ -d "$T" ] || mkdir -p "$T" 2>/dev/null || true
-                [ -d "$T" ] || continue
-                echo "Instalacja w: $T"
-                [ -f "$T/SoftCam.Key" ] && cp -a "$T/SoftCam.Key" "$T/SoftCam.Key.aio-bak-$STAMP" 2>/dev/null || true
-                cp -f /tmp/SoftCam.Key.dl "$T/SoftCam.Key"
-                chmod 644 "$T/SoftCam.Key" 2>/dev/null || true
-            done
-            rm -f /tmp/SoftCam.Key.dl
-            echo "Klucze zaktualizowane."
-            sync
-            aio_soft_restart_oscam
-            sleep 3
-        '''.format(url=url, url_alt=url_alt, helpers=_oscam_detect_shell_functions(extra_keys=True))
-        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+        urls = ['https://raw.githubusercontent.com/oscam-emu/oscam-patched-old/master/Distribution/doc/example/SoftCam.Key', 'https://raw.githubusercontent.com/oscam-emu/oscam-emu/master/Distribution/doc/example/SoftCam.Key']
+        script = os.path.join(PLUGIN_PATH, 'update_oscam_data_safe.sh')
+        status = os.path.join(PLUGIN_TMP_PATH, 'softcamkey_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s softcamkey %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status), ' '.join(_safe_shell_arg(x) for x in urls))
+        run_command_in_background(self.sess, 'Aktualizacja SoftCam.Key', [cmd])
 
 
 
@@ -5778,9 +5932,9 @@ class PanelAIO(Screen):
                 log(){ echo "$1"; echo "$1" >> "$OUT"; }
                 test_url(){
                     URL="$1"
-                    wget -qO /dev/null --no-check-certificate -T 10 "$URL" >/dev/null 2>&1 && return 0
                     wget -qO /dev/null -T 10 "$URL" >/dev/null 2>&1 && return 0
-                    curl -k -L -m 10 -o /dev/null -s "$URL" >/dev/null 2>&1 && return 0
+                    wget -qO /dev/null -T 10 "$URL" >/dev/null 2>&1 && return 0
+                    curl -fL -m 10 -o /dev/null -sS "$URL" >/dev/null 2>&1 && return 0
                     return 1
                 }
                 log "=== AIO Feed Test ==="
@@ -5935,10 +6089,12 @@ class PanelAIO(Screen):
                 opkg update || true
                 chmod 755 /etc/init.d/softcam 2>/dev/null || true
                 reinstall_detected_or_first enigma2-plugin-softcams-oscam enigma2-plugin-softcams-oscam-emu oscam oscam-emu oscam-smod ncam softcam-ncam enigma2-plugin-softcams-ncam enigma2-plugin-softcams-ncam-emu || true
-                /etc/init.d/softcam stop 2>/dev/null || true
-                killall -9 oscam ncam softcam 2>/dev/null || true
-                sleep 2
-                /etc/init.d/softcam start 2>/dev/null || /etc/init.d/softcam restart 2>/dev/null || systemctl restart softcam 2>/dev/null || systemctl restart oscam 2>/dev/null || true
+                /etc/init.d/softcam stop 2>/dev/null || systemctl stop softcam 2>/dev/null || true
+                for P in oscam oscam-emu oscam_emu ncam softcam; do killall -TERM "$P" 2>/dev/null || true; done
+                N=0; while ps 2>/dev/null | grep -E '[o]scam|[n]cam|[s]oftcam' >/dev/null 2>&1 && [ "$N" -lt 8 ]; do sleep 1; N=$((N+1)); done
+                for P in oscam oscam-emu oscam_emu ncam softcam; do killall -KILL "$P" 2>/dev/null || true; done
+                sleep 1
+                /etc/init.d/softcam start 2>/dev/null || systemctl start softcam 2>/dev/null || systemctl start oscam 2>/dev/null || true
                 ps | grep -E 'oscam|ncam|softcam' | grep -v grep || true
             }
 
@@ -6127,125 +6283,54 @@ class PanelAIO(Screen):
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def smart_cleanup(self):
-        title = "Smart Cleanup"
-        cmd = r'''
-            BEFORE=$(df -k / 2>/dev/null | awk 'NR==2 {print $4}')
-            echo "=== AIO Smart Cleanup ==="
-            echo "Start: $(date)"
-            echo ""
-
-            echo "[1/4] Czyszczenie archiwów i plików tymczasowych z /tmp..."
-            rm -f /tmp/*.ipk /tmp/*.zip /tmp/*.tar.gz /tmp/*.tgz /tmp/*.tbz2 /tmp/*.tmp /tmp/epg.dat 2>/dev/null || true
-            rm -f /tmp/enigma2_crash*.log /tmp/*crash*.log /tmp/*debug*.log 2>/dev/null || true
-
-            echo "[2/4] Czyszczenie crashlogów i logów użytkownika..."
-            rm -f /home/root/enigma2_crash*.log /home/root/*crash*.log 2>/dev/null || true
-            if [ -d /home/root/logs ]; then
-                find /home/root/logs -type f \( -name '*.log' -o -name '*.txt' \) -print -delete 2>/dev/null || true
-            fi
-
-            echo "[3/4] Czyszczenie cache menedżera pakietów..."
-            rm -rf /var/cache/opkg/* /var/lib/opkg/lists/* 2>/dev/null || true
-
-            echo "[4/4] Sync + odświeżenie RAM cache..."
-            sync
-            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-            sync
-
-            AFTER=$(df -k / 2>/dev/null | awk 'NR==2 {print $4}')
-            if [ -n "$BEFORE" ] && [ -n "$AFTER" ]; then
-                GAIN=$((AFTER - BEFORE))
-                echo ""
-                echo "Odzyskane miejsce w głównym systemie: ${GAIN} KB"
-            fi
-            echo "Koniec: $(date)"
-        '''
-        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+        removed = _cleanup_owned_tmp(PLUGIN_TMP_PATH, 3600)
+        gc.collect()
+        cmd = "find %s -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true; find %s -type f \\( -name '*.pyc' -o -name '*.pyo' \\) -delete 2>/dev/null || true" % (_safe_shell_arg(PLUGIN_PATH), _safe_shell_arg(PLUGIN_PATH))
+        def done(result):
+            show_message_compat(self.sess, ('Bezpieczne czyszczenie zakończone. Usunięto elementy robocze AIO: %s. Nie usunięto logów użytkownika ani list OPKG.' % removed if self.lang == 'PL' else 'Safe cleanup completed. Removed AIO work items: %s. User logs and OPKG lists were preserved.' % removed), timeout=9)
+        run_command_in_background(self.sess, 'Smart Cleanup', [cmd], callback_on_finish=done)
 
     def clean_broken_plugins(self):
-        title = "AIO Cleaner"
-        cmd = r'''
-            echo "=== AIO Broken Plugin Cleaner ==="
-            echo "Start: $(date)"
-            echo ""
-            PY=""
-            command -v python3 >/dev/null 2>&1 && PY="python3"
-            [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY="python"
-            if [ -z "$PY" ]; then
-                echo "Brak interpretera Python - przerwano."
-                exit 1
-            fi
-
-            BASE="/usr/lib/enigma2/python/Plugins"
-            FOUND=0
-            echo "[1/3] Czyszczenie cache Pythona..."
-            find "$BASE" -type d -name __pycache__ -prune -exec rm -rf {} \; 2>/dev/null || true
-            find "$BASE" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-
-            echo "[2/3] Sprawdzanie plugin.py w Extensions/SystemPlugins..."
-            for GROUP in Extensions SystemPlugins; do
-                [ -d "$BASE/$GROUP" ] || continue
-                for DIR in "$BASE/$GROUP"/*; do
-                    [ -d "$DIR" ] || continue
-                    NAME=$(basename "$DIR")
-                    [ "$NAME" = "PanelAIO" ] && continue
-                    [ -f "$DIR/plugin.py" ] || continue
-                    ERR="/tmp/aio_pycheck_${GROUP}_${NAME}.log"
-                    "$PY" -m py_compile "$DIR/plugin.py" >"$ERR" 2>&1
-                    if [ $? -ne 0 ]; then
-                        FOUND=$((FOUND+1))
-                        echo "Uszkodzona wtyczka: $GROUP/$NAME"
-                        echo "  -> usuwam całkowicie: $DIR"
-                        cat "$ERR" 2>/dev/null || true
-                        rm -rf "$DIR" 2>/dev/null || echo "  !! Nie udało się usunąć $DIR"
-                    fi
-                    rm -f "$ERR" 2>/dev/null || true
-                done
-            done
-
-            echo "[3/3] Podsumowanie..."
-            if [ "$FOUND" -eq 0 ]; then
-                echo "Nie wykryto niedziałających wtyczek na podstawie kompilacji plugin.py."
-            else
-                echo "Usunięto niedziałających wtyczek: $FOUND"
-                echo "Po restarcie GUI lista wtyczek powinna być odświeżona."
-            fi
-            sync
-            echo "Koniec: $(date)"
-        '''
-        console_screen_open(self.sess, title, [cmd], close_on_finish=False)
+        report = '/tmp/aio_plugin_compatibility_report.txt'
+        cmd = r'''PY=$(command -v python3 || command -v python || true)
+    [ -n "$PY" ] || { echo 'Brak Pythona'; exit 1; }
+    : > %s
+    BASE=/usr/lib/enigma2/python/Plugins
+    for GROUP in Extensions SystemPlugins; do
+      [ -d "$BASE/$GROUP" ] || continue
+      for DIR in "$BASE/$GROUP"/*; do
+        [ -f "$DIR/plugin.py" ] || continue
+        NAME=$(basename "$DIR")
+        if "$PY" -m py_compile "$DIR/plugin.py" >/tmp/aio_pycheck.log 2>&1; then
+          echo "OK|$GROUP/$NAME" >> %s
+        else
+          echo "ERROR|$GROUP/$NAME|$(tr '\n' ' ' </tmp/aio_pycheck.log)" >> %s
+        fi
+      done
+    done
+    cat %s
+    ''' % tuple(_safe_shell_arg(report) for _ in range(4))
+        console_screen_open(self.sess, ('Raport zgodności wtyczek — bez usuwania' if self.lang == 'PL' else 'Plugin compatibility report — no deletion'), [cmd], close_on_finish=False)
 
     def _get_backup_path(self):
-        # Prefer mounted external media, but fall back to /home/root so backup/restore is still usable.
         candidates = []
-        for base in ("/media/hdd", "/media/usb", "/media/mmc", "/media/sda1", "/media/sdb1"):
-            try:
-                if os.path.ismount(base):
-                    candidates.append(base)
-            except Exception:
-                pass
-        for base in ("/media/hdd", "/media/usb", "/media/mmc", "/media/sda1", "/media/sdb1", "/home/root"):
-            if base not in candidates and os.path.isdir(base):
-                candidates.append(base)
-        if "/home/root" not in candidates:
-            candidates.append("/home/root")
-
-        for base in candidates:
-            try:
-                path = os.path.join(base, "aio_backups")
-                if not os.path.isdir(path):
-                    os.makedirs(path)
-                test = os.path.join(path, ".aio_write_test")
-                with open(test, "w") as f:
-                    f.write("ok")
-                try:
-                    os.remove(test)
-                except Exception:
-                    pass
-                return path + "/"
-            except Exception as e:
-                print("[AIO Panel] Backup path not writable {}: {}".format(base, e))
-        return None
+        try:
+            with open('/proc/mounts', 'r') as handle:
+                mounts = [line.split()[1] for line in handle if len(line.split()) >= 2]
+        except Exception:
+            mounts = []
+        for path in mounts:
+            if re.match(r'^/media/(hdd|usb|mmc|sdcard|cf)(?:\d+)?$', path) and os.path.isdir(path) and os.access(path, os.W_OK):
+                candidates.append(path)
+        if candidates:
+            candidates.sort(key=lambda x: shutil_disk_usage(x).free if os.path.exists(x) else 0, reverse=True)
+            return os.path.join(candidates[0], 'aio_backups') + '/'
+        fallback = '/home/root/aio_backups/'
+        try:
+            if not os.path.isdir(fallback): os.makedirs(fallback)
+            return fallback
+        except Exception:
+            return None
 
     def _find_channel_backup_file(self, path):
         latest = os.path.join(path, "aio_channels_backup.tar.gz")
@@ -6266,122 +6351,61 @@ class PanelAIO(Screen):
     def backup_lists(self):
         path = self._get_backup_path()
         if not path:
-            show_message_compat(self.sess, "Brak zapisywalnego miejsca na backup." if self.lang == 'PL' else "No writable backup location found.", MessageBox.TYPE_ERROR); return
-        cmd = r'''
-            set -e
-            P="{p}"
-            STAMP=$(date +%Y%m%d_%H%M%S)
-            OUT="$P/aio_channels_backup_$STAMP.tar.gz"
-            LATEST="$P/aio_channels_backup.tar.gz"
-            WORK="/tmp/aio_channels_backup_work_$$"
-            SRC="/etc/enigma2"
-            echo "=== AIO Panel: Backup list kanałów ==="
-            echo "Źródło: $SRC"
-            echo "Katalog backupu: $P"
-            [ -d "$SRC" ] || {{ echo "Brak katalogu /etc/enigma2"; exit 1; }}
-            mkdir -p "$P"
-            rm -rf "$WORK"
-            mkdir -p "$WORK"
-            cd "$SRC"
-            for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml; do
-                [ -f "$F" ] && cp -a "$F" "$WORK/" || true
-            done
-            for F in userbouquet.*.tv userbouquet.*.radio *.del; do
-                [ -f "$F" ] && cp -a "$F" "$WORK/" || true
-            done
-            COUNT=$(find "$WORK" -type f 2>/dev/null | wc -l | tr -d ' ')
-            if [ "$COUNT" = "0" ] || [ -z "$COUNT" ]; then
-                echo "Brak plików list kanałów do backupu."
-                rm -rf "$WORK"
-                exit 1
-            fi
-            tar -czpf "$OUT" -C "$WORK" .
-            cp -f "$OUT" "$LATEST"
-            rm -rf "$WORK"
-            sync
-            echo "Zapisano plik: $OUT"
-            echo "Zaktualizowano kopię ostatnią: $LATEST"
-            echo "Liczba plików w backupie: $COUNT"
-            echo "Backup zakończony poprawnie."
-        '''.format(p=path.rstrip('/'))
-        console_screen_open(self.sess, "Backup Listy" if self.lang == 'PL' else "Channel List Backup", [cmd], close_on_finish=False)
+            show_message_compat(self.sess, 'Brak zapisywalnego miejsca na backup.', MessageBox.TYPE_ERROR); return
+        status = os.path.join(PLUGIN_TMP_PATH, 'backup_channels_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'backup_channels_script.sh'), path, status))
+        def done(result):
+            text = _read_text_file(status, '').strip()
+            if result and result.get('success') and text.startswith('OK'):
+                show_message_compat(self.sess, 'Backup list zapisany w:\n%s' % path, timeout=8)
+            else:
+                show_message_compat(self.sess, 'Backup list nie powiódł się.\n%s' % text, MessageBox.TYPE_ERROR)
+        run_command_in_background(self.sess, 'Backup list kanałów', [cmd], callback_on_finish=done)
 
     def restore_lists(self):
         path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Brak zapisywalnego miejsca na backup." if self.lang == 'PL' else "No writable backup location found.", MessageBox.TYPE_ERROR); return
-        f = self._find_channel_backup_file(path)
-        if not fileExists(f):
-            show_message_compat(self.sess, "Brak pliku backupu." if self.lang == 'PL' else "Backup file not found.", MessageBox.TYPE_ERROR); return
-        msg = "Przywrócić listę kanałów z pliku:\n{}\n\nEnigma2 zostanie zatrzymana, stare listy zostaną wyczyszczone, a GUI uruchomi się ponownie.".format(f) if self.lang == 'PL' else "Restore channel list from file:\n{}\n\nEnigma2 will be stopped, old lists will be cleared and the GUI will restart.".format(f)
-        cmd = r'''
-            set -e
-            ARCH="{archive}"
-            BACKUP_DIR="{backupdir}"
-            SCRIPT="/tmp/aio_restore_channels.sh"
-            LOG="/tmp/aio_restore_channels.log"
-            [ -f "$ARCH" ] || {{ echo "Brak archiwum: $ARCH"; exit 1; }}
-            tar -tzf "$ARCH" >/dev/null 2>&1 || {{ echo "Uszkodzony backup albo zły format archiwum: $ARCH"; exit 1; }}
-            cat > "$SCRIPT" <<AIO_RESTORE_EOF
-#!/bin/sh
-LOG="$LOG"
-exec >> "\$LOG" 2>&1
-ARCH="$ARCH"
-DEST="/etc/enigma2"
-BACKUP_DIR="$BACKUP_DIR"
-PRE="\$BACKUP_DIR/pre_restore_\$(date +%Y%m%d_%H%M%S)"
-echo "=== AIO Panel: Restore list kanałów ==="
-echo "Start: \$(date)"
-echo "Archiwum: \$ARCH"
-if [ ! -f "\$ARCH" ]; then echo "Brak archiwum: \$ARCH"; exit 1; fi
-if ! tar -tzf "\$ARCH" >/dev/null 2>&1; then echo "Uszkodzone archiwum: \$ARCH"; exit 1; fi
-mkdir -p "\$DEST" "\$PRE"
-cd "\$DEST" || exit 1
-for F in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist cables.xml satellites.xml terrestrial.xml userbouquet.*.tv userbouquet.*.radio *.del; do
-    [ -f "\$F" ] && cp -a "\$F" "\$PRE/" || true
-done
-echo "Awaryjna kopia obecnych list: \$PRE"
-echo "Zatrzymuję Enigma2..."
-if command -v init >/dev/null 2>&1; then init 4 || true; fi
-if command -v systemctl >/dev/null 2>&1; then systemctl stop enigma2 2>/dev/null || true; fi
-killall -9 enigma2 2>/dev/null || true
-sleep 4
-echo "Czyszczę stare pliki list..."
-rm -f "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio \
-      "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio \
-      "\$DEST"/blacklist "\$DEST"/whitelist "\$DEST"/*.del 2>/dev/null || true
-echo "Przywracam backup..."
-tar -xzpf "\$ARCH" -C "\$DEST"
-[ -f "\$DEST/bouquets.tv" ] || printf '#NAME Bouquets (TV)\n' > "\$DEST/bouquets.tv"
-[ -f "\$DEST/bouquets.radio" ] || printf '#NAME Bouquets (Radio)\n' > "\$DEST/bouquets.radio"
-chmod 644 "\$DEST"/lamedb "\$DEST"/lamedb5 "\$DEST"/bouquets.tv "\$DEST"/bouquets.radio "\$DEST"/userbouquet.*.tv "\$DEST"/userbouquet.*.radio 2>/dev/null || true
-sync
-echo "Restore zakończony: \$(date)"
-echo "Uruchamiam Enigma2..."
-if command -v init >/dev/null 2>&1; then init 3 || true; fi
-if command -v systemctl >/dev/null 2>&1; then systemctl start enigma2 2>/dev/null || true; fi
-exit 0
-AIO_RESTORE_EOF
-            chmod 755 "$SCRIPT"
-            nohup /bin/sh "$SCRIPT" >/tmp/aio_restore_channels_launcher.log 2>&1 &
-            echo "Restore uruchomiony w tle. Log: $LOG"
-            echo "Za chwilę GUI może zostać zatrzymane i uruchomione ponownie."
-        '''.format(archive=f, backupdir=path.rstrip('/'))
-        self.sess.openWithCallback(lambda c: console_screen_open(self.sess, "Przywracanie" if self.lang == 'PL' else "Restoring", [cmd], close_on_finish=False) if c else None, MessageBox, msg, MessageBox.TYPE_YESNO)
+        if not path: return
+        pointer = os.path.join(path, 'aio_channels_backup.latest')
+        archive = ''
+        if os.path.isfile(pointer):
+            archive = _read_text_file(pointer, '').strip()
+            if archive and not archive.startswith('/'): archive = os.path.join(path, archive)
+        if not archive or not os.path.isfile(archive):
+            found = sorted([os.path.join(path, x) for x in os.listdir(path) if x.startswith('aio_channels_backup_') and x.endswith('.tar.gz')], reverse=True) if os.path.isdir(path) else []
+            archive = found[0] if found else ''
+        if not archive:
+            show_message_compat(self.sess, 'Brak backupu list kanałów.', MessageBox.TYPE_ERROR); return
+        msg = 'Przywrócić listy z:\n%s?\n\nOperacja ma automatyczny rollback i zawsze ponownie uruchamia GUI.' % archive
+        def confirmed(answer):
+            if not answer: return
+            status = os.path.join(PLUGIN_TMP_PATH, 'restore_channels_%s.status' % int(time.time() * 1000))
+            cmd = '/bin/sh %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'restore_channels_script.sh'), archive, status))
+            console_screen_open(self.sess, 'Bezpieczne przywracanie list', [cmd], close_on_finish=False)
+        self.sess.openWithCallback(confirmed, MessageBox, msg, MessageBox.TYPE_YESNO, default=False)
 
     def backup_oscam(self):
         path = self._get_backup_path()
-        if not path:
-            show_message_compat(self.sess, "Brak nośnika HDD/USB.", MessageBox.TYPE_ERROR); return
-        cmd = "mkdir -p \"{p}\" && cd /etc/tuxbox/config && tar -czf \"{p}aio_oscam_config_backup.tar.gz\" . && echo 'Backup Oscam OK'".format(p=path)
-        run_command_in_background(self.sess, "Backup Oscam", [cmd])
+        if not path: show_message_compat(self.sess, 'Brak miejsca na backup.', MessageBox.TYPE_ERROR); return
+        status = os.path.join(PLUGIN_TMP_PATH, 'backup_oscam_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'backup_oscam_script.sh'), path, status))
+        run_command_in_background(self.sess, 'Backup OSCam', [cmd], callback_on_finish=lambda result: show_message_compat(self.sess, ('Backup OSCam zakończony.' if result and result.get('success') else 'Backup OSCam nie powiódł się.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
 
     def restore_oscam(self):
         path = self._get_backup_path()
         if not path: return
-        f = os.path.join(path, "aio_oscam_config_backup.tar.gz")
-        if not fileExists(f): show_message_compat(self.sess, "Brak pliku backupu.", MessageBox.TYPE_ERROR); return
-        self.sess.openWithCallback(lambda c: run_command_in_background(self.sess, "Przywracanie", ["tar -xzf \"{}\" -C /etc/tuxbox/config/".format(f)], self.restart_oscam) if c else None, MessageBox, "Przywrócić Oscam?", MessageBox.TYPE_YESNO)
+        pointer = os.path.join(path, 'aio_oscam_config_backup.latest')
+        archive = _read_text_file(pointer, '').strip() if os.path.isfile(pointer) else ''
+        if archive and not archive.startswith('/'): archive = os.path.join(path, archive)
+        if not archive or not os.path.isfile(archive):
+            found = sorted([os.path.join(path, x) for x in os.listdir(path) if x.startswith('aio_oscam_config_backup_') and x.endswith('.tar.gz')], reverse=True) if os.path.isdir(path) else []
+            archive = found[0] if found else ''
+        if not archive: show_message_compat(self.sess, 'Brak backupu OSCam.', MessageBox.TYPE_ERROR); return
+        def confirmed(answer):
+            if not answer: return
+            status = os.path.join(PLUGIN_TMP_PATH, 'restore_oscam_%s.status' % int(time.time() * 1000))
+            cmd = '/bin/sh %s %s %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'restore_oscam_script.sh'), archive, status))
+            run_command_in_background(self.sess, 'Przywracanie OSCam', [cmd], callback_on_finish=lambda result: show_message_compat(self.sess, ('Konfiguracja OSCam została przywrócona.' if result and result.get('success') else 'Przywracanie OSCam nie powiodło się.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
+        self.sess.openWithCallback(confirmed, MessageBox, 'Przywrócić konfigurację OSCam z:\n%s?' % archive, MessageBox.TYPE_YESNO, default=False)
     def run_network_diagnostics(self):
         self.sess.open(NetworkDiagnosticsSummaryScreen, self.lang)
 
@@ -6448,94 +6472,36 @@ AIO_RESTORE_EOF
             return False
 
     def _build_openpli_safe_installer_command(self, title, cmd):
-        """Convert GitHub wget|sh / wget -O file / opkg install URL commands to OpenPLi-safe download-then-run."""
+        """Return an audited local command for supported legacy installers."""
         try:
-            original = ensure_unicode(cmd)
-            if not self._command_has_github_download(original):
-                return None
-
-            url = self._extract_first_url_from_cmd(original)
-            if not url:
-                return None
-
-            low = original.lower()
-            url_low = url.lower()
-
-            # Direct IPK from GitHub/GitHub Releases.
-            if url_low.endswith(".ipk") or ".ipk" in url_low or re.search(r"opkg\s+install\s+https?://", low):
-                out = self._aio_tmp_name_for_url(url, ".ipk")
-                return (
-                    "set -e\n"
-                    + _download_shell_command(url, out, "ipk")
-                    + "\n"
-                    + "echo '[AIO Panel] Instaluję IPK: %s'\n" % out
-                    + "opkg install --force-reinstall %s || opkg install %s\n" % (_safe_shell_arg(out), _safe_shell_arg(out))
-                    + "sync\n"
-                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
-                )
-
-            # Tarballs from GitHub: safe download, then continue original command after first &&.
-            if url_low.endswith(".tar.gz") or ".tar.gz" in url_low or url_low.endswith(".tgz") or ".tgz" in url_low:
-                out_match = re.search(r"-O\s+(['\"]?)(/tmp/[^'\"\s;&|]+)\1", original)
-                out = out_match.group(2) if out_match else self._aio_tmp_name_for_url(url, ".tar.gz")
-                after = ""
-                if "&&" in original:
-                    after = original.split("&&", 1)[1].strip()
-                return (
-                    "set -e\n"
-                    + _download_shell_command(url, out, "tar.gz")
-                    + ("\n%s\n" % after if after else "\necho '[AIO Panel] Archiwum pobrane: %s'\n" % out)
-                    + "sync\n"
-                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
-                )
-
-            # Script installers from GitHub/raw.githubusercontent.com.
-            script_markers = (
-                "installer.sh", "install.sh", "e2iplayer_install.sh", "online-setup",
-                "setup.sh", "download/install.sh"
-            )
-            if any(marker in url_low for marker in script_markers) or "| sh" in low or "| /bin/sh" in low or "| bash" in low:
-                out = self._aio_tmp_name_for_url(url, ".sh")
-                run_line = '/bin/sh %s' % _safe_shell_arg(out)
-
-                if "bash -s install" in low or "sh -s install" in low:
-                    run_line = 'if command -v bash >/dev/null 2>&1; then bash %s install; else /bin/sh %s install; fi' % (_safe_shell_arg(out), _safe_shell_arg(out))
-                elif "| bash" in low or "/bin/bash" in low:
-                    run_line = 'if command -v bash >/dev/null 2>&1; then bash %s; else /bin/sh %s; fi' % (_safe_shell_arg(out), _safe_shell_arg(out))
-
-                return (
-                    "set -e\n"
-                    + _download_shell_command(url, out, "script")
-                    + "\n"
-                    + "chmod 755 %s 2>/dev/null || true\n" % _safe_shell_arg(out)
-                    + "echo '[AIO Panel] Uruchamiam pobrany instalator: %s'\n" % out
-                    + run_line + "\n"
-                    + "sync\n"
-                    + "echo 'AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga.'\n"
-                )
-
-            return None
+            return self._safe_legacy_action_command(title, cmd)
         except Exception as e:
-            print("[AIO Panel] OpenPLi-safe command rewrite error:", e)
+            print("[AIO Panel] Safe installer translation error:", e)
             return None
 
 
     def _sanitize_install_command(self, cmd):
-        # Nie pozwalamy, aby pozycje z menu same zabijały GUI. Restart ma być świadomą decyzją użytkownika.
+        """Remove automatic reboots and fail closed for every network installer."""
         try:
+            original = ensure_unicode(cmd)
             replacements = [
-                "&& killall -9 enigma2", "; echo 'AIO Panel: restart wykonaj ręcznie.'", "killall -9 enigma2",
-                "&& reboot", "; reboot", " reboot", "&& init 6", "; init 6", " init 6", "&& killall enigma2", "; killall enigma2", "killall enigma2"
+                "&& killall -9 enigma2", "; killall -9 enigma2", "killall -9 enigma2",
+                "&& reboot", "; reboot", "&& init 6", "; init 6",
+                "&& killall enigma2", "; killall enigma2", "killall enigma2"
             ]
-            safe = cmd
+            safe = original
             for item in replacements:
-                safe = safe.replace(item, " && echo 'AIO Panel: automatyczny restart pominięty, restart wykonaj ręcznie.'")
-            openpli_safe = self._build_openpli_safe_installer_command("", safe)
-            if openpli_safe:
-                return openpli_safe
+                safe = safe.replace(item, " && echo 'AIO Panel: automatyczny restart pominięty; wykonaj go ręcznie.'")
+            if re.search(r'https?://|\bwget\b|\bcurl\b', safe, re.I):
+                translated = self._build_openpli_safe_installer_command("", safe)
+                if not translated:
+                    return "echo 'AIO Panel: zewnętrzna komenda została zablokowana przez zasady bezpieczeństwa.'; exit 126"
+                return translated
             return safe
-        except Exception:
-            return cmd
+        except Exception as e:
+            print('[AIO Panel] Command sanitization error:', e)
+            return "echo 'AIO Panel: nie można bezpiecznie przygotować polecenia.'; exit 126"
+
 
     def _open_console_install_action_confirmed(self, title, cmdlist):
         safe_cmdlist = [self._sanitize_install_command(c) for c in cmdlist]
@@ -6677,14 +6643,26 @@ AIO_RESTORE_EOF
         console_screen_open(self.sess, title, [cmd], close_on_finish=False)
 
     def set_system_password(self):
-        def _set_password_callback(p):
-            if not p:
-                return
-            safe_p = _safe_shell_arg(p)
-            cmd = "(printf '%s\n' {0}; printf '%s\n' {0}) | passwd".format(safe_p)
-            run_command_in_background(self.sess, "Hasło", [cmd])
-        self.sess.openWithCallback(_set_password_callback, InputBox, title="Nowe hasło root")
-    def restart_oscam(self, *args): run_command_in_background(self.sess, "Restart Oscam", ["killall -9 oscam; /etc/init.d/softcam restart"])
+        def callback(password):
+            password = ensure_unicode(password)
+            if not password: return
+            fd, temp_path = tempfile.mkstemp(prefix='aio-pass-', dir=PLUGIN_TMP_PATH)
+            try:
+                os.write(fd, ensure_str('root:%s\n' % password).encode('utf-8') if IS_PY3 else ensure_str('root:%s\n' % password))
+            finally:
+                os.close(fd)
+            os.chmod(temp_path, 0o600)
+            cmd = 'chpasswd < %s; RC=$?; rm -f %s; exit $RC' % (_safe_shell_arg(temp_path), _safe_shell_arg(temp_path))
+            run_command_in_background(self.sess, 'Zmiana hasła root', [cmd])
+        kwargs = {'title': 'Nowe hasło root'}
+        if Input is not None:
+            password_type = getattr(Input, 'PASSWORD', getattr(Input, 'PIN', None))
+            if password_type is not None: kwargs['type'] = password_type
+        self.sess.openWithCallback(callback, InputBox, **kwargs)
+    def restart_oscam(self, *args):
+        status = os.path.join(PLUGIN_TMP_PATH, 'oscam_control_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s restart %s' % (_safe_shell_arg(os.path.join(PLUGIN_PATH, 'oscam_control_script.sh')), _safe_shell_arg(status))
+        run_command_in_background(self.sess, 'Restart OSCam/NCam', [cmd])
     def show_uninstall_manager(self):
         self.sess.open(UninstallManagerScreen, self.lang)
 
@@ -6704,38 +6682,37 @@ AIO_RESTORE_EOF
         self._open_console_install_action(title, [cmd])
 
     def install_softcam_script(self):
-        title = "Softcam - Instalator" if self.lang == 'PL' else "Softcam - Installer"
-        cmd = "opkg update || true; opkg install wget ca-certificates || true; wget -O - -q http://updates.mynonpublic.com/oea/feed | bash || true; mkdir -p /usr/softcams 2>/dev/null || true; chmod 755 /etc/init.d/softcam 2>/dev/null || true; sync"
-        self._open_console_install_action(title, [cmd])
+        title = 'Softcam - Instalator' if self.lang == 'PL' else 'Softcam - Installer'
+        status = os.path.join(PLUGIN_TMP_PATH, 'softcam_feed_%s.status' % int(time.time() * 1000))
+        cmd = '/bin/sh %s %s' % (_safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_softcam_feed_safe.sh')), _safe_shell_arg(status))
+        def finished(result):
+            text = _read_text_file(status, '').strip()
+            try: os.remove(status)
+            except Exception: pass
+            if text.startswith('OK'):
+                msg = 'Feed Softcam lub OSCam jest dostępny.' if self.lang == 'PL' else 'Softcam feed or OSCam is available.'
+                typ = MessageBox.TYPE_INFO
+            elif text.startswith('WARN'):
+                msg = ('Zewnętrzny feed Softcam jest niedostępny lub nie został potwierdzony. Nie zablokowano pozostałych funkcji. Log: /tmp/aio_softcam_feed.log' if self.lang == 'PL' else 'The external Softcam feed is unavailable or unconfirmed. Other functions were not blocked. Log: /tmp/aio_softcam_feed.log')
+                typ = MessageBox.TYPE_INFO
+            else:
+                msg = ('Instalacja feedu Softcam nie powiodła się. Log: /tmp/aio_softcam_feed.log' if self.lang == 'PL' else 'Softcam feed installation failed. Log: /tmp/aio_softcam_feed.log')
+                typ = MessageBox.TYPE_ERROR
+            show_message_compat(self.sess, msg, typ, timeout=14)
+        run_command_in_background(self.sess, title, [cmd], callback_on_finish=finished)
 
     def install_levi45_oscam(self):
-        title = "Oscam Levi45" if self.lang == 'PL' else "Oscam Levi45"
-        cmd = r'''
-            echo "=== Oscam Levi45 Installer ==="
-            opkg update || true
-            opkg install wget ca-certificates ca-bundle openssl libcrypto3 libssl3 2>/dev/null || true
-            wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh
-            echo ""
-            echo "=== Wykryta wersja Oscam po instalacji ==="
-            for B in /usr/softcams/oscam /usr/bin/oscam /usr/bin/oscam-emu /usr/softcams/oscam-emu; do
-                [ -x "$B" ] || continue
-                echo "Binarka: $B"
-                "$B" -V 2>&1 | head -n 12 || true
-                break
-            done
-            echo "AIO Panel: restart GUI / tunera wykonaj ręcznie, jeżeli instalator tego wymaga."
-            sync
-        '''
-        self._open_console_install_action(title, [cmd])
+        title = "Oscam Levi45"
+        raw = "wget -q https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh -O - | /bin/sh"
+        self._run_safe_legacy_action(title, raw)
 
     def install_ncam_feed(self):
         title = "NCam (Feed - najnowszy)" if self.lang == 'PL' else "NCam (Feed - latest)"
         cmd = "opkg update && (opkg install --force-reinstall ncam || opkg install --force-reinstall softcam-ncam || opkg install --force-reinstall enigma2-plugin-softcams-ncam || opkg install --force-reinstall enigma2-plugin-softcams-ncam-emu)"
         self._open_console_install_action(title, [cmd])
-    def install_iptv_dream_simplified(self): 
-        # [FIX] Uruchamianie w konsoli, aby uniknąć zwisu na "wget pipe"
-        cmd = self._build_openpli_safe_installer_command("IPTV Dream Installer", "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh") or "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | sh"
-        self._open_console_install_action("IPTV Dream Installer", [cmd])
+    def install_iptv_dream_simplified(self):
+        raw = "wget -qO- https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh | /bin/sh"
+        self._run_safe_legacy_action("IPTV Dream Installer", raw)
 
     def install_iptv_deps(self):
         title = "Konfiguracja IPTV - zależności" if self.lang == 'PL' else "IPTV Configuration - dependencies"
@@ -6782,16 +6759,24 @@ AIO_RESTORE_EOF
 
 # === Network Diagnostics: readable summary screen (v6.0) ===
 class NetworkDiagnosticsSummaryScreen(Screen):
-    skin = """
+    skin_large = """
     <screen position="center,center" size="980,560" title="Network Diagnostics">
         <widget name="text" position="20,20" size="940,490" font="Regular;22" />
         <widget name="hint" position="20,520" size="940,30" font="Regular;20" halign="center" />
     </screen>"""
+    skin_small = """
+    <screen position="center,center" size="690,430" title="Network Diagnostics">
+        <widget name="text" position="15,15" size="660,355" font="Regular;17" />
+        <widget name="hint" position="15,388" size="660,26" font="Regular;17" halign="center" />
+    </screen>"""
 
     def __init__(self, session, lang='PL'):
+        self.skin = self.skin_small if _is_small_ui() else self.skin_large
         Screen.__init__(self, session)
         self.session = session
         self.lang = lang or 'PL'
+        self._closed = False
+        self.onClose.append(self._mark_closed)
 
         if ScrollLabel:
             self["text"] = ScrollLabel("")
@@ -6806,7 +6791,12 @@ class NetworkDiagnosticsSummaryScreen(Screen):
 
         self.onShown.append(self._start)
 
+    def _mark_closed(self):
+        self._closed = True
+
     def _start(self):
+        if self._closed:
+            return
         self.setTitle(TRANSLATIONS[self.lang].get("net_diag_title", "Network Diagnostics"))
         self["text"].setText(TRANSLATIONS[self.lang].get("net_diag_wait", "Please wait..."))
         Thread(target=self._worker).start()
@@ -6869,11 +6859,9 @@ class NetworkDiagnosticsSummaryScreen(Screen):
     def _get_public_ip(self):
         for url in (
             'https://api.ipify.org',
-            'http://api.ipify.org',
             'https://ifconfig.me/ip',
-            'http://ifconfig.me/ip',
         ):
-            rc, out, _ = self._run_cmd("wget -qO- --no-check-certificate --timeout=10 %s" % url)
+            rc, out, _ = self._run_cmd("wget -qO- --timeout=10 %s" % url)
             if rc == 0 and out and re.match(r"^\d{1,3}(\.\d{1,3}){3}$", out.strip()):
                 return out.strip()
         return ""
@@ -7018,10 +7006,12 @@ class NetworkDiagnosticsSummaryScreen(Screen):
         reactor.callFromThread(self._show_results, result)
 
     def _show_results(self, text):
+        if self._closed:
+            return
         try:
             self["text"].setText(text)
-        except Exception:
-            pass
+        except Exception as exc:
+            print('[AIO Panel] Network result display error:', exc)
 def main(session, **kwargs):
     session.open(AIOLoadingScreen)
 

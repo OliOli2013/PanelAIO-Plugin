@@ -11,6 +11,9 @@ safe session-start tasks stay lightweight.
 """
 
 import os
+import gc
+import time
+import shutil
 
 from Plugins.Plugin import PluginDescriptor
 
@@ -149,8 +152,24 @@ def _get_auto_ram_timer():
 
 def _run_auto_ram_clean_task():
     try:
-        os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
-        print('[AIO Panel] Auto RAM Cleaner: memory cleaned automatically.')
+        gc.collect()
+        root = '/tmp/PanelAIO'
+        now = time.time()
+        removed = 0
+        if os.path.isdir(root):
+            for name in os.listdir(root):
+                path = os.path.join(root, name)
+                try:
+                    if now - os.path.getmtime(path) < 86400:
+                        continue
+                    if os.path.isdir(path) and not os.path.islink(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.remove(path)
+                    removed += 1
+                except Exception:
+                    pass
+        print('[AIO Panel] Maintenance task completed; removed %s stale AIO files.' % removed)
     except Exception as e:
         print('[AIO Panel] Auto RAM Cleaner error:', e)
 
@@ -178,7 +197,9 @@ def _apply_auto_ram_from_config():
 
 
 def sessionstart(reason, session=None, **kwargs):
-    # v13.0.1: absolute safe startup. Do not run timers, shell commands or runtime imports during boot.
+    # Lightweight and non-destructive maintenance only. No shell commands, OPKG or runtime import.
+    if reason == 0:
+        _apply_auto_ram_from_config()
     return None
 
 
@@ -209,4 +230,5 @@ def Plugins(**kwargs):
             fnc=main
         ),
         PluginDescriptor(where=PluginDescriptor.WHERE_MENU, fnc=menu),
+        PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, fnc=sessionstart),
     ]
