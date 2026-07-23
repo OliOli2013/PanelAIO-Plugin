@@ -1,47 +1,68 @@
 #!/bin/sh
-# AIO Panel 14.0.1 - transactional GitHub source installer.
-set -u
-REPO="OliOli2013/PanelAIO-Plugin"; BRANCH="main"
-BASE="/usr/lib/enigma2/python/Plugins"; DST="$BASE/SystemPlugins/PanelAIO"; OLD="$BASE/Extensions/PanelAIO"
-SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
-# During an online update this helper may not yet exist next to /tmp installer.
-if [ -f "$SELF_DIR/aio_safe_common.sh" ]; then AIO_PLUGIN_DIR="$SELF_DIR"; . "$SELF_DIR/aio_safe_common.sh"
-elif [ -f "$DST/aio_safe_common.sh" ]; then AIO_PLUGIN_DIR="$DST"; . "$DST/aio_safe_common.sh"
-else echo '[PanelAIO] Missing aio_safe_common.sh; use the IPK package for recovery.'; exit 1; fi
-URL1="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"; URL2="https://codeload.github.com/${REPO}/zip/refs/heads/${BRANCH}"
-TMP="/tmp/PanelAIO/github_update_$$"; ZIP="$TMP/repo.zip"; EXTRACT="$TMP/extract"; NEW="$DST.aio-new-$$"; BAK="$DST.aio-old-$$"; LOG="/tmp/aio_github_update.log"
+# AIO Panel 14.0.1 - standalone online installer/update script
+# Works for both a fresh installation and an existing installation.
+
+VERSION="14.0.1"
+PACKAGE="enigma2-plugin-extensions-panelaio_${VERSION}_all.ipk"
+URL_PRIMARY="https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/${PACKAGE}"
+URL_FALLBACK="https://github.com/OliOli2013/PanelAIO-Plugin/raw/refs/heads/main/release/${PACKAGE}"
+TMP="/tmp/${PACKAGE}"
+LOG="/tmp/panelaio_installer.log"
+
+log() {
+    echo "[AIO Panel] $*" | tee -a "$LOG"
+}
+
+fail() {
+    log "BŁĄD: $*"
+    rm -f "$TMP" 2>/dev/null
+    exit 1
+}
+
+download_file() {
+    url="$1"
+    out="$2"
+
+    if command -v wget >/dev/null 2>&1; then
+        wget -q -O "$out" "$url" && return 0
+    fi
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fL --connect-timeout 30 --max-time 600 -o "$out" "$url" && return 0
+    fi
+
+    return 1
+}
+
 : > "$LOG" 2>/dev/null || true
-log(){ printf '%s\n' "[PanelAIO] $*" | tee -a "$LOG"; }; cleanup(){ rm -rf "$TMP" "$NEW" 2>/dev/null || true; aio_release_lock; }
-fail(){ log "ERROR: $1"; if [ -d "$BAK" ] && [ ! -d "$DST" ]; then mv "$BAK" "$DST" 2>/dev/null || true; fi; cleanup; trap - EXIT HUP INT TERM; exit 1; }
-trap 'cleanup' EXIT HUP INT TERM
-aio_acquire_lock plugin_update || fail "Another AIO update is already running."
-rm -rf "$TMP" "$NEW" "$BAK" 2>/dev/null || true; mkdir -p "$EXTRACT" "$NEW" || fail "Cannot create staging directories."
-aio_secure_download "$URL1" "$ZIP" 600 3 || aio_secure_download "$URL2" "$ZIP" 600 3 || fail "Cannot download repository ZIP over HTTPS."
-aio_not_html "$ZIP" || fail "HTML response received instead of ZIP."
-aio_validate_archive "$ZIP" zip 100000 1073741824 >> "$LOG" 2>&1 || fail "Unsafe or damaged repository ZIP."
-command -v unzip >/dev/null 2>&1 || fail "unzip is missing. Install it before running the source updater."
-unzip -oq "$ZIP" -d "$EXTRACT" >> "$LOG" 2>&1 || fail "Cannot extract repository ZIP."
-SRC=""
-for D in "$EXTRACT/PanelAIO-Plugin-main" "$EXTRACT/PanelAIO-Plugin-main/AIO-Panel" "$EXTRACT/PanelAIO-Plugin-$BRANCH" "$EXTRACT/PanelAIO-Plugin-$BRANCH/AIO-Panel"; do [ -f "$D/plugin.py" ] && [ -f "$D/version.txt" ] && { SRC="$D"; break; }; done
-if [ -z "$SRC" ]; then F=$(find "$EXTRACT" -type f -name plugin.py -print -quit 2>/dev/null); [ -n "$F" ] && SRC=$(dirname "$F"); fi
-[ -n "$SRC" ] || fail "Plugin source root not found."
-cp -pR "$SRC"/. "$NEW/" || fail "Cannot copy staged plugin."
-rm -rf "$NEW/.git" "$NEW/.github" "$NEW/release" "$NEW/releases" "$NEW/control" "$NEW/packaging" 2>/dev/null || true
-find "$NEW" -depth -type d -name __pycache__ -print 2>/dev/null | while IFS= read -r D; do rm -rf "$D" 2>/dev/null || true; done
-find "$NEW" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-for REQUIRED in plugin.py legacy_plugin.py version.txt install_archive_script.sh picon_install_script.sh aio_safe_common.sh; do [ -s "$NEW/$REQUIRED" ] || fail "Missing required file: $REQUIRED"; done
-PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail "Python interpreter not found."
-"$PY" -m py_compile "$NEW/plugin.py" "$NEW/legacy_plugin.py" >> "$LOG" 2>&1 || fail "Python syntax validation failed."
-for S in "$NEW"/*.sh; do [ -f "$S" ] || continue; /bin/sh -n "$S" >> "$LOG" 2>&1 || fail "Shell syntax error: $(basename "$S")"; done
-find "$NEW" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r F; do chmod 755 "$F" 2>/dev/null || true; done
-find "$NEW" -type f -name '*.py' -print 2>/dev/null | while IFS= read -r F; do chmod 644 "$F" 2>/dev/null || true; done
-find "$NEW" -type f -name '*.png' -print 2>/dev/null | while IFS= read -r F; do chmod 644 "$F" 2>/dev/null || true; done
-[ -d "$DST" ] && mv "$DST" "$BAK" || true
-mv "$NEW" "$DST" || { [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Atomic activation failed."; }
-[ -s "$DST/plugin.py" ] && [ -s "$DST/legacy_plugin.py" ] || { rm -rf "$DST" 2>/dev/null || true; [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Post-activation validation failed."; }
-# Remove legacy Extensions copy only after successful activation, preserving one recovery copy temporarily.
-if [ -d "$OLD" ]; then rm -rf "$OLD.aio-legacy" 2>/dev/null || true; mv "$OLD" "$OLD.aio-legacy" 2>/dev/null || true; fi
-rm -rf "$BAK" "$OLD.aio-legacy" 2>/dev/null || true
+rm -f "$TMP" 2>/dev/null
+
+command -v opkg >/dev/null 2>&1 || fail "Nie znaleziono polecenia opkg."
+
+log "Pobieranie AIO Panel ${VERSION}..."
+download_file "$URL_PRIMARY" "$TMP" || download_file "$URL_FALLBACK" "$TMP" || fail "Nie można pobrać pakietu IPK z GitHuba."
+
+[ -s "$TMP" ] || fail "Pobrany plik jest pusty."
+
+SIZE=$(wc -c < "$TMP" 2>/dev/null || echo 0)
+[ "$SIZE" -gt 10000 ] 2>/dev/null || fail "Pobrany plik jest zbyt mały i prawdopodobnie nie jest pakietem IPK."
+
+if head -c 512 "$TMP" 2>/dev/null | grep -Eqi '<!DOCTYPE|<html|404: Not Found'; then
+    fail "GitHub zwrócił stronę HTML zamiast pakietu IPK."
+fi
+
+log "Instalacja pakietu ${PACKAGE}..."
+if opkg install --force-reinstall "$TMP" >> "$LOG" 2>&1; then
+    :
+elif opkg install --force-overwrite --force-reinstall "$TMP" >> "$LOG" 2>&1; then
+    :
+else
+    fail "Instalacja OPKG nie powiodła się. Log: $LOG"
+fi
+
+rm -f "$TMP" 2>/dev/null
 sync 2>/dev/null || true
-log "Installed version: $(cat "$DST/version.txt" 2>/dev/null || echo unknown). Manual GUI restart is recommended after verification."
-cleanup; trap - EXIT HUP INT TERM; exit 0
+
+log "AIO Panel ${VERSION} został zainstalowany."
+log "Wykonaj restart GUI: killall -9 enigma2"
+exit 0
