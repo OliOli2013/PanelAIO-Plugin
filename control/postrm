@@ -1,0 +1,5 @@
+#!/bin/sh
+# Preserve /etc/enigma2 settings and all user backups.
+rm -rf /tmp/PanelAIO/locks /tmp/PanelAIO/.deps_ok 2>/dev/null || true
+rm -f /tmp/aio_panel_postinst.log 2>/dev/null || true
+exit 0

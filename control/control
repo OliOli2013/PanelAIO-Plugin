@@ -1,8 +1,11 @@
 Package: enigma2-plugin-extensions-panelaio
 Version: 14.0.0
-Section: extra
+Section: systemplugins
 Priority: optional
 Architecture: all
 Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
-Description: AIO Panel 14.0.0 - modern adaptive Enigma2 toolbox for Python 2 and Python 3
 Depends: enigma2
+Provides: enigma2-plugin-systemplugins-panelaio
+Description: AIO Panel 14.0.0 hardened Enigma2 toolbox for Python 2 and Python 3
+ Transactional channel-list, picon, OSCam and update operations with validation,
+ rollback, operation locks and adaptive SD/HD/FHD interface.

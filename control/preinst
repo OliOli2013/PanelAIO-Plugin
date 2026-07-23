@@ -1,4 +1,17 @@
 #!/bin/sh
-rm -rf /usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO 2>/dev/null || true
-rm -rf /usr/lib/enigma2/python/Plugins/Extensions/PanelAIO 2>/dev/null || true
+# Never delete the currently working plugin before the new data is unpacked.
+set -u
+DST=/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO
+TMP=/tmp/PanelAIO
+mkdir -p "$TMP" 2>/dev/null || true
+# Keep a lightweight recovery marker and verify that the target filesystem has room.
+if [ -d "$DST" ]; then
+    printf '%s\n' "$(cat "$DST/version.txt" 2>/dev/null || echo unknown)" > "$TMP/preupgrade_version" 2>/dev/null || true
+fi
+FREE=$(df -Pk /usr/lib/enigma2/python/Plugins 2>/dev/null | awk 'NR==2 {print $4; exit}')
+case "$FREE" in ''|*[!0-9]*) FREE=0 ;; esac
+if [ "$FREE" -gt 0 ] && [ "$FREE" -lt 6144 ]; then
+    echo "AIO Panel: insufficient free flash space (minimum 6 MiB)." >&2
+    exit 1
+fi
 exit 0

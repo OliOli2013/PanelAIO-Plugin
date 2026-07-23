@@ -1,12 +1,31 @@
 #!/bin/sh
+set -u
 DST=/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO
-chmod 755 "$DST/install_archive_script.sh" 2>/dev/null || true
-chmod 755 "$DST/installer.sh" 2>/dev/null || true
-chmod 755 "$DST/update_satellites_xml.sh" 2>/dev/null || true
-find "$DST" -type f -name "*.sh" -exec chmod 755 {} \; 2>/dev/null || true
-find "$DST" -type f -name "*.py" -exec chmod 644 {} \; 2>/dev/null || true
-find "$DST" -type f -name "*.png" -exec chmod 644 {} \; 2>/dev/null || true
+OLD=/usr/lib/enigma2/python/Plugins/Extensions/PanelAIO
+LOG=/tmp/aio_panel_postinst.log
+: > "$LOG" 2>/dev/null || true
+fail(){ echo "AIO Panel postinst: $1" | tee -a "$LOG" >&2; exit 1; }
+for F in plugin.py legacy_plugin.py version.txt aio_safe_common.sh install_archive_script.sh picon_install_script.sh restore_channels_script.sh install_oscam_emu_script.sh; do
+    [ -s "$DST/$F" ] || fail "missing required file: $F"
+done
+PY=""
+command -v python3 >/dev/null 2>&1 && PY=python3
+[ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY=python
+[ -n "$PY" ] || fail "Python interpreter not found"
+"$PY" -m py_compile "$DST/plugin.py" "$DST/legacy_plugin.py" >> "$LOG" 2>&1 || fail "Python syntax validation failed"
+for S in "$DST"/*.sh; do
+    [ -f "$S" ] || continue
+    /bin/sh -n "$S" >> "$LOG" 2>&1 || fail "shell syntax error: $(basename "$S")"
+done
+find "$DST" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
+find "$DST" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true
+find "$DST" -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true
 find "$DST" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
-find "$DST" -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null || true
-sync || true
+find "$DST" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.before_full_repair' \) -delete 2>/dev/null || true
+# Remove only the obsolete duplicate after the new SystemPlugins copy passed validation.
+if [ -d "$OLD" ] && [ "$OLD" != "$DST" ]; then
+    rm -rf "$OLD" 2>/dev/null || true
+fi
+rm -f /tmp/PanelAIO/preupgrade_version 2>/dev/null || true
+sync 2>/dev/null || true
 exit 0

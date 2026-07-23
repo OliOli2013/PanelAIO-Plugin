@@ -1,0 +1,5 @@
+[AIO Channel Backup] OK: zapisano /mnt/data/aio_backup_tests/dest/aio_channels_backup_20260723_113623.tar.gz (4 plików).
+PASS_channel_backup
+[AIO OSCam Backup] OK: /mnt/data/aio_backup_tests/dest/aio_oscam_config_backup_20260723_113623.tar.gz
+[AIO OSCam Restore] Restore OSCam zakończony poprawnie.
+PASS_oscam_backup_restore

@@ -1,0 +1,22 @@
+PASS|syntax
+PASS|archive_validation
+=== AIO Panel 14.0.0: transakcyjna instalacja listy ===
+Archiwum: /mnt/data/aio_repair_tests/list_work.zip
+Katalog roboczy: /tmp/aio_list_install_20260723_113929_7474
+Źródło listy: /tmp/aio_list_install_20260723_113929_7474/extract
+Kopia transakcyjna została zweryfikowana.
+>>> Lista została zainstalowana i zweryfikowana.
+PASS|channel_install_success
+PASS|channel_install_rejects_invalid
+PASS|channel_restore_success
+PASS|channel_restore_rejects_invalid
+[AIO Picons] URL: https://raw.githubusercontent.com/example/test.zip
+[AIO Picons] Cel: /mnt/data/aio_repair_tests/picons
+[AIO Picons] Katalog roboczy: /tmp/.aio_picons_20260723_113932_7732
+OK|1
+[AIO Picons] Kopiowanie 1 unikalnych piconów...
+[AIO Picons] OK: zainstalowano i zweryfikowano 1 piconów.
+PASS|picon_install_success
+PASS|picon_duplicate_rejected
+PASS|remote_script_validation
+ALL_TESTS_PASSED
