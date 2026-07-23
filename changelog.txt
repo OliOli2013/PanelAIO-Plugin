@@ -1,26 +1,3 @@
-AIO Panel 14.0.0 — pełna naprawa bezpieczeństwa i niezawodności (bez zmiany numeru wersji)
-
-- transakcyjna instalacja oraz przywracanie list kanałów: staging, kompletna kopia, walidacja, lock i automatyczny rollback,
-- restore list działa w odłączonym procesie i zawsze próbuje ponownie uruchomić Enigmę2, również po błędzie,
-- bezpieczna instalacja piconów: HTTPS, walidacja ZIP, kontrola miejsca i inodów, wykrywanie kolizji nazw, atomowe kopiowanie i blokada równoległej instalacji,
-- Super Konfigurator sprawdza wynik każdego kroku, umożliwia ponowienie/anulowanie i nie przechodzi dalej po błędzie krytycznym,
-- FULL pozwala wybrać katalog piconów, zamiast zawsze zapełniać pamięć wewnętrzną,
-- START i FULL instalują dokładnie „Polska 13E AIO Panel”, feed Softcam oraz preferowany OSCam-Emu i sprawdzają uruchomiony proces,
-- zdalne instalatory nie są już uruchamiane przez potok wget/curl do powłoki; są pobierane, walidowane i dopiero uruchamiane,
-- zdalny manifest aktualizacji nie może przekazać dowolnego polecenia shell; aktualizacje IPK są sprawdzane po nazwie pakietu i opcjonalnej sumie SHA-256,
-- usunięto wyłączanie weryfikacji certyfikatów TLS; źródła HTTP są blokowane, poza lokalnym OpenWebif 127.0.0.1,
-- bezpieczne backup/restore OSCam z wykrywaniem katalogów, walidacją archiwum, rollbackiem oraz jednolitym sterowaniem procesem,
-- bezpieczna aktualizacja satellites.xml i danych OSCam przez plik tymczasowy, walidację i atomową podmianę,
-- import M3U i bukietów używa unikalnego stagingu, walidowanych identyfikatorów, poprawnego kodowania i atomowego zapisu,
-- timery ekranów są zatrzymywane po zamknięciu, a ekran aktualizacji i usług ma układ dla SD,
-- Auto RAM nie wykonuje już drop_caches; używa bezpiecznego GC i czyści wyłącznie własne pliki tymczasowe,
-- czyszczenie nie usuwa cudzych archiwów, logów ani list OPKG, a „naprawa uszkodzonych wtyczek” tylko raportuje problemy,
-- Service Manager wykonuje akcję wyłącznie na wykrytej jednostce/skrypcie zamiast próbować wiele usług łańcuchem OR,
-- hasło root jest wprowadzane w trybie maskowanym i przekazywane przez chroniony plik tymczasowy,
-- preinst nie usuwa już działającej wersji; postinst najpierw waliduje nową instalację i dopiero wtedy usuwa starą ścieżkę Extensions,
-- dodano postrm zachowujący ustawienia użytkownika i backupy,
-- zachowano zgodność Python 2/Python 3 oraz historyczną nazwę pakietu dla poprawnych aktualizacji istniejących instalacji.
-
 AIO Panel 14.0.0 — poprawka piconów i Super Konfiguratora (bez zmiany wersji)
 
 - dodano dedykowany, weryfikowany instalator piconów z kontrolą miejsca, wielokrotnym pobieraniem, walidacją ZIP i rekursywnym kopiowaniem PNG,
