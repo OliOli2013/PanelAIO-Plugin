@@ -1900,7 +1900,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📦 Konfiguracja IPTV - zależności", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Instalator", "opkg:enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Instalator", "remote_script:https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh"),
-    ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "remote_script:https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh"),
+    ("▶️ E2iPlayer Master - Instalacja/Aktualizacja", "CMD:INSTALL_E2IPLAYER"),
     ("📅 EPG Import - Instalator", "remote_script_bash:https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh"),
     ("📺 Simple IPTV EPG - Instalator", "remote_script:https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh"),
     ("📡 PP Channel Sync - Instalator", "remote_script:https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh"),
@@ -1942,7 +1942,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📦 IPTV Configuration - dependencies", "CMD:IPTV_DEPS"),
     ("⚙️ StreamlinkProxy - Installer", "opkg:enigma2-plugin-extensions-streamlinkproxy"),
     ("🛠 AJPanel - Installer", "remote_script:https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh"),
-    ("▶️ E2iPlayer Master - Install/Update", "remote_script:https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh"),
+    ("▶️ E2iPlayer Master - Install/Update", "CMD:INSTALL_E2IPLAYER"),
     ("📅 EPG Import - Installer", "remote_script_bash:https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh"),
     ("📺 Simple IPTV EPG - Installer", "remote_script:https://raw.githubusercontent.com/OliOli2013/SimpleIPTV_EPG/main/installer.sh"),
     ("📡 PP Channel Sync - Installer", "remote_script:https://raw.githubusercontent.com/OliOli2013/PPChannelSync-Plugin/main/installer.sh"),
@@ -5590,6 +5590,9 @@ class PanelAIO(Screen):
             elif key == 'INSTALL_SOFTCAM_SCRIPT': self.install_softcam_script()
             elif key == 'INSTALL_NCAM_FEED': self.install_ncam_feed()
             elif key == 'INSTALL_IPTV_DREAM': self.install_iptv_dream_simplified()
+            elif key == 'INSTALL_E2IPLAYER':
+                command = '/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_e2iplayer.sh'))
+                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
             elif key == 'MANAGE_DVBAPI': self.manage_dvbapi()
             elif key == 'UPDATE_DVBAPI_POLAND': self.update_oscam_dvbapi_poland()
             elif key == 'UNINSTALL_MANAGER': self.show_uninstall_manager()

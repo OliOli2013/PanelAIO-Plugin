@@ -3,8 +3,8 @@
   "build": 14001,
   "package": "enigma2-plugin-extensions-panelaio",
   "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk",
-  "sha256": "b87f3e8f687fcd2288f96ff1b7740be797f1b3d134c873abe610659117fa578f",
-  "size": 289370,
+  "sha256": "a2d5ef14ce54de1234763eefd31cf846bb8ae228d97259e80c98182d435c5aa0",
+  "size": 287824,
   "python": "2/3",
-  "changelog": "Autorskie picony AIO Panel, naprawiona instalacja piconów, poprawiony Super Konfigurator, Softcam, OSCam-Emu, listy, backup, restore i aktualizacje."
+  "changelog": "E2iPlayer hotfix: dedykowany instalator z dokładnym poleceniem wget -q ... -O - | /bin/sh oraz zgodność ze starym modułem załadowanym w RAM. Wersja pozostaje 14.0.1."
 }

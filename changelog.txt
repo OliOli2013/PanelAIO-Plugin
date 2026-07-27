@@ -25,3 +25,8 @@ POZOSTAŁE ZMIANY — EFEKT AUDYTU WTYCZKI
 - uporządkowano zgodność z systemami Enigma2 Python 2 i Python 3.
 
 AIO Panel 14.0.1 — by Paweł Pawełek
+
+AIO Panel 14.0.1 E2iPlayer hotfix:
+- dedykowane wykonanie oficjalnego instalatora E2iPlayer;
+- obejście walidatora tylko dla dokładnego adresu oe-mirrors/e2iplayer python3;
+- poprawka działa również przed restartem GUI po ponownej instalacji tej samej wersji.
