@@ -55,13 +55,14 @@ def _modern_skin():
     logo = os.path.join(PLUGIN_PATH, 'logo_original_14.png')
     if mode == 'small':
         return """
-<screen name="PanelAIOModern140R3" position="center,center" size="900,560" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
+<screen name="PanelAIOModern150" position="center,center" size="900,560" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
     <widget name="brand_logo" position="18,10" size="56,56" pixmap="%s" alphatest="blend" scale="1" />
     <widget name="title_label" position="88,10" size="340,30" font="Regular;26" foregroundColor="#F2F7FC" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="support_label" position="88,41" size="360,22" font="Regular;16" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="health" position="442,14" size="385,20" font="Regular;15" halign="right" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="clock" position="442,39" size="385,24" font="Regular;19" halign="right" foregroundColor="#00C2FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="qr_code_small" position="842,18" size="38,38" pixmap="%s" alphatest="blend" scale="1" />
+    <widget name="qr_support_label" position="798,58" size="82,16" font="Regular;11" halign="center" foregroundColor="#FFD24A" backgroundColor="#07111D" transparent="0" />
     <widget name="pp_logo" position="0,0" size="0,0" transparent="1" />
 
     <widget name="sidebar" position="13,88" size="214,374" itemHeight="42" font="Regular;18" scrollbarMode="showOnDemand" selectionPixmap="%s" foregroundColor="#B9C8D8" foregroundColorSelected="#FFFFFF" backgroundColor="#0D1A29" transparent="0" />
@@ -84,21 +85,24 @@ def _modern_skin():
     <widget name="key_red" position="18,505" size="196,25" font="Regular;16" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="226,505" size="196,25" font="Regular;16" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="434,505" size="210,25" font="Regular;16" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="key_blue" position="656,505" size="226,25" font="Regular;16" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="footer" position="18,536" size="864,18" font="Regular;13" halign="center" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_blue" position="656,505" size="160,25" font="Regular;16" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="footer" position="18,536" size="798,18" font="Regular;13" halign="center" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="site_qr_label" position="704,480" size="174,18" font="Regular;12" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr" position="833,505" size="48,48" alphatest="blend" scale="1" />
     <widget name="function_description" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="legend" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="tabs_display" position="0,0" size="0,0" font="Regular;1" transparent="1" />
 </screen>""" % (logo, legacy.PLUGIN_QR_CODE_SMALL_PATH, _asset('sel_sidebar_small.png'), _asset('sel_menu_small.png'))
     if mode == 'hd':
         return """
-<screen name="PanelAIOModern140R3" position="center,center" size="1180,680" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
+<screen name="PanelAIOModern150" position="center,center" size="1180,680" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
     <widget name="brand_logo" position="22,12" size="68,68" pixmap="%s" alphatest="blend" scale="1" />
     <widget name="title_label" position="108,15" size="420,34" font="Regular;30" foregroundColor="#F2F7FC" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="support_label" position="108,52" size="430,24" font="Regular;18" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="health" position="560,17" size="530,22" font="Regular;17" halign="right" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="clock" position="560,48" size="530,28" font="Regular;22" halign="right" foregroundColor="#00C2FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="qr_code_small" position="1110,19" size="50,50" pixmap="%s" alphatest="blend" scale="1" />
+    <widget name="qr_support_label" position="1048,72" size="112,18" font="Regular;13" halign="center" foregroundColor="#FFD24A" backgroundColor="#07111D" transparent="0" />
     <widget name="pp_logo" position="0,0" size="0,0" transparent="1" />
 
     <widget name="sidebar" position="22,108" size="260,476" itemHeight="50" font="Regular;21" scrollbarMode="showOnDemand" selectionPixmap="%s" foregroundColor="#B9C8D8" foregroundColorSelected="#FFFFFF" backgroundColor="#0D1A29" transparent="0" />
@@ -118,23 +122,26 @@ def _modern_skin():
     <widget name="net_value" position="896,550" size="252,22" font="Regular;16" foregroundColor="#00C2FF" backgroundColor="#0D1A29" transparent="0" />
 
     <widget name="update_status" position="22,604" size="380,22" font="Regular;17" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="footer" position="430,604" size="728,22" font="Regular;15" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="footer" position="430,604" size="650,22" font="Regular;15" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="site_qr_label" position="956,576" size="192,20" font="Regular;14" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr" position="1094,599" size="64,64" alphatest="blend" scale="1" />
     <widget name="key_red" position="22,640" size="250,26" font="Regular;18" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="284,640" size="250,26" font="Regular;18" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="546,640" size="276,26" font="Regular;18" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="key_blue" position="834,640" size="324,26" font="Regular;18" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_blue" position="834,640" size="246,26" font="Regular;18" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="function_description" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="legend" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="tabs_display" position="0,0" size="0,0" font="Regular;1" transparent="1" />
 </screen>""" % (logo, legacy.PLUGIN_QR_CODE_SMALL_PATH, _asset('sel_sidebar_hd.png'), _asset('sel_menu_hd.png'))
     return """
-<screen name="PanelAIOModern140R3" position="center,center" size="1560,900" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
+<screen name="PanelAIOModern150" position="center,center" size="1560,900" title="AIO Panel" backgroundColor="#07111D" zPosition="99" borderWidth="2" borderColor="#1E789E">
     <widget name="brand_logo" position="30,16" size="86,86" pixmap="%s" alphatest="blend" scale="1" />
     <widget name="title_label" position="138,20" size="570,44" font="Regular;40" foregroundColor="#F2F7FC" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="support_label" position="138,70" size="590,28" font="Regular;23" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="health" position="740,22" size="690,28" font="Regular;22" halign="right" foregroundColor="#8FA7BE" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="clock" position="740,62" size="690,34" font="Regular;28" halign="right" foregroundColor="#00C2FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="qr_code_small" position="1450,24" size="70,70" pixmap="%s" alphatest="blend" scale="1" />
+    <widget name="qr_support_label" position="1388,98" size="132,24" font="Regular;17" halign="center" foregroundColor="#FFD24A" backgroundColor="#07111D" transparent="0" />
     <widget name="pp_logo" position="0,0" size="0,0" transparent="1" />
 
     <widget name="sidebar" position="32,140" size="330,632" itemHeight="64" font="Regular;28" scrollbarMode="showOnDemand" selectionPixmap="%s" foregroundColor="#B9C8D8" foregroundColorSelected="#FFFFFF" backgroundColor="#0D1A29" transparent="0" />
@@ -154,11 +161,13 @@ def _modern_skin():
     <widget name="net_value" position="1154,758" size="360,30" font="Regular;22" foregroundColor="#00C2FF" backgroundColor="#0D1A29" transparent="0" />
 
     <widget name="update_status" position="30,808" size="500,28" font="Regular;22" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="footer" position="560,808" size="970,28" font="Regular;20" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="footer" position="560,808" size="840,28" font="Regular;20" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="site_qr_label" position="1230,772" size="284,24" font="Regular;18" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr" position="1422,798" size="96,96" alphatest="blend" scale="1" />
     <widget name="key_red" position="30,852" size="330,32" font="Regular;24" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="378,852" size="330,32" font="Regular;24" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="726,852" size="370,32" font="Regular;24" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="key_blue" position="1114,852" size="416,32" font="Regular;24" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_blue" position="1114,852" size="286,32" font="Regular;24" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="function_description" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="legend" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="tabs_display" position="0,0" size="0,0" font="Regular;1" transparent="1" />
@@ -169,7 +178,7 @@ def _loading_skin():
     logo = os.path.join(PLUGIN_PATH, 'logo_original_14.png')
     if mode == 'small':
         return """
-<screen name="AIOModernLoading140R3" position="center,center" size="720,340" title="AIO Panel" backgroundColor="#07111D">
+<screen name="AIOModernLoading150" position="center,center" size="720,340" title="AIO Panel" backgroundColor="#07111D">
     <eLabel position="0,0" size="720,340" backgroundColor="#07111D"  zPosition="-10" />
     <eLabel position="0,0" size="720,78" backgroundColor="#0E1C2C"  zPosition="-10" />
     <widget name="logo" position="22,13" size="52,52" pixmap="%s" alphatest="blend" scale="1" />
@@ -181,7 +190,7 @@ def _loading_skin():
     <widget name="tip" position="42,270" size="636,52" font="Regular;16" halign="center" valign="center" foregroundColor="#8FA7BE" transparent="1" />
 </screen>""" % logo
     return """
-<screen name="AIOModernLoading140R3" position="center,center" size="900,430" title="AIO Panel" backgroundColor="#07111D">
+<screen name="AIOModernLoading150" position="center,center" size="900,430" title="AIO Panel" backgroundColor="#07111D">
     <eLabel position="0,0" size="900,430" backgroundColor="#07111D"  zPosition="-10" />
     <eLabel position="0,0" size="900,98" backgroundColor="#0E1C2C"  zPosition="-10" />
     <widget name="logo" position="28,16" size="66,66" pixmap="%s" alphatest="blend" scale="1" />
@@ -222,14 +231,17 @@ def _truncate(text, limit):
 
 class ModernPanelAIO(legacy.PanelAIO):
     skin = _modern_skin()
-    modern_skin_name = ['PanelAIOModern140R3']
+    modern_skin_name = ['PanelAIOModern150']
 
     def __init__(self, session, fetched_data):
         legacy.PanelAIO.__init__(self, session, fetched_data)
-        self.skinName = ['PanelAIOModern140R3']
+        self.skinName = ['PanelAIOModern150']
         self['brand_logo'] = Pixmap()
         self['category_icon'] = Pixmap()
         self['item_icon'] = Pixmap()
+        self['site_qr'] = Pixmap()
+        self['qr_support_label'] = Label('')
+        self['site_qr_label'] = Label('')
         self['category_title'] = Label('')
         self['item_counter'] = Label('')
         self['clock'] = Label('')
@@ -286,6 +298,7 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _modern_layout_ready(self):
         self._set_pixmap('brand_logo', os.path.join(PLUGIN_PATH, 'logo_original_14.png'))
+        self._set_pixmap('site_qr', _asset('qr_site.png'))
         try:
             self.set_language(self.lang)
             self.switch_tab(self.active_tab)
@@ -309,12 +322,16 @@ class ModernPanelAIO(legacy.PanelAIO):
     def _refresh_modern_labels(self):
         if self.lang == 'PL':
             self['support_label'].setText('Nowoczesne centrum narzędzi Enigma2')
+            self['qr_support_label'].setText('WSPARCIE')
+            self['site_qr_label'].setText('STRONA AIO-IPTV.PL')
             self['key_red'].setText('●  Polski')
             self['key_green'].setText('●  English')
             self['key_yellow'].setText('●  Restart GUI')
             self['key_blue'].setText('●  Aktualizacja')
         else:
             self['support_label'].setText('Modern Enigma2 tools and maintenance hub')
+            self['qr_support_label'].setText('SUPPORT')
+            self['site_qr_label'].setText('AIO-IPTV.PL WEBSITE')
             self['key_red'].setText('●  Polski')
             self['key_green'].setText('●  English')
             self['key_yellow'].setText('●  Restart GUI')
@@ -406,6 +423,8 @@ class ModernPanelAIO(legacy.PanelAIO):
             return 'channels.png'
         if 'softcam' in text or 'oscam' in text or 'ncam' in text:
             return 'softcam.png'
+        if 'aio connect' in text or 'connect' in text or 'połącz' in text:
+            return 'network.png'
         if 'wtycz' in text or 'plugin' in text or 'online' in text:
             return 'plugins.png'
         if 'konfigur' in text or 'configur' in text or 'setup' in text:
@@ -430,6 +449,14 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _item_icon_name(self, action):
         value = legacy.ensure_unicode(action or '').lower()
+        if 'aio_connect' in value or 'connect' in value:
+            if 'report' in value or 'qr' in value:
+                return 'info.png'
+            if 'updates' in value:
+                return 'update.png'
+            if 'tools' in value:
+                return 'cleanup.png'
+            return 'network.png'
         if 'network' in value:
             return 'network.png'
         if 'backup' in value:
@@ -543,7 +570,7 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
 
     def __init__(self, session):
         legacy.AIOLoadingScreen.__init__(self, session)
-        self.skinName = ['AIOModernLoading140R3']
+        self.skinName = ['AIOModernLoading150']
         self['logo'] = Pixmap()
         self['title'] = Label('AIO Panel')
         self['version'] = Label('v%s' % legacy.VER)

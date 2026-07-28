@@ -1,0 +1,12 @@
+AIO Panel 15.0.0 — poprawka techniczna r2
+
+Widoczna wersja wtyczki pozostaje 15.0.0.
+Techniczna rewizja pakietu OPKG: 15.0.0-r2.
+
+Poprawki:
+- E2iPlayer uruchamia dokładne sprawdzone polecenie bez ogólnego walidatora zdalnych skryptów,
+- AIO Connect zawiera tylko: diagnostykę, raport, zgłoszenie QR, stronę QR, dołączenie do Społeczności i prywatność,
+- usunięto z menu AIO Connect Centrum aktualizacji i Bezpieczne narzędzia,
+- wykluczono listy Azman,
+- podpisano kody QR na ekranie głównym,
+- dodano techniczny znacznik build r2, aby łatwo potwierdzić instalację poprawionej paczki.

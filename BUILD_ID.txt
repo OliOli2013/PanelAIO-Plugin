@@ -1,0 +1,9 @@
+AIO Panel 15.0.0 — corrected build r2
+Build date: 2026-07-28
+
+Verification marker for the corrected package:
+- exact direct E2iPlayer installer command,
+- AIO Connect reduced to six requested functions,
+- AIO Community onboarding,
+- QR labels in the main dashboard,
+- Azman channel lists filtered.

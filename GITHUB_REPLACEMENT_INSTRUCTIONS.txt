@@ -1,0 +1,20 @@
+AIO Panel 15.0.0 — AIO Connect
+PLIKI DO PODMIANY / DODANIA NA GITHUBIE
+
+1. Wgraj zawartość paczki do katalogu głównego repozytorium PanelAIO-Plugin, zachowując podkatalogi.
+2. Nie usuwaj żadnych innych plików repozytorium.
+3. Plik wydania musi pozostać pod ścieżką:
+   release/enigma2-plugin-extensions-panelaio_15.0.0_all.ipk
+4. update.json, version.txt i SHA256SUMS.txt muszą trafić do katalogu głównego repozytorium.
+5. Po publikacji sprawdź polecenie instalacji:
+   wget -q -O - "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh?$(date +%s)" | /bin/sh
+6. Po instalacji wykonaj Restart GUI.
+
+Zakres wersji 15.0.0:
+- tylko integracja AIO Connect,
+- nowa kategoria pod Wtyczki Online,
+- QR strony w dolnej części panelu,
+- zachowane pozostałe funkcje AIO Panel 14.0.1.
+
+
+AIO Panel 15.0.0 — corrected build r2: exact E2iPlayer command, six AIO Connect functions, Azman filtering and QR labels.

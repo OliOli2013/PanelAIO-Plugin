@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 14.0.1
+Wersja 15.0.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -444,13 +444,13 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("14.0.1")
+VER = _read_local_version("15.0.0")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
-FOOT = "AIO {} | {} | by Paweł Pawełek | aio-iptv@wp.pl".format(VER, "Py3" if IS_PY3 else "Py2") 
+FOOT = "AIO {} | build r2 | {} | AIO-IPTV.pl • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
@@ -1919,6 +1919,13 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📺 TV Garden - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
     ("🔎 Simple ZOOM Panel - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
     ("⚽ FootOnsat - Instalator", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
+    (r"\c00FFD200--- AIO Connect ---\c00ffffff", "SEPARATOR"),
+    ("🔎 Diagnostyka tunera", "CMD:AIO_CONNECT_DIAGNOSTICS"),
+    ("📄 Pełny raport diagnostyczny", "CMD:AIO_CONNECT_REPORT"),
+    ("📱 Zgłoś problem przez telefon / QR", "CMD:AIO_CONNECT_REPORT_QR"),
+    ("🌐 Strona AIO-IPTV.pl / QR", "CMD:AIO_CONNECT_SITE_QR"),
+    ("👥 Dołącz do AIO Społeczności", "CMD:AIO_CONNECT_JOIN_COMMUNITY"),
+    ("ℹ️ Informacje i prywatność", "CMD:AIO_CONNECT_PRIVACY"),
 ]
 
 
@@ -1961,6 +1968,13 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📺 TV Garden - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
     ("🔎 Simple ZOOM Panel - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
     ("⚽ FootOnsat - Installer", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
+    (r"\c00FFD200--- AIO Connect ---\c00ffffff", "SEPARATOR"),
+    ("🔎 Receiver diagnostics", "CMD:AIO_CONNECT_DIAGNOSTICS"),
+    ("📄 Full diagnostic report", "CMD:AIO_CONNECT_REPORT"),
+    ("📱 Report a problem by phone / QR", "CMD:AIO_CONNECT_REPORT_QR"),
+    ("🌐 AIO-IPTV.pl website / QR", "CMD:AIO_CONNECT_SITE_QR"),
+    ("👥 Join the AIO Community", "CMD:AIO_CONNECT_JOIN_COMMUNITY"),
+    ("ℹ️ Information and privacy", "CMD:AIO_CONNECT_PRIVACY"),
 ]
 
 
@@ -2090,7 +2104,8 @@ COL_TITLES = {
 # wszystkimi listami z ostatnich 12 miesięcy. Listy Bzyk83 są wykluczone ze
 # wszystkich źródeł. Vhannibal pozostaje na końcu listy zgodnie z układem AIO.
 CHANNEL_LIST_EXCLUDED_CREATORS = (
-    u"bzyk83", u"bzyk 83", u"bzyk_83", u"bzyk-83"
+    u"bzyk83", u"bzyk 83", u"bzyk_83", u"bzyk-83",
+    u"azman", u"az man", u"azman list", u"azman settings"
 )
 
 
@@ -4438,6 +4453,29 @@ FUNCTION_DESCRIPTIONS = {
 }
 # === KONIEC OPISÓW FUNKCJI ===
 
+# AIO Connect 15.0.0 — descriptions kept outside the legacy dictionary body.
+FUNCTION_DESCRIPTIONS["PL"].update({
+    "🔎 Diagnostyka tunera": "Sprawdza kondycję tunera: system, Python, flash, RAM, temperaturę, obciążenie, sieć, OpenWebif, listy, EPG, picony i crashlogi.",
+    "📄 Pełny raport diagnostyczny": "Tworzy pełny lokalny raport w /tmp. Raport nie jest wysyłany automatycznie i nie zawiera haseł ani surowego adresu MAC.",
+    "📱 Zgłoś problem przez telefon / QR": "Wyświetla kod QR prowadzący do formularza zgłoszenia na AIO-IPTV.pl z podstawowymi danymi tunera.",
+    "🌐 Strona AIO-IPTV.pl / QR": "Wyświetla lokalny kod QR strony AIO-IPTV.pl. Działa także bez generatora QR online.",
+    "👥 Społeczność AIO / QR": "Otwiera kod QR prowadzący bezpośrednio do Społeczności AIO.",
+    "👥 Dołącz do AIO Społeczności": "Pokazuje możliwości Społeczności AIO i prostą instrukcję rejestracji przez bezpieczny link e-mail. Kod QR otwiera stronę na telefonie.",
+    "🔄 Centrum aktualizacji AIO": "Sprawdza zainstalowane i najnowsze wersje najważniejszych projektów AIO.",
+    "🛡 Bezpieczne narzędzia": "Raport, czyszczenie plików tymczasowych, ograniczenie crashlogów, przeładowanie list, restart softcamu i GUI — zawsze z potwierdzeniem.",
+    "ℹ️ Informacje i prywatność": "Wyjaśnia, jakie dane zbiera diagnostyka i potwierdza, że raport pozostaje lokalny do chwili świadomego udostępnienia."
+})
+FUNCTION_DESCRIPTIONS["EN"].update({
+    "🔎 Receiver diagnostics": "Checks receiver health: image, Python, flash, RAM, temperature, load, network, OpenWebif, bouquets, EPG, picons and crash logs.",
+    "📄 Full diagnostic report": "Creates a full local report in /tmp. It is not sent automatically and contains no passwords or raw MAC address.",
+    "📱 Report a problem by phone / QR": "Shows a QR code leading to the AIO-IPTV.pl report page with basic receiver information.",
+    "🌐 AIO-IPTV.pl website / QR": "Shows a bundled QR code for the AIO-IPTV.pl website.",
+    "👥 AIO Community / QR": "Shows a QR code leading directly to the AIO Community.",
+    "🔄 AIO update centre": "Checks installed and latest versions of the main AIO projects.",
+    "🛡 Safe tools": "Local report, temporary-file cleanup, crash-log retention, bouquet reload and softcam/GUI restart with confirmation.",
+    "ℹ️ Information and privacy": "Explains diagnostic data handling and confirms that reports stay local until the user shares them."
+})
+
 # === NOWA KLASA WYBORU Z OPISEM (DLA WIZARDA) ===
 class SuperWizardChoiceScreen(Screen):
     skin = _super_wizard_choice_skin()
@@ -4845,6 +4883,13 @@ class PanelAIO(Screen):
 
 
     # --- Modern Dashboard helpers (focus/sidebar/health/QR) ---
+
+    def open_aio_connect(self, action):
+        try:
+            from Plugins.SystemPlugins.PanelAIO.ui.screens.connect import open_connect_action
+            open_connect_action(self.sess, action, self.lang)
+        except Exception as error:
+            show_message_compat(self.sess, "AIO Connect nie uruchomił się poprawnie.\n\n%s" % error, MessageBox.TYPE_ERROR, timeout=12)
 
     def open_support(self):
         try:
@@ -5591,7 +5636,9 @@ class PanelAIO(Screen):
             elif key == 'INSTALL_NCAM_FEED': self.install_ncam_feed()
             elif key == 'INSTALL_IPTV_DREAM': self.install_iptv_dream_simplified()
             elif key == 'INSTALL_E2IPLAYER':
-                command = '/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_e2iplayer.sh'))
+                # Dedicated direct command restored from the tested 14.0.1 fix.
+                # Do not route E2iPlayer through the generic remote-script validator.
+                command = 'wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'
                 run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
             elif key == 'MANAGE_DVBAPI': self.manage_dvbapi()
             elif key == 'UPDATE_DVBAPI_POLAND': self.update_oscam_dvbapi_poland()
@@ -5627,6 +5674,13 @@ class PanelAIO(Screen):
             elif key == 'COMPATIBILITY_CHECK': self.open_compatibility_check()
             elif key == 'SHOW_AIO_TIP': self.show_aio_tip()
             elif key == 'LOCAL_CHANGELOG': self.show_local_changelog()
+            elif key == 'AIO_CONNECT_DIAGNOSTICS': self.open_aio_connect('diagnostics')
+            elif key == 'AIO_CONNECT_REPORT': self.open_aio_connect('report')
+            elif key == 'AIO_CONNECT_REPORT_QR': self.open_aio_connect('report_qr')
+            elif key == 'AIO_CONNECT_SITE_QR': self.open_aio_connect('site_qr')
+            elif key == 'AIO_CONNECT_COMMUNITY_QR': self.open_aio_connect('community_qr')
+            elif key == 'AIO_CONNECT_JOIN_COMMUNITY': self.open_aio_connect('community_join')
+            elif key == 'AIO_CONNECT_PRIVACY': self.open_aio_connect('privacy')
             elif key == 'UPDATE_SRVID': self.update_oscam_srvid_files()
             elif key == 'INSTALL_SOFTCAMKEY_ONLINE': self.install_softcam_key_online()
             elif key == 'INSTALL_BMX_SAFE':

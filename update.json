@@ -1,10 +1,10 @@
 {
-  "version": "14.0.1",
-  "build": 14001,
+  "version": "15.0.0",
+  "build": 15002,
   "package": "enigma2-plugin-extensions-panelaio",
-  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_14.0.1_all.ipk",
-  "sha256": "a2d5ef14ce54de1234763eefd31cf846bb8ae228d97259e80c98182d435c5aa0",
-  "size": 287824,
+  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_15.0.0-r2_all.ipk",
+  "sha256": "efd3ef41c740a40d4739af3b686ffe53de596edd96536f685039441fea786a5d",
+  "size": 293868,
   "python": "2/3",
-  "changelog": "E2iPlayer hotfix: dedykowany instalator z dokładnym poleceniem wget -q ... -O - | /bin/sh oraz zgodność ze starym modułem załadowanym w RAM. Wersja pozostaje 14.0.1."
+  "changelog": "AIO Panel 15.0.0 build r2: faktyczna poprawka E2iPlayer z bezpośrednim poleceniem, sześć funkcji AIO Connect, dołączenie do Społeczności AIO, podpisane kody QR i filtrowanie list Azman."
 }

@@ -1,0 +1,16 @@
+AIO Panel 15.0.0 — AIO Connect (wydanie poprawione, 28.07.2026)
+
+Najważniejsze poprawki:
+- przywrócono dedykowany instalator E2iPlayer z dokładnym, sprawdzonym poleceniem:
+  wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh
+- wykluczono z list kanałów wszystkie nieaktywne wpisy i bukiety Azman,
+- usunięto z kategorii AIO Connect powielone funkcje Centrum aktualizacji AIO i Bezpieczne narzędzia,
+- dodano wyraźną funkcję „Dołącz do AIO Społeczności” z opisem możliwości i instrukcją rejestracji,
+- podpisano oba kody QR na ekranie głównym: „WSPARCIE” oraz „STRONA AIO-IPTV.PL”,
+- pozostawiono diagnostykę tunera, pełny raport, zgłoszenie problemu przez QR, stronę AIO-IPTV.pl i informacje o prywatności,
+- zachowano wszystkie pozostałe funkcje AIO Panel 14.0.1 i wersję pakietu 15.0.0.
+
+by Paweł Pawełek
+
+
+AIO Panel 15.0.0 — corrected build r2: exact E2iPlayer command, six AIO Connect functions, Azman filtering and QR labels.

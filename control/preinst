@@ -4,6 +4,11 @@ set -u
 DST=/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO
 TMP=/tmp/PanelAIO
 mkdir -p "$TMP" 2>/dev/null || true
+# Remove stale Python bytecode before unpacking the corrected build.
+if [ -d "$DST" ]; then
+    find "$DST" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
+    find "$DST" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+fi
 # Keep a lightweight recovery marker and verify that the target filesystem has room.
 if [ -d "$DST" ]; then
     printf '%s\n' "$(cat "$DST/version.txt" 2>/dev/null || echo unknown)" > "$TMP/preupgrade_version" 2>/dev/null || true

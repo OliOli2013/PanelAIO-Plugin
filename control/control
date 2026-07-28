@@ -1,11 +1,11 @@
 Package: enigma2-plugin-extensions-panelaio
-Version: 14.0.1
+Version: 15.0.0-r2
 Section: systemplugins
 Priority: optional
 Architecture: all
 Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
 Depends: enigma2
 Provides: enigma2-plugin-systemplugins-panelaio
-Description: AIO Panel 14.0.1 for Enigma2 Python 2 and Python 3
- Complete toolbox with original AIO picons, channel-list tools, Super Configurator,
- Softcam and OSCam-Emu support, backup, restore, diagnostics and online updates.
+Description: AIO Panel 15.0.0 corrected build r2 with integrated AIO Connect
+ Preserves all functions from 14.0.1 and adds receiver diagnostics, local reports,
+ website/community QR access, community onboarding and privacy information.

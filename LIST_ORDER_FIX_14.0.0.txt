@@ -1,0 +1,6 @@
+AIO Panel 14.0.0 — korekta kolejności list kanałów
+
+- wszystkie listy Azman zostały całkowicie wykluczone,
+- listy Vhannibal/Vhanibal są zawsze wyświetlane na samym dole,
+- wszystkie pozostałe listy są sortowane według daty od najnowszej,
+- zachowano wersję 14.0.0 oraz zgodność Python 2 / Python 3.

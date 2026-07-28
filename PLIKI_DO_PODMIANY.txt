@@ -1,0 +1,31 @@
+AIO Panel 15.0.0 — pliki zmienione lub dodane
+
+plugin.py
+legacy_plugin.py
+version.txt
+installer.sh
+build_ipk.sh
+update.json
+SHA256SUMS.txt
+changelog.txt
+README.md
+RELEASES.md
+GITHUB_REPLACEMENT_INSTRUCTIONS.txt
+AIO_PANEL_15.0.0_ZMIANY.txt
+ARCHITECTURE_15.0.0.md
+control/control
+control/postinst
+core/network.py
+core/system.py
+data/skins.py
+ui/modern.py
+ui/screens/connect.py
+assets/modern/qr_site.png
+assets/modern/qr_community.png
+assets/modern/qr_report.png
+release/enigma2-plugin-extensions-panelaio_15.0.0_all.ipk
+releases/15.0.0/enigma2-plugin-extensions-panelaio_15.0.0_all.ipk
+releases/15.0.0/RELEASE_NOTES.txt
+
+
+AIO Panel 15.0.0 — corrected build r2: exact E2iPlayer command, six AIO Connect functions, Azman filtering and QR labels.
