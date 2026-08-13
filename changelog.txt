@@ -2,7 +2,6 @@ AIO Panel 16.0.0 — wydanie stabilne
 Data: 13.08.2026
 
 NAJWAŻNIEJSZE ZMIANY
-- działająca 15.0.2 została użyta jako bezpieczna baza zgodności,
 - główny aktywny silnik został przeniesiony z legacy_plugin.py do runtime.py; legacy_plugin.py jest teraz tylko cienką warstwą zgodności,
 - nowe akcje AIO są kierowane przez core/action_dispatcher.py zamiast dalszego rozbudowywania jednego łańcucha if/elif,
 - zachowano lazy-load przy starcie Enigma2,
