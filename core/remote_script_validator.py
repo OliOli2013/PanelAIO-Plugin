@@ -65,6 +65,13 @@ def validate(path, profile=None):
     if '\x00' in text:
         raise ValueError('binary/NUL data in script')
     for pattern in DENY_PATTERNS:
+        # Dedicated trusted installers may intentionally restart Enigma2 after
+        # a successful installation. The exception is profile-scoped and never
+        # applies to the generic remote-script runner.
+        if profile == 'iptv-dream' and pattern == r'\binit\s+[0646]\b':
+            continue
+        if profile in ('picon-updater', 'myupdater') and pattern == r'killall[^\n]*enigma2':
+            continue
         if re.search(pattern, text, re.I | re.M):
             raise ValueError('blocked script construct: %s' % pattern)
 
@@ -75,6 +82,15 @@ def validate(path, profile=None):
         if not re.search(r'\bopkg\b', low):
             raise ValueError('opkg operation is missing')
     else:
+        if profile == 'picon-updater':
+            if 'OliOli2013/PiconUpdater' not in text or '/Plugins/Extensions/PiconUpdater' not in text:
+                raise ValueError('PiconUpdater source markers are missing')
+        elif profile == 'myupdater':
+            if 'OliOli2013/MyUpdater-Plugin' not in text or '/Plugins/Extensions/MyUpdater' not in text:
+                raise ValueError('MyUpdater source markers are missing')
+        elif profile == 'iptv-dream':
+            if 'OliOli2013' not in text or 'IPTV-Dream-Plugin' not in text or '/Plugins/Extensions/IPTVDream' not in text:
+                raise ValueError('IPTV Dream source markers are missing')
         if re.search(r'http://', text, re.I):
             raise ValueError('insecure HTTP URL embedded in installer')
         for match in re.findall(r'https://([^/\s"\'<>]+)', text, re.I):

@@ -1,0 +1,51 @@
+AIO Panel 16.0.0 — podmiana repo przez GitKraken / Linux Mint
+
+WAŻNE: NIE USUWAJ Picony.zip. Obecna funkcja „Pobierz Picony (Transparent)” nadal wskazuje ten plik w repozytorium.
+
+Wariant bezpieczny:
+1. W lokalnym klonie repozytorium zrób commit/pull aktualnego stanu.
+2. Opcjonalnie utwórz branch backup-15 przed podmianą.
+3. Z terminala w katalogu repo uruchom:
+   sh tools/clean_old_repo.sh
+   (jeśli skrypt kopiujesz dopiero z paczki 16, możesz ręcznie usunąć pliki z listy niżej).
+4. Skopiuj CAŁĄ zawartość przygotowanego katalogu PanelAIO-Plugin-16.0.0 do lokalnego repo i zezwól na nadpisanie plików.
+5. Picony.zip zostaw dotychczasowy — nie znajduje się w paczce przygotowanej przez ChatGPT ze względu na jego duży rozmiar, ale powinien pozostać w repo.
+6. Sprawdź w GitKraken, że stare raporty 14.x/15.x są oznaczone jako Deleted, a nowe pliki 16.0.0 jako Added/Modified.
+7. Commit przykładowo: AIO Panel 16.0.0 stable
+8. Push do main.
+9. Po push sprawdź, czy w repo istnieją:
+   version.txt = 16.0.0
+   release/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk
+   update.json
+   SHA256SUMS.txt
+   installer.sh
+
+Do usunięcia ze starego root repo:
+- AIO_PANEL_14.0.1_ZMIANY.txt
+- AIO_PANEL_15.0.0_R2_POPRAWKI.txt
+- AIO_PANEL_15.0.0_ZMIANY.txt
+- AIO_PANEL_AWARYJNE_USUNIECIE.txt
+- AIO_Panel_14.0.0_DIRECT_FEED_TEST_REPORT.txt
+- AIO_Panel_14.0.0_SUPERCONFIG_FIX_TEST_REPORT.txt
+- ARCHITECTURE_14.0.1.md
+- ARCHITECTURE_15.0.0.md
+- CHANNELS_FIX_TEST_REPORT.txt
+- CHANNEL_INSTALL_FIX_14.0.0.txt
+- FIXES_14.0.0_PICONS_SUPER_CONFIG.txt
+- LIST_ORDER_FIX_14.0.0.txt
+- PLIKI_DO_PODMIANY.txt
+- SUPERCONFIG_DIRECT_FEED_14.0.1.txt
+- SUPER_CONFIG_SOFTCAM_FIX_14.0.0.txt
+- UPDATE_ONLINE_FIX_14.0.1.txt
+- stare katalogi releases/14.* i releases/15.*
+
+Nie usuwaj:
+- Picony.zip
+- LICENSE
+- grafik używanych przez plugin
+- control/
+- core/
+- data/
+- ui/
+- assets/
+- release/ (ma zawierać nowy IPK 16.0.0)

@@ -1,9 +1,28 @@
-AIO Panel 15.0.0 — corrected build r2
-Build date: 2026-07-28
+AIO Panel 16.0.0 — stable modular release r0
+Build date: 2026-08-13
 
-Verification marker for the corrected package:
-- exact direct E2iPlayer installer command,
-- AIO Connect reduced to six requested functions,
-- AIO Community onboarding,
-- QR labels in the main dashboard,
-- Azman channel lists filtered.
+Baseline:
+- tested AIO Panel 15.0.2 runtime behaviour,
+- no intentional regression in channel-list, picon archive, E2iPlayer, Softcam/OSCam or Super Configurator workflows.
+
+Architecture:
+- plugin.py: lightweight Enigma2 entry point,
+- runtime.py: compatibility runtime backend,
+- legacy_plugin.py: compatibility-only import shim,
+- core/action_dispatcher.py: modular routing for modern AIO actions,
+- core/action_registry.py: action metadata,
+- core/result.py: normalized ActionResult,
+- core/logger.py: rotating central log,
+- core/activity.py: favorites/recent state,
+- core/source_registry.py: trusted remote source registry,
+- core/plugin_state.py: non-network installed-state hints,
+- ui/: modern adaptive user interface and AIO Connect.
+
+Security / reliability:
+- Trusted Source Registry remains mandatory for generic remote scripts,
+- PiconUpdater/MyUpdater/IPTV Dream use dedicated staged installers and profile validation,
+- S4aUpdater legacy HTTP exception fixed to avoid false-positive rm -rf path blocking while still rejecting root deletion and disk tools,
+- AIO Connect masks full LAN IP in shareable reports,
+- fresh GitHub bootstrap downloads exact helper/validator files, then prefers release IPK,
+- full Python compile and shell syntax checks in postinst,
+- built-in self-test before source activation.

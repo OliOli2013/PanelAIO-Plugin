@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 """AIO Panel entry point.
 
-v15.0.0 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
+v16.0.0 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
 while building the plugin list and during GUI startup; loading the whole PanelAIO
 runtime at that moment is risky on some OpenATV 8 / beta images.  The dashboard
 runtime is imported only when the user opens AIO Panel, while the menu entry and
@@ -32,7 +32,7 @@ except Exception:
     eTimer = None
 
 PLUGIN_NAME = 'AIO Panel'
-DEFAULT_VERSION = '15.0.0'
+DEFAULT_VERSION = '16.0.0'
 MENU_VISIBILITY_FALLBACK_FILE = '/etc/enigma2/.panelaio_show_in_menu'
 
 _auto_ram_timer = None
@@ -66,8 +66,10 @@ def _init_config():
         if ConfigSelection is not None and not hasattr(config.plugins.panelaio, 'auto_ram_interval'):
             config.plugins.panelaio.auto_ram_interval = ConfigSelection(
                 default='off',
-                choices=[('off', 'off'), ('10', '10'), ('30', '30'), ('60', '60')]
+                choices=[('off', 'off'), ('startup', 'startup'), ('1440', '1440'), ('4320', '4320'), ('10', '10'), ('30', '30'), ('60', '60')]
             )
+        if ConfigSelection is not None and not hasattr(config.plugins.panelaio, 'update_channel'):
+            config.plugins.panelaio.update_channel = ConfigSelection(default='stable', choices=[('stable', 'stable'), ('test', 'test')])
         if ConfigYesNo is not None and not hasattr(config.plugins.panelaio, 'show_in_menu'):
             config.plugins.panelaio.show_in_menu = ConfigYesNo(default=True)
     except Exception as e:
@@ -146,7 +148,7 @@ def _get_auto_ram_timer():
                 _auto_ram_timer.timeout.connect(_run_auto_ram_clean_task)
                 _auto_ram_connected = True
             except Exception as e:
-                print('[AIO Panel] Auto RAM timer connect error:', e)
+                print('[AIO Panel] AIO maintenance timer connect error:', e)
     return _auto_ram_timer
 
 
@@ -171,7 +173,7 @@ def _run_auto_ram_clean_task():
                     pass
         print('[AIO Panel] Maintenance task completed; removed %s stale AIO files.' % removed)
     except Exception as e:
-        print('[AIO Panel] Auto RAM Cleaner error:', e)
+        print('[AIO Panel] AIO maintenance error:', e)
 
 
 def _apply_auto_ram_from_config():
@@ -183,17 +185,23 @@ def _apply_auto_ram_from_config():
         if config is None or not hasattr(config.plugins, 'panelaio') or not hasattr(config.plugins.panelaio, 'auto_ram_interval'):
             return
         value = getattr(config.plugins.panelaio.auto_ram_interval, 'value', 'off')
+        if value == 'startup':
+            _run_auto_ram_clean_task()
+            timer.stop()
+            _auto_ram_active = False
+            print('[AIO Panel] Automatic AIO maintenance executed once at GUI startup.')
+            return
         if value and value != 'off':
             minutes = int(value)
             if minutes > 0:
                 timer.start(minutes * 60000, False)
                 _auto_ram_active = True
-                print('[AIO Panel] Auto RAM Cleaner restored: %s min' % minutes)
+                print('[AIO Panel] Automatic AIO maintenance restored: %s min' % minutes)
                 return
         timer.stop()
         _auto_ram_active = False
     except Exception as e:
-        print('[AIO Panel] Auto RAM apply error:', e)
+        print('[AIO Panel] AIO maintenance apply error:', e)
 
 
 def sessionstart(reason, session=None, **kwargs):

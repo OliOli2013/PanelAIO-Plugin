@@ -21,7 +21,8 @@ try:
 except Exception:
     config = None
 
-from Plugins.SystemPlugins.PanelAIO import legacy_plugin as legacy
+from Plugins.SystemPlugins.PanelAIO import runtime as legacy
+from Plugins.SystemPlugins.PanelAIO.core.plugin_state import status_text as _plugin_status_text
 
 PLUGIN_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 ASSET_PATH = os.path.join(PLUGIN_PATH, 'assets', 'modern')
@@ -449,6 +450,16 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _item_icon_name(self, action):
         value = legacy.ensure_unicode(action or '').lower()
+        if 'aio_search' in value:
+            return 'diagnostics.png'
+        if 'aio_favorites' in value:
+            return 'star.png'
+        if 'aio_recent' in value:
+            return 'info.png'
+        if 'aio_source_health' in value:
+            return 'network.png'
+        if 'aio_update_channel' in value:
+            return 'update.png'
         if 'aio_connect' in value or 'connect' in value:
             if 'report' in value or 'qr' in value:
                 return 'info.png'
@@ -519,6 +530,12 @@ class ModernPanelAIO(legacy.PanelAIO):
                     pass
                 if not description:
                     description = self._fallback_description(action)
+                try:
+                    state = _plugin_status_text(action, self.lang)
+                except Exception:
+                    state = ''
+                if state:
+                    description = (description.rstrip() + '\n\n' + state).strip()
                 self['detail_body'].setText(legacy.ensure_str(_truncate(description, 310)))
                 self._set_pixmap('item_icon', _asset(self._item_icon_name(action)))
             else:

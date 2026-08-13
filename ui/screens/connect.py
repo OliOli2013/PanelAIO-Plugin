@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
-"""AIO Connect module embedded in AIO Panel 15.0.0.
+"""AIO Connect module embedded in AIO Panel 16.0.0.
 
 The module is intentionally self-contained and Python 2/3 compatible. It never
 uploads a report automatically. Diagnostic data is kept locally in /tmp and a QR
@@ -541,10 +541,23 @@ def collect_diagnostics():
     }
 
 
+def _redact_ip(value):
+    """Return a support-safe LAN address representation."""
+    text = _u(value or '').strip()
+    match = re.match(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$', text)
+    if match:
+        return '%s.%s.x.x' % (match.group(1), match.group(2))
+    if ':' in text:
+        parts = [p for p in text.split(':') if p]
+        if parts:
+            return ':'.join(parts[:2]) + '::x'
+    return 'brak' if not text else 'ukryty'
+
+
 def diagnostic_report(data):
     temp = 'brak' if data['temperature'] is None else '%.1f°C' % data['temperature']
     lines = [
-        'AIO Panel 15.0.0 — AIO Connect',
+        'AIO Panel 16.0.0 — AIO Connect',
         'Raport utworzony: %s' % data['time'],
         'Kod urządzenia: %s (anonimowy skrót)' % data['device_code'],
         '',
@@ -555,7 +568,7 @@ def diagnostic_report(data):
         'Build: %s' % (data['build'] or 'brak danych'),
         'Python: %s' % data['python'],
         'Architektura: %s' % data['arch'],
-        'Adres IP: %s' % data['ip'],
+        'Adres IP (zanonimizowany): %s' % _redact_ip(data['ip']),
         '',
         'Flash: %s użyte / %s wolne (%d%%)' % (format_bytes(data['flash']['used']), format_bytes(data['flash']['free']), data['flash']['percent']),
         'RAM: %s użyte / %s dostępne (%d%%)' % (format_bytes(data['memory']['used']), format_bytes(data['memory']['available']), data['memory']['percent']),
@@ -579,7 +592,7 @@ def diagnostic_report(data):
         lines.extend(['', 'OSTRZEŻENIA:'] + ['- ' + item for item in data['warnings']])
     if not data['errors'] and not data['warnings']:
         lines.extend(['', 'Nie wykryto istotnych problemów.'])
-    lines.extend(['', 'Raport nie zawiera haseł ani surowego adresu MAC i nie jest wysyłany automatycznie.'])
+    lines.extend(['', 'Raport nie zawiera haseł, surowego adresu MAC ani pełnego adresu IP i nie jest wysyłany automatycznie.'])
     return '\n'.join(lines)
 
 
@@ -785,7 +798,7 @@ class AIOConnectQRScreen(Screen):
         path = None
         for source in sources:
             try:
-                request = Request(source, headers={'User-Agent': 'AIOPanel/15.0.0', 'Accept': 'image/png,image/*'})
+                request = Request(source, headers={'User-Agent': 'AIOPanel/16.0.0', 'Accept': 'image/png,image/*'})
                 response = urlopen(request, timeout=12)
                 raw = response.read()
                 try:
@@ -944,7 +957,7 @@ class AIOConnectUpdatesScreen(Screen):
     def _fetch_update(self, url):
         if not url:
             return {}
-        request = Request(url, headers={'User-Agent': 'AIOPanel/15.0.0', 'Cache-Control': 'no-cache'})
+        request = Request(url, headers={'User-Agent': 'AIOPanel/16.0.0', 'Cache-Control': 'no-cache'})
         response = urlopen(request, timeout=7)
         raw = response.read()
         try:
@@ -970,7 +983,7 @@ class AIOConnectUpdatesScreen(Screen):
             local = installed.get(package, '-') if package else 'Android / telefon'
             latest = _u(remote.get('version') or '?')
             if project['name'] == 'AIO Panel':
-                local = '15.0.0'
+                local = '16.0.0'
             status = 'APLIKACJA'
             if package:
                 if local == '-':
@@ -1169,6 +1182,7 @@ PRIVACY_PL = '''AIO Connect — informacje i prywatność
 
 • Diagnostyka jest wykonywana wyłącznie lokalnie na tunerze.
 • Raport jest zapisywany w /tmp/aio_panel_connect_report.txt.
+• Adres IP jest w raporcie maskowany (np. 192.168.x.x).
 • Wtyczka nie wysyła raportu, haseł ani danych dostępowych automatycznie.
 • Kod urządzenia jest krótkim skrótem SHA-256 i nie zawiera surowego adresu MAC ani numeru seryjnego.
 • Kod QR otwiera stronę AIO-IPTV.pl, formularz zgłoszenia lub Społeczność AIO.

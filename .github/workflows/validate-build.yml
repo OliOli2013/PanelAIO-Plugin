@@ -1,0 +1,26 @@
+name: Validate AIO Panel
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Python syntax
+        run: python -m compileall -q .
+      - name: Shell syntax
+        run: find . -type f -name '*.sh' -print0 | xargs -0 -n1 sh -n
+      - name: AIO self-test
+        run: python core/selftest.py .
+      - name: Regression checks
+        run: python tests/static_regression.py
+      - name: Build IPK
+        run: sh build_ipk.sh
+      - name: Verify release artifact
+        run: test -s release/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk

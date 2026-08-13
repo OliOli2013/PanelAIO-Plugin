@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 15.0.0 - dedicated E2iPlayer installer/update wrapper.
+# AIO Panel 16.0.0 - dedicated E2iPlayer installer/update wrapper.
 # Keep this command identical to the command used over FTP/SSH.
 URL="https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh"
 LOG="/tmp/aio_e2iplayer_install.log"

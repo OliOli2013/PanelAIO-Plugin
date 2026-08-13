@@ -1,52 +1,39 @@
-# AIO Panel 15.0.0
+# AIO Panel 16.0.0
 
-AIO Panel is a universal Enigma2 toolbox for receivers running Python 2 or Python 3. Version 15.0.0 preserves the stabilized 14.0.1 action engine and adds the integrated AIO Connect diagnostics and support module.
+AIO Panel to zestaw narzędzi All-In-One dla odbiorników Enigma2. Wersja 16.0.0 jest stabilnym wydaniem opartym na przetestowanej linii 15.0.2 i porządkuje architekturę, aktualizacje, diagnostykę oraz bezpieczeństwo instalatorów.
 
-## AIO Connect
-
-AIO Connect is available as a separate category directly below Online Plugins. It provides receiver diagnostics, a local text report, website/community QR access, an AIO update centre, confirmed safe tools and privacy information. Reports are not uploaded automatically.
-
-## Main areas
-
-- channel lists and bouquet installation,
-- Softcam and Oscam tools,
-- online plugin installers,
-- first-installation configurator,
-- system tools, feed and repository management,
-- channel-list and Oscam backup/restore,
-- skins, diagnostics, cleanup and security tools,
-- plugin update and compatibility information.
-
-## Modern interface
-
-- separate layouts for compact, HD and Full HD desktops,
-- PNG pictograms independent of receiver font and emoji support,
-- category navigation, central action list and a live details panel,
-- CPU, RAM, flash, network, image and Python information,
-- automatic Polish interface on Polish Enigma2 systems and English on other languages,
-- manual language switching: Red — Polish, Green — English,
-- Yellow — restart GUI, Blue — AIO Panel update, INFO — support QR.
-
-## E2 Doctor
-
-E2 Doctor is available in Online Plugins and is installed with:
-
-```sh
-wget -q -O - https://raw.githubusercontent.com/OliOli2013/E2-Doctor-Plugin/main/installer.sh | /bin/sh
-```
-
-Because E2 Doctor requires Python 3, the entry is hidden automatically on Python 2 images.
-
-## Online installation
+## Instalacja
 
 ```sh
 wget -q -O - https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
 ```
 
-The installer does not force an automatic reboot.
+Instalator 16.0.0 działa również na tunerze bez wcześniejszej instalacji AIO Panel. Preferuje paczkę IPK z katalogu `release/`, a instalację źródłową wykorzystuje tylko jako ścieżkę awaryjną.
 
-Author: **by Paweł Pawełek**  
-Contact: **aio-iptv@wp.pl**
+## Najważniejsze funkcje
 
+- listy kanałów AIO i obsługa bezpiecznego rollbacku,
+- Softcam/OSCam oraz Super Konfigurator,
+- instalatory wtyczek i skórek,
+- E2iPlayer, IPTV Dream, PiconUpdater, MyUpdater, S4aUpdater,
+- AIO Connect i lokalny raport diagnostyczny,
+- wyszukiwarka AIO, Ulubione, Ostatnio używane,
+- Health Check źródeł,
+- Stable/Test update channel,
+- backup/restore list kanałów i Oscam,
+- diagnostyka systemu, logi, usługi, cron i konserwacja AIO.
 
-AIO Panel 15.0.0 — corrected build r2: exact E2iPlayer command, six AIO Connect functions, Azman filtering and QR labels.
+## Architektura 16.x
+
+`plugin.py` pozostaje lekkim entry pointem Enigma2. Aktywny backend znajduje się w `runtime.py`, natomiast `legacy_plugin.py` istnieje wyłącznie dla zgodności starszych importów. Nowe akcje użytkowe są rejestrowane i kierowane przez moduły `core/` zamiast dalszego powiększania warstwy legacy.
+
+## Bezpieczeństwo instalatorów
+
+Zdalne instalatory są ograniczone do jawnego Trusted Source Registry. Dla wybranych instalatorów AIO pobiera skrypt do prywatnego pliku w `/tmp`, sprawdza odpowiedź i profil źródła, zapisuje SHA-256, a dopiero potem uruchamia skrypt. S4aUpdater jest świadomym wyjątkiem legacy HTTP i jest dodatkowo oznaczany ostrzeżeniem.
+
+## Python
+
+AIO Panel zachowuje kompatybilność z Python 2 dla istniejących funkcji legacy. Rozwój nowych modułów jest ukierunkowany na Python 3; funkcje wymagające Python 3 są ukrywane lub blokowane na starszych obrazach.
+
+Autor: **Paweł Pawełek**  
+Kontakt: `aio-iptv@wp.pl`

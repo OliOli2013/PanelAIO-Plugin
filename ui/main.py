@@ -11,8 +11,8 @@ def open_main(session, lang=None, **kwargs):
 
 
 def menu_entries(menuid, **kwargs):
-    from Plugins.SystemPlugins.PanelAIO import legacy_plugin
-    return legacy_plugin.menu(menuid, **kwargs)
+    from Plugins.SystemPlugins.PanelAIO import runtime
+    return runtime.menu(menuid, **kwargs)
 
 
 def sessionstart_hook(reason, session=None, **kwargs):

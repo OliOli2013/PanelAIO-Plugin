@@ -1,30 +1,53 @@
 #!/bin/sh
+# Reproducible AIO Panel IPK builder for Linux Mint / GitHub Actions.
 set -eu
-VERSION=$(cat version.txt)
-[ "$VERSION" = "15.0.0" ] || { echo "Unexpected version: $VERSION" >&2; exit 1; }
-PKG="enigma2-plugin-extensions-panelaio_${VERSION}-r2_all.ipk"
-WORK="/tmp/panelaio-build-$$"
-OUT="$(pwd)/release/$PKG"
-DST="$WORK/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO"
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+VERSION=$(tr -d '\r\n ' < "$ROOT/version.txt")
+PKG='enigma2-plugin-extensions-panelaio'
+OUTDIR="$ROOT/release"
+OUT="$OUTDIR/${PKG}_${VERSION}_all.ipk"
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/panelaio-build.XXXXXX")
+PLUGIN="$WORK/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO"
+CONTROL="$WORK/control"
 cleanup(){ rm -rf "$WORK"; }
 trap cleanup EXIT HUP INT TERM
-rm -rf "$WORK"
-mkdir -p "$DST" "$WORK/control" "$(dirname "$OUT")"
-# Copy the repository source as the runtime tree, then remove packaging-only data.
-cp -a . "$DST/"
-rm -rf "$DST/control" "$DST/release" "$DST/releases" "$DST/.git" "$DST/.github" "$DST/packaging" 2>/dev/null || true
-rm -f "$DST"/*.ipk "$DST/build_ipk.sh" "$DST/SHA256SUMS.txt" "$DST/update.json" "$DST/PLIKI_DO_PODMIANY.txt" 2>/dev/null || true
-find "$DST" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-find "$DST" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-for F in plugin.py legacy_plugin.py version.txt BUILD_ID.txt install_e2iplayer.sh ui/modern.py ui/screens/connect.py assets/modern/qr_site.png assets/modern/qr_community.png assets/modern/qr_report.png; do
-    [ -s "$DST/$F" ] || { echo "Missing runtime file: $F" >&2; exit 1; }
-done
-cp control/control control/preinst control/postinst control/postrm "$WORK/control/"
-chmod 755 "$WORK/control/preinst" "$WORK/control/postinst" "$WORK/control/postrm"
+mkdir -p "$PLUGIN" "$CONTROL" "$OUTDIR"
+
+# Copy repository source, then remove files which are repository/build-only.
+(
+  cd "$ROOT"
+  tar -cf - \
+    --exclude='./.git' --exclude='./.github' --exclude='./release' --exclude='./releases' \
+    --exclude='./control' --exclude='./docs' --exclude='./tests' --exclude='./tools' \
+    --exclude='./build_ipk.sh' --exclude='./README.md' --exclude='./RELEASES.md' \
+    --exclude='./GITKRAKEN_16.0.0.txt' --exclude='./SHA256SUMS.txt' --exclude='./update.json' \
+    --exclude='./Picony.zip' --exclude='./__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
+    .
+) | tar -xf - -C "$PLUGIN"
+
+cp -a "$ROOT/control/." "$CONTROL/"
+
+# IPK should contain runtime assets, not repository metadata.
+find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+find "$PLUGIN" -type f -name '*.sh' -exec chmod 755 {} \;
+find "$PLUGIN" -type f -name '*.py' -exec chmod 644 {} \;
+find "$PLUGIN" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.json' -o -name '*.txt' -o -name 'LICENSE' \) -exec chmod 644 {} \; 2>/dev/null || true
+chmod 755 "$CONTROL"/preinst "$CONTROL"/postinst "$CONTROL"/postrm 2>/dev/null || true
+chmod 644 "$CONTROL"/control
+
+# Validate the staged payload before packaging.
+python3 -m compileall -q "$PLUGIN"
+find "$PLUGIN" -type f -name '*.sh' -print0 | xargs -0 -n1 /bin/sh -n
+python3 "$PLUGIN/core/selftest.py" "$PLUGIN"
+find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+
+# Build standard opkg/deb-format archives. AIO 15.x used xz and tested receivers accept it.
 printf '2.0\n' > "$WORK/debian-binary"
 (
-  cd "$WORK/control"
-  tar --owner=0 --group=0 -cJf "$WORK/control.tar.xz" control preinst postinst postrm
+  cd "$CONTROL"
+  tar --owner=0 --group=0 -cJf "$WORK/control.tar.xz" .
 )
 (
   cd "$WORK/data"
@@ -35,5 +58,21 @@ rm -f "$OUT"
   cd "$WORK"
   ar r "$OUT" debian-binary control.tar.xz data.tar.xz >/dev/null
 )
-chmod 644 "$OUT"
+
+[ -s "$OUT" ] || { echo 'Build failed: IPK is empty.' >&2; exit 1; }
+if command -v sha256sum >/dev/null 2>&1; then
+  HASH=$(sha256sum "$OUT" | awk '{print $1}')
+else
+  HASH=$(python3 - "$OUT" <<'PY'
+import hashlib, sys
+h=hashlib.sha256()
+with open(sys.argv[1],'rb') as f:
+    for chunk in iter(lambda:f.read(65536), b''):
+        h.update(chunk)
+print(h.hexdigest())
+PY
+)
+fi
+printf '%s  %s\n' "$HASH" "release/$(basename "$OUT")" > "$ROOT/SHA256SUMS.txt"
 echo "Built: $OUT"
+echo "SHA256: $HASH"

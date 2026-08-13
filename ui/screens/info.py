@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
-from Plugins.SystemPlugins.PanelAIO import legacy_plugin
-AIOSupportScreen = legacy_plugin.AIOSupportScreen
-AIOInfoScreen = legacy_plugin.AIOInfoScreen
-AIOTextViewerScreen = legacy_plugin.AIOTextViewerScreen
-AIOTipPopupScreen = legacy_plugin.AIOTipPopupScreen
-LogViewerScreen = legacy_plugin.LogViewerScreen
-CronManagerScreen = legacy_plugin.CronManagerScreen
-ServiceManagerScreen = legacy_plugin.ServiceManagerScreen
-SystemInfoScreen = legacy_plugin.SystemInfoScreen
-UninstallManagerScreen = legacy_plugin.UninstallManagerScreen
-NetworkDiagnosticsSummaryScreen = legacy_plugin.NetworkDiagnosticsSummaryScreen
+from Plugins.SystemPlugins.PanelAIO import runtime
+AIOSupportScreen = runtime.AIOSupportScreen
+AIOInfoScreen = runtime.AIOInfoScreen
+AIOTextViewerScreen = runtime.AIOTextViewerScreen
+AIOTipPopupScreen = runtime.AIOTipPopupScreen
+LogViewerScreen = runtime.LogViewerScreen
+CronManagerScreen = runtime.CronManagerScreen
+ServiceManagerScreen = runtime.ServiceManagerScreen
+SystemInfoScreen = runtime.SystemInfoScreen
+UninstallManagerScreen = runtime.UninstallManagerScreen
+NetworkDiagnosticsSummaryScreen = runtime.NetworkDiagnosticsSummaryScreen

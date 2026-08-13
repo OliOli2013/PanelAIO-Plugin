@@ -1,10 +1,9 @@
 {
-  "version": "15.0.0",
-  "build": 15002,
+  "name": "AIO Panel",
+  "version": "16.0.0",
   "package": "enigma2-plugin-extensions-panelaio",
-  "url": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_15.0.0-r2_all.ipk",
-  "sha256": "efd3ef41c740a40d4739af3b686ffe53de596edd96536f685039441fea786a5d",
-  "size": 293868,
-  "python": "2/3",
-  "changelog": "AIO Panel 15.0.0 build r2: faktyczna poprawka E2iPlayer z bezpośrednim poleceniem, sześć funkcji AIO Connect, dołączenie do Społeczności AIO, podpisane kody QR i filtrowanie list Azman."
+  "channel": "stable",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk",
+  "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
+  "changelog": "AIO Panel 16.0.0: modularny runtime, poprawione instalatory PiconUpdater/MyUpdater/S4aUpdater, bezpieczny bootstrap IPK, status wtyczek, anonimizacja AIO Connect i porzadek repozytorium."
 }

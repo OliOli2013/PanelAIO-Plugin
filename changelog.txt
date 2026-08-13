@@ -1,4 +1,86 @@
-[15.0.0]
+AIO Panel 16.0.0 — wydanie stabilne
+Data: 13.08.2026
+
+NAJWAŻNIEJSZE ZMIANY
+- działająca 15.0.2 została użyta jako bezpieczna baza zgodności,
+- główny aktywny silnik został przeniesiony z legacy_plugin.py do runtime.py; legacy_plugin.py jest teraz tylko cienką warstwą zgodności,
+- nowe akcje AIO są kierowane przez core/action_dispatcher.py zamiast dalszego rozbudowywania jednego łańcucha if/elif,
+- zachowano lazy-load przy starcie Enigma2,
+- poprawiono błąd automatycznej konserwacji „przy starcie GUI”,
+- centralny logger, ActionResult, ActionRegistry, historia, Ulubione, wyszukiwarka i Health Check pozostają częścią rdzenia,
+- dodano lokalny status zainstalowania dla najważniejszych instalatorów w panelu szczegółów,
+- AIO Connect maskuje pełny adres IP w raporcie diagnostycznym,
+- instalator GitHub obsługuje teraz również całkowicie świeżą instalację z wget | sh i preferuje identyczny artefakt IPK z katalogu release,
+- dodano testy statyczne i workflow GitHub Actions,
+- repozytorium zostało przygotowane do oczyszczenia ze starych raportów i historycznych plików napraw.
+
+INSTALATORY
+- IPTV Dream: https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh
+  wget -q --no-check-certificate ... -O pliku tymczasowego; walidacja przed /bin/sh.
+- Picon Updater: źródło zgodne z poleceniem:
+  wget -qO - https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh | /bin/sh
+  W AIO skrypt jest najpierw zapisywany do /tmp i walidowany, następnie uruchamiany.
+- MyUpdater v5.1: źródło zgodne z poleceniem:
+  wget -q -O - https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh | sh
+  W AIO skrypt jest najpierw zapisywany do /tmp i walidowany, następnie uruchamiany.
+- S4aUpdater: pozostaje dokładny adres wydawcy:
+  http://s4aupdater.one.pl/instalujs4aupdater.sh
+  Naprawiono fałszywe blokowanie legalnych poleceń rm -rf /ścieżka. Nadal blokowane są operacje dyskowe i próba rm -rf /.
+
+BEZ ZMIAN REGRESYJNYCH
+- instalacja list kanałów i rollback,
+- picon_install_script.sh,
+- E2iPlayer i jego sprawdzone polecenie,
+- Softcam/OSCam i Super Konfigurator,
+- AIO Connect funkcjonalnie poza anonimizacją raportu,
+- kompatybilność Python 2 pozostaje w trybie legacy-maintenance; nowe funkcje są projektowane przede wszystkim dla Python 3.
+
+--- HISTORIA POPRZEDNICH WYDAŃ ---
+AIO Panel 15.0.2 — Core Modernization Test (13.08.2026)
+
+NOWOŚCI I ZMIANY:
+- dodano centralny, rotowany log AIO: /tmp/PanelAIO/logs/panelaio.log,
+- dodano ujednolicony obiekt ActionResult zgodny wstecznie z dotychczasowymi callbackami,
+- utworzono ActionRegistry i przeniesiono do niego politykę potwierdzania operacji,
+- dodano Trusted Source Registry: zdalny skrypt uruchamiany jako root musi pochodzić z jawnie zatwierdzonego repozytorium i ścieżki,
+- dodano wyszukiwarkę wszystkich funkcji AIO Panel,
+- dodano Ulubione; klawisz 0 dodaje lub usuwa aktualnie zaznaczoną funkcję,
+- dodano lokalną historię „Ostatnio używane”, zachowywaną w /etc/enigma2/.panelaio_activity.json,
+- dodano Health Check źródeł AIO: sprawdzanie głównych endpointów i zatwierdzonych instalatorów bez wykonywania instalacji,
+- przygotowano kanały aktualizacji Stable/Test; Stable korzysta z main, Test z osobnej gałęzi test,
+- instalator online preferuje teraz identyczny artefakt IPK publikowany w katalogu release; instalacja ze źródeł pozostaje wyłącznie ścieżką awaryjną,
+- rozszerzono centralne logowanie uruchamianych operacji i zadań wykonywanych w tle,
+- dodano automatyczny self-test pakietu sprawdzający wersję, wymagane moduły, JSON i kompletność Trusted Source Registry,
+- zachowano dotychczasowe, sprawdzone mechanizmy list kanałów, piconów, softcamów, E2iPlayer i AIO Connect.
+- poprawiono instalator IPTV Dream: używa wskazanego źródła OliOli2013/IPTV-Dream-Plugin oraz trybu wget --no-check-certificate dla tunerów ze starym magazynem CA; skrypt jest najpierw pobierany do /tmp i walidowany, a nie wykonywany bezpośrednio z pipe,
+- dodano S4aUpdater do Wtyczek Online z oficjalnie stosowanym adresem http://s4aupdater.one.pl/instalujs4aupdater.sh; z uwagi na legacy HTTP AIO pokazuje ostrzeżenie, pobiera plik do /tmp, wykonuje kontrolę podstawową i zapisuje SHA-256 w logu,
+- zmieniono harmonogram Automatycznej konserwacji AIO na praktyczne tryby: przy starcie GUI, raz dziennie lub raz na 3 dni; zapisane wcześniej interwały 10/30/60 min pozostają obsługiwane jako tryb zgodności.
+
+TESTOWAĆ NA TUNERZE:
+1. uruchomienie i nawigację po wszystkich zakładkach,
+2. klawisz 0 na dowolnej funkcji + pozycję Ulubione,
+3. Szukaj w AIO Panel,
+4. Ostatnio używane,
+5. Sprawdź źródła AIO,
+6. instalację przynajmniej jednego zatwierdzonego instalatora online,
+7. instalację listy kanałów i piconów,
+8. AIO Connect oraz aktualizację E2iPlayer,
+9. instalację IPTV Dream,
+10. instalację S4aUpdater,
+11. zmianę trybu Automatycznej konserwacji AIO.
+
+AIO Panel 15.0.1 — test hardening build (13.08.2026)
+
+- baza: sprawdzona paczka 15.0.0-r2, bez zmian w działaniu list, piconów, softcamów i AIO Connect,
+- odchudzono zawartość IPK: usunięto historyczne raporty testowe, dokumenty napraw i pliki developerskie niewymagane na tunerze,
+- rozszerzono walidację instalacji: pełna kontrola składni modułów Python 3 i rekursywna kontrola skryptów shell,
+- postinst nie zależy już od historycznego znacznika build r2 ani od konkretnej linii implementacji E2iPlayer,
+- instalator źródłowy usuwa artefakty repozytorium przed aktywacją wtyczki,
+- „Auto RAM Cleaner” przemianowano na „Automatyczna konserwacja AIO”, zgodnie z faktycznym działaniem funkcji,
+- „Wyczyść Pamięć RAM” przemianowano na „Zwolnij pamięć Pythona AIO”; Linux drop_caches nadal nie jest wykonywany,
+- poprawiono angielskie opcje konfiguracji automatycznej konserwacji,
+- ujednolicono identyfikatory wersji i User-Agent do 15.0.1.
+
 AIO Panel 15.0.0 — AIO Connect (wydanie poprawione, 28.07.2026)
 
 Najważniejsze poprawki:
@@ -12,7 +94,7 @@ Najważniejsze poprawki:
 - zachowano wszystkie pozostałe funkcje AIO Panel 14.0.1 i wersję pakietu 15.0.0.
 
 by Paweł Pawełek
-[15.0.0]
+
 AIO Panel 15.0.0 — AIO Connect (28.07.2026)
 
 NOWA FUNKCJA: AIO CONNECT

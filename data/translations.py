@@ -6,11 +6,11 @@ try:
 except Exception:
     config = None
 
-from Plugins.SystemPlugins.PanelAIO import legacy_plugin
+from Plugins.SystemPlugins.PanelAIO import runtime
 
-TRANSLATIONS = legacy_plugin.TRANSLATIONS
-COL_TITLES = getattr(legacy_plugin, 'COL_TITLES', {})
-FUNCTION_DESCRIPTIONS = getattr(legacy_plugin, 'FUNCTION_DESCRIPTIONS', {})
+TRANSLATIONS = runtime.TRANSLATIONS
+COL_TITLES = getattr(runtime, 'COL_TITLES', {})
+FUNCTION_DESCRIPTIONS = getattr(runtime, 'FUNCTION_DESCRIPTIONS', {})
 
 
 def detect_language():
