@@ -1,5 +1,5 @@
-AIO Panel 16.0.0 — stable modular release r0
-Build date: 2026-08-13
+AIO Panel 16.0.0 — stable modular release r1 hotfix
+Build date: 2026-08-15
 
 Baseline:
 - tested AIO Panel 15.0.2 runtime behaviour,
@@ -26,3 +26,9 @@ Security / reliability:
 - fresh GitHub bootstrap downloads exact helper/validator files, then prefers release IPK,
 - full Python compile and shell syntax checks in postinst,
 - built-in self-test before source activation.
+
+Hotfix r1:
+- GitHub Release asset is now the primary IPK source,
+- fresh-install ZIP fallback bootstraps archive_validator.py,
+- binary HTML check no longer uses shell command substitution,
+- self-update confirms version.txt before reporting success.

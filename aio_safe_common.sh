@@ -1,5 +1,5 @@
 #!/bin/sh
-# Shared POSIX helpers for AIO Panel 14.0.1.
+# Shared POSIX helpers for AIO Panel 16.0.0-r1.
 
 AIO_PLUGIN_DIR="${AIO_PLUGIN_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)}"
 AIO_RUNTIME_ROOT="${AIO_RUNTIME_ROOT:-/tmp/PanelAIO}"
@@ -113,8 +113,12 @@ PY
 
 aio_not_html() {
     [ -s "$1" ] || return 1
-    H=$(dd if="$1" bs=1024 count=1 2>/dev/null | tr 'A-Z' 'a-z')
-    case "$H" in *"<html"*|*"<!doctype"*|*"404: not found"*|*"access denied"*|*"rate limit"*) return 1 ;; esac
+    # Do not place binary data in a shell variable. ZIP/IPK files contain NUL
+    # bytes and BusyBox ash/bash may warn about ignored NUL bytes in command
+    # substitution. Stream only the first KiB directly through grep instead.
+    if dd if="$1" bs=1024 count=1 2>/dev/null | tr 'A-Z' 'a-z' | grep -q -e '<html' -e '<!doctype' -e '404: not found' -e 'access denied' -e 'rate limit'; then
+        return 1
+    fi
     return 0
 }
 

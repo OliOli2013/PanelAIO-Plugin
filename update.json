@@ -3,7 +3,7 @@
   "version": "16.0.0",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk",
+  "ipk": "https://github.com/OliOli2013/PanelAIO-Plugin/releases/download/16.0.0/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "AIO Panel 16.0.0: modularny runtime, poprawione instalatory PiconUpdater/MyUpdater/S4aUpdater, bezpieczny bootstrap IPK, status wtyczek, anonimizacja AIO Connect i porzadek repozytorium."
+  "changelog": "AIO Panel 16.0.0: modular runtime, safer GitHub Release IPK bootstrap, fixed fresh-install ZIP validation, verified self-update result, trusted sources, diagnostics, favorites/search/history and AIO Connect."
 }

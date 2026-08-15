@@ -470,7 +470,7 @@ CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/P
 
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
-FOOT = "AIO {} | build r0 | {} | AIO-IPTV.pl • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
+FOOT = "AIO {} | build r1 | {} | AIO-IPTV.pl • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
@@ -5669,10 +5669,23 @@ class PanelAIO(Screen):
         status = os.path.join(PLUGIN_TMP_PATH, 'aio_self_update_%s.status' % int(time.time() * 1000))
         branch = 'test' if self._get_update_channel() == 'test' else 'main'
         command = '/bin/sh %s %s %s /bin/sh %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'run_remote_script_safe.sh'), url, status, branch))
+        expected_version = ensure_unicode((self.update_info or {}).get('version', '')).strip()
         def finished(result):
             if result and result.get('success'):
+                # Do not report success only because installer.sh returned 0.
+                # Verify that the expected version is really present on disk.
+                installed_version = ''
+                try:
+                    with io.open(os.path.join(PLUGIN_PATH, 'version.txt'), 'r', encoding='utf-8', errors='ignore') as vf:
+                        installed_version = ensure_unicode(vf.read()).strip()
+                except Exception as exc:
+                    _log_exception('self update version verification', exc)
+                if expected_version and installed_version != expected_version:
+                    msg = ('Instalator zakończył pracę, ale wersja na dysku nadal wynosi %s zamiast %s. Aktualizacja NIE została potwierdzona. Log: /tmp/aio_remote_script.log' % (installed_version or '?', expected_version) if self.lang == 'PL' else 'The installer finished, but the version on disk is still %s instead of %s. The update was NOT verified. Log: /tmp/aio_remote_script.log' % (installed_version or '?', expected_version))
+                    show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=16)
+                    return
                 self.update_info = None
-                show_message_compat(self.sess, ('Aktualizacja została zainstalowana. Sprawdź system i wykonaj restart GUI ręcznie.' if self.lang == 'PL' else 'The update was installed. Check the system and restart the GUI manually.'), MessageBox.TYPE_INFO, timeout=10)
+                show_message_compat(self.sess, ('Aktualizacja została faktycznie zainstalowana (%s). Sprawdź system i wykonaj restart GUI ręcznie.' % (installed_version or expected_version) if self.lang == 'PL' else 'The update was actually installed (%s). Check the system and restart the GUI manually.' % (installed_version or expected_version)), MessageBox.TYPE_INFO, timeout=10)
             else:
                 show_message_compat(self.sess, ('Aktualizacja nie powiodła się. Log: /tmp/aio_remote_script.log' if self.lang == 'PL' else 'Update failed. Log: /tmp/aio_remote_script.log'), MessageBox.TYPE_ERROR, timeout=14)
         run_command_in_background(self.sess, 'Aktualizacja AIO Panel', [command], callback_on_finish=finished)

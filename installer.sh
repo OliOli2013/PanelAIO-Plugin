@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 16.0.0 - IPK-first transactional installer/updater with source-recovery fallback.
+# AIO Panel 16.0.0-r1 - IPK-first transactional installer/updater with source-recovery fallback.
 set -u
 REPO="OliOli2013/PanelAIO-Plugin"
 BRANCH="${1:-main}"
@@ -57,11 +57,19 @@ elif [ -n "$VERSION" ]; then
 fi
 if [ -n "$VERSION" ] && [ -n "$IPK_RUNNER" ]; then
     IPK_NAME="enigma2-plugin-extensions-panelaio_${VERSION}_all.ipk"
-    IPK_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/release/${IPK_NAME}"
     STATUS="$TMP/ipk.status"
-    log "Trying release IPK first: $IPK_NAME"
-    if /bin/sh "$IPK_RUNNER" "$IPK_URL" '^enigma2-plugin-extensions-panelaio$' "$STATUS" >> "$LOG" 2>&1; then
-        log "IPK update completed successfully: $VERSION"
+    # Prefer the GitHub Release asset. The repository /release/ copy is only a
+    # secondary mirror and may intentionally be absent from the main branch.
+    IPK_URL_RELEASE="https://github.com/${REPO}/releases/download/${VERSION}/${IPK_NAME}"
+    IPK_URL_REPO="https://raw.githubusercontent.com/${REPO}/${BRANCH}/release/${IPK_NAME}"
+    log "Trying GitHub Release IPK first: $IPK_NAME"
+    if /bin/sh "$IPK_RUNNER" "$IPK_URL_RELEASE" '^enigma2-plugin-extensions-panelaio$' "$STATUS" >> "$LOG" 2>&1; then
+        log "IPK update completed successfully from GitHub Release: $VERSION"
+        cleanup; trap - EXIT HUP INT TERM; exit 0
+    fi
+    log "GitHub Release IPK failed; trying repository release mirror."
+    if /bin/sh "$IPK_RUNNER" "$IPK_URL_REPO" '^enigma2-plugin-extensions-panelaio$' "$STATUS" >> "$LOG" 2>&1; then
+        log "IPK update completed successfully from repository mirror: $VERSION"
         cleanup; trap - EXIT HUP INT TERM; exit 0
     fi
     log "Release IPK not available or failed validation; switching to source-recovery mode."
@@ -71,6 +79,14 @@ fi
 URL1="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"; URL2="https://codeload.github.com/${REPO}/zip/refs/heads/${BRANCH}"
 aio_secure_download "$URL1" "$ZIP" 600 3 || aio_secure_download "$URL2" "$ZIP" 600 3 || fail "Cannot download repository ZIP over HTTPS."
 aio_not_html "$ZIP" || fail "HTML response received instead of ZIP."
+# Fresh wget|sh installations initially have only aio_safe_common.sh.  Ensure
+# the companion archive validator exists before validating the downloaded ZIP.
+if [ ! -s "$AIO_PLUGIN_DIR/core/archive_validator.py" ]; then
+    mkdir -p "$BOOT/core" 2>/dev/null || fail "Cannot create validator bootstrap directory."
+    aio_secure_download "https://raw.githubusercontent.com/${REPO}/${BRANCH}/core/archive_validator.py" "$BOOT/core/archive_validator.py" 30 2 >/dev/null 2>&1 || fail "Cannot bootstrap archive validator."
+    [ -s "$BOOT/core/archive_validator.py" ] || fail "Archive validator bootstrap is empty."
+    AIO_PLUGIN_DIR="$BOOT"
+fi
 aio_validate_archive "$ZIP" zip 100000 1073741824 >> "$LOG" 2>&1 || fail "Unsafe or damaged repository ZIP."
 command -v unzip >/dev/null 2>&1 || fail "unzip is missing. Install it before running the source updater."
 unzip -oq "$ZIP" -d "$EXTRACT" >> "$LOG" 2>&1 || fail "Cannot extract repository ZIP."
