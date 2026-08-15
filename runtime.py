@@ -447,6 +447,7 @@ different images (OpenATV/OpenPLi/VTi/Hyperion), we ship two sizes:
 """
 PLUGIN_QR_CODE_BIG_PATH = os.path.join(PLUGIN_PATH, "qr_support.png")
 PLUGIN_QR_CODE_SMALL_PATH = os.path.join(PLUGIN_PATH, "qr_header.png")
+PLUGIN_QR_SITE_PATH = os.path.join(PLUGIN_PATH, "assets", "modern", "qr_site.png")
 PLUGIN_PP_LOGO_PATH = os.path.join(PLUGIN_PATH, "pp_logo.png")
 PLUGIN_SEL_MENU_PATH = os.path.join(PLUGIN_PATH, "sel_menu.png")
 PLUGIN_SEL_SIDEBAR_PATH = os.path.join(PLUGIN_PATH, "sel_sidebar.png")
@@ -594,35 +595,41 @@ def _info_screen_skin():
     if _is_small_ui():
         return """
     <screen position="center,center" size="690,430" title="Informacje o AIO Panel">
-        <widget name="title" position="16,16" size="658,26" font="Regular;20" halign="center" valign="center" />
-        <widget name="author" position="16,48" size="658,20" font="Regular;16" halign="center" valign="center" />
-        <widget name="facebook" position="16,70" size="658,20" font="Regular;16" halign="center" valign="center" />
-        <widget name="legal_title" position="16,100" size="658,24" font="Regular;19" halign="center" foregroundColor="yellow" />
-        <widget name="legal_text" position="16,132" size="658,164" font="Regular;15" halign="center" valign="top" />
+        <widget name="title" position="16,14" size="658,26" font="Regular;20" halign="center" valign="center" />
+        <widget name="site_qr" position="20,48" size="72,72" pixmap="{qr_site}" alphatest="blend" scale="1" />
+        <widget name="author" position="108,48" size="562,20" font="Regular;16" halign="left" valign="center" />
+        <widget name="facebook" position="108,70" size="562,20" font="Regular;15" halign="left" valign="center" />
+        <widget name="site_hint" position="108,92" size="562,20" font="Regular;15" halign="left" valign="center" foregroundColor="cyan" />
+        <widget name="legal_title" position="16,126" size="658,24" font="Regular;19" halign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="16,156" size="658,142" font="Regular;14" halign="center" valign="top" />
         <widget name="changelog_title" position="16,304" size="658,24" font="Regular;19" halign="center" foregroundColor="cyan" />
         <widget name="changelog_text" position="20,336" size="650,76" font="Regular;16" halign="left" valign="top" />
-    </screen>"""
+    </screen>""".format(qr_site=PLUGIN_QR_SITE_PATH)
     if _is_hd_ui():
         return """
     <screen position="center,center" size="760,470" title="Informacje o AIO Panel">
-        <widget name="title" position="20,18" size="720,30" font="Regular;24" halign="center" valign="center" />
-        <widget name="author" position="20,54" size="720,22" font="Regular;18" halign="center" valign="center" />
-        <widget name="facebook" position="20,78" size="720,22" font="Regular;18" halign="center" valign="center" />
-        <widget name="legal_title" position="20,112" size="720,26" font="Regular;22" halign="center" foregroundColor="yellow" />
-        <widget name="legal_text" position="20,145" size="720,185" font="Regular;17" halign="center" valign="top" />
+        <widget name="title" position="20,16" size="720,30" font="Regular;24" halign="center" valign="center" />
+        <widget name="site_qr" position="24,54" size="84,84" pixmap="{qr_site}" alphatest="blend" scale="1" />
+        <widget name="author" position="126,54" size="610,22" font="Regular;18" halign="left" valign="center" />
+        <widget name="facebook" position="126,80" size="610,22" font="Regular;17" halign="left" valign="center" />
+        <widget name="site_hint" position="126,106" size="610,22" font="Regular;17" halign="left" valign="center" foregroundColor="cyan" />
+        <widget name="legal_title" position="20,144" size="720,26" font="Regular;22" halign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="20,176" size="720,154" font="Regular;16" halign="center" valign="top" />
         <widget name="changelog_title" position="20,338" size="720,26" font="Regular;22" halign="center" foregroundColor="cyan" />
         <widget name="changelog_text" position="25,372" size="710,85" font="Regular;18" halign="left" valign="top" />
-    </screen>"""
+    </screen>""".format(qr_site=PLUGIN_QR_SITE_PATH)
     return """
     <screen position="center,center" size="900,540" title="Informacje o AIO Panel">
-        <widget name="title" position="20,20" size="860,35" font="Regular;28" halign="center" valign="center" />
-        <widget name="author" position="20,60" size="860,25" font="Regular;22" halign="center" valign="center" />
-        <widget name="facebook" position="20,85" size="860,25" font="Regular;22" halign="center" valign="center" />
-        <widget name="legal_title" position="20,125" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
-        <widget name="legal_text" position="20,165" size="860,200" font="Regular;20" halign="center" valign="top" />
+        <widget name="title" position="20,18" size="860,35" font="Regular;28" halign="center" valign="center" />
+        <widget name="site_qr" position="28,62" size="96,96" pixmap="{qr_site}" alphatest="blend" scale="1" />
+        <widget name="author" position="145,62" size="730,25" font="Regular;22" halign="left" valign="center" />
+        <widget name="facebook" position="145,91" size="730,25" font="Regular;20" halign="left" valign="center" />
+        <widget name="site_hint" position="145,120" size="730,25" font="Regular;20" halign="left" valign="center" foregroundColor="cyan" />
+        <widget name="legal_title" position="20,166" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
+        <widget name="legal_text" position="20,204" size="860,161" font="Regular;18" halign="center" valign="top" />
         <widget name="changelog_title" position="20,375" size="860,30" font="Regular;26" halign="center" foregroundColor="cyan" />
         <widget name="changelog_text" position="30,415" size="840,105" font="Regular;22" halign="left" valign="top" />
-    </screen>"""
+    </screen>""".format(qr_site=PLUGIN_QR_SITE_PATH)
 
 def _panel_main_skin():
     if _is_small_ui():
@@ -3041,7 +3048,9 @@ class AIOInfoScreen(Screen):
 
         self["title"] = Label("AIO Panel v{}".format(VER))
         self["author"] = Label("Twórca: Paweł Pawełek | aio-iptv@wp.pl")
-        self["facebook"] = Label("Facebook: Enigma 2 Oprogramowanie, dodatki")
+        self["facebook"] = Label("Strona WWW: https://olioli2013.github.io/aio-iptv-projekt")
+        self["site_qr"] = Pixmap()
+        self["site_hint"] = Label("Zeskanuj kod QR, aby odwiedzić stronę twórcy")
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
         
         legal_note_text = "Nota Licencyjna i Prawa Autorskie\n\n" \
@@ -3052,7 +3061,7 @@ class AIOInfoScreen(Screen):
                           "Licencji Publicznej GNU (GNU GPL), opublikowanej przez\n" \
                           "Free Software Foundation.\n\n" \
                           "Oprogramowanie to jest rozpowszechniane z nadzieją, że będzie\n" \
-                          "użyteczne, ale BEZ JAKIEJKOLWIEK GWARANCJI; even without\n" \
+                          "użyteczne, ale BEZ JAKIEJKOLWIEK GWARANCJI; nawet bez\n" \
                           "domniemanej gwarancji PRZYDATNOŚCI HANDLOWEJ lub\n" \
                           "PRZYDATNOŚCI DO OKREŚLONEGO CELU. Korzystasz z niej\n" \
                           "na własną odpowiedzialność.\n\n" \
@@ -3061,7 +3070,9 @@ class AIOInfoScreen(Screen):
                           "---\n" \
                           "Wsparcie dla autora\n" \
                           "Jeśli doceniasz moją pracę, możesz postawić mi wirtualną kawę.\n" \
-                          "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!\n\nKontakt / wsparcie: aio-iptv@wp.pl"
+                          "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!\n\n" \
+                          "Strona twórcy: https://olioli2013.github.io/aio-iptv-projekt\n" \
+                          "Kontakt / wsparcie: aio-iptv@wp.pl"
         
         self["legal_text"] = Label(legal_note_text)
         self["changelog_title"] = Label("Ostatnie zmiany (z GitHub)")
