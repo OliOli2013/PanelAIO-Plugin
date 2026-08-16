@@ -1,39 +1,72 @@
 ############################################################
-# oscam.dvbapi - POLSKIE PLATFORMY
-# Priorytet tylko dla polskich platform cyfrowych
-# Zagraniczne platformy działają bez wpisu - automatycznie z PMT
+# AIO PANEL - OSCAM.DVBAPI - POLAND / UNIVERSAL
+# Updated: 2026-08-16
+#
+# Cel:
+# - priorytet dla polskich platform satelitarnych,
+# - brak blokowania platform zagranicznych,
+# - bez I:, I: 0, mapowan i sztucznych opoznien,
+# - bez "continue = 1", aby zachowac normalny fallback OSCam.
+#
+# UWAGA:
+# P: ustala priorytet wyboru ECM/CAID.
+# Nie daje uprawnien i nie omija parowania kart, CI+/ECP ani
+# zabezpieczen operatora.
 ############################################################
 
-############################
-# CANAL+ Polska / dawne nc+
-############################
+############################################################
+# POLSKA - PRIORYTETY GLOWNE
+# Kolejnosc przeplata systemy CANAL+ i Polsat Box, aby plik
+# pozostal mozliwie neutralny dla uzytkownikow obu platform.
+############################################################
 
+# CANAL+ Polska - Nagra MA (nowszy system)
 P: 1884
-P: 1813
-P: 0100:000068
-P: 0B01
 
-############################
-# Polsat Box / Cyfrowy Polsat
-############################
-
-P: 1803
-P: 1861
-P: 186C
+# Polsat Box - Nagra MA (nowsza generacja)
 P: 1870
+
+# CANAL+ Polska - Nagra MA / provider dawnej CYFRY+/nc+
+# Provider 000068 ogranicza wpis do polskiego operatora.
+P: 1813:000068
+
+# Polsat Box - Nagra MA
+P: 186C
+P: 1861
+P: 1803
+
+# Polsat Box - Irdeto
 P: 06ED
 
-############################
-# Orange Polska
-############################
+############################################################
+# POLSKA - KOMPATYBILNOSC / STARSZE SYSTEMY NADAL SPOTYKANE
+############################################################
 
+# CANAL+ Polska - Conax
+# Pozostawiony dla kanalow/uslug, na ktorych CAID 0B01 nadal
+# wystepuje. Nie jest wymuszany przez "continue = 1".
+P: 0B01
+
+# CANAL+ Polska - Seca/Mediaguard, provider 000068
+# System wygaszany, ale wpis jest bezpieczny jako fallback tam,
+# gdzie nadal jest sygnalizowany w PMT.
+P: 0100:000068
+
+# Orange Polska - legacy/kompatybilnosc satelitarna (Viaccess)
 P: 0500:032A00
 
 ############################################################
-# WAŻNE:
-# Nie dodawać na końcu:
+# PLATFORMY ZAGRANICZNE
+#
+# Celowo BRAK wpisow I: oraz BRAK "I: 0".
+# Wszystkie pozostale CAID/provider ID z Astry 19.2E, 23.5E,
+# Thora 0.8W/1W, Hot Birda i innych pozycji orbitalnych sa
+# pozostawione do standardowej obslugi przez OSCam na podstawie
+# PMT i dostepnych readerow.
+#
+# Nie dodawac globalnego:
 # I: 0
 #
-# Brak I: 0 oznacza, że inne platformy zagraniczne
-# nie są blokowane i OSCam może je obsłużyć automatycznie.
+# Nie dodawac "continue = 1" do powyzszych priorytetow w pliku
+# uniwersalnym AIO Panel - mogloby to pogorszyc fallback.
 ############################################################
