@@ -27,7 +27,7 @@ TRUSTED_REMOTE_SCRIPTS = set([
     'https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh',
     'https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh',
     'https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh',
-    'https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh',
+    'https://raw.githubusercontent.com/islam-2412/FuryBiss/refs/heads/main/fury/installer.sh',
     'https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh',
     'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup',
 ])

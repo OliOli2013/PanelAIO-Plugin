@@ -8,12 +8,12 @@ mkdir -p "$LOGDIR" 2>/dev/null || true
 : > "$LOG" 2>/dev/null || true
 fail(){ echo "AIO Panel postinst: $1" | tee -a "$LOG" >&2; exit 1; }
 
-for F in plugin.py runtime.py legacy_plugin.py version.txt BUILD_ID.txt aio_safe_common.sh install_e2iplayer.sh install_archive_script.sh picon_install_script.sh restore_channels_script.sh install_softcam_feed_safe.sh install_oscam_emu_script.sh install_iptv_dream_safe.sh install_s4aupdater_safe.sh install_picon_updater_safe.sh install_myupdater_safe.sh ui/modern.py ui/screens/connect.py assets/modern/qr_site.png assets/modern/qr_community.png assets/modern/qr_report.png core/logger.py core/result.py core/action_registry.py core/activity.py core/source_registry.py core/selftest.py; do
+for F in core/oscam_data.py data/navigation.py data/requested_installers.py plugin.py runtime.py legacy_plugin.py version.txt BUILD_ID.txt aio_safe_common.sh install_e2iplayer.sh install_archive_script.sh picon_install_script.sh restore_channels_script.sh install_softcam_feed_safe.sh install_oscam_emu_script.sh install_iptv_dream_safe.sh install_s4aupdater_safe.sh install_picon_updater_safe.sh install_myupdater_safe.sh ui/modern.py ui/screens/connect.py assets/modern/qr_site.png assets/modern/qr_community.png assets/modern/qr_report.png core/logger.py core/result.py core/action_registry.py core/activity.py core/source_registry.py core/selftest.py; do
     [ -s "$DST/$F" ] || fail "missing required file: $F"
 done
 
-[ "$(cat "$DST/version.txt" 2>/dev/null)" = "16.0.0" ] || fail "unexpected version.txt"
-grep -Fq 'AIO Panel 16.0.0' "$DST/BUILD_ID.txt" || fail "16.0.0 build marker missing"
+[ "$(cat "$DST/version.txt" 2>/dev/null)" = "16.0.2" ] || fail "unexpected version.txt"
+grep -Fq 'AIO Panel 16.0.2' "$DST/BUILD_ID.txt" || fail "16.0.2 build marker missing"
 
 PY=""
 command -v python3 >/dev/null 2>&1 && PY=python3
@@ -32,7 +32,7 @@ find "$DST" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r S; do
     /bin/sh -n "$S" >> "$LOG" 2>&1 || exit 1
 done || fail "shell syntax validation failed"
 
-"$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail "AIO 16.0.0 self-test failed"
+"$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail "AIO 16.0.2 self-test failed"
 
 find "$DST" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
 find "$DST" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true

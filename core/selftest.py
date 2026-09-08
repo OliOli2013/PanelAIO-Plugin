@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '16.0.0'
+VERSION = '16.0.2'
 
 
 def _read(path):
@@ -43,6 +43,7 @@ def run(root):
         'core/logger.py', 'core/result.py', 'core/action_registry.py',
         'core/action_dispatcher.py', 'core/activity.py', 'core/source_registry.py',
         'core/plugin_state.py', 'core/selftest.py',
+        'data/navigation.py', 'data/requested_installers.py', 'core/oscam_data.py',
         'ui/modern.py', 'ui/screens/connect.py', 'installer.sh',
         'safe_ipk_install.sh', 'install_iptv_dream_safe.sh',
         'install_s4aupdater_safe.sh', 'install_picon_updater_safe.sh',

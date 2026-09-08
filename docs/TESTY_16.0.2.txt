@@ -1,0 +1,43 @@
+test_all_existing_installers_preserved (__main__.AuditTests.test_all_existing_installers_preserved) ... ok
+test_download_does_not_clobber_caller_variables (__main__.AuditTests.test_download_does_not_clobber_caller_variables) ... ok
+test_old_validator_accepts_new_updater (__main__.AuditTests.test_old_validator_accepts_new_updater) ... ok
+test_package_gzip_and_payload (__main__.AuditTests.test_package_gzip_and_payload) ... ok
+test_parallel_fetches_have_unique_files_and_cleanup (__main__.AuditTests.test_parallel_fetches_have_unique_files_and_cleanup) ... ok
+test_partial_python_download_is_rejected (__main__.AuditTests.test_partial_python_download_is_rejected) ... ok
+test_rejected_contender_preserves_lock (__main__.AuditTests.test_rejected_contender_preserves_lock) ... ok
+test_themed_tabs_preserve_every_action_both_languages (__main__.AuditTests.test_themed_tabs_preserve_every_action_both_languages) ... ok
+test_update_checksum_failure (__main__.AuditTests.test_update_checksum_failure) ... ok
+test_update_missing_artifact (__main__.AuditTests.test_update_missing_artifact) ... ok
+test_update_noop_is_failure (__main__.AuditTests.test_update_noop_is_failure) ... ok
+test_update_opkg_failure (__main__.AuditTests.test_update_opkg_failure) ... ok
+test_update_release_fallback (__main__.AuditTests.test_update_release_fallback) ... ok
+test_update_success (__main__.AuditTests.test_update_success) ... ok
+test_update_ui_background_dedup_and_closed_guard (__main__.AuditTests.test_update_ui_background_dedup_and_closed_guard) ... ok
+test_update_wrong_database (__main__.AuditTests.test_update_wrong_database) ... ok
+test_update_wrong_payload_version (__main__.AuditTests.test_update_wrong_payload_version) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 4.501s
+
+OK
+
+test_active_versioned_process_config_forms (__main__.DataTests.test_active_versioned_process_config_forms) ... ok
+test_channel_list_first_both_languages (__main__.DataTests.test_channel_list_first_both_languages) ... ok
+test_detect_nested_oscam_emu_and_ncam_and_deduplicate_keys (__main__.DataTests.test_detect_nested_oscam_emu_and_ncam_and_deduplicate_keys) ... ok
+test_invalid_sources (__main__.DataTests.test_invalid_sources) ... ok
+test_key_file_decorative_lines_and_malformed_record (__main__.DataTests.test_key_file_decorative_lines_and_malformed_record) ... ok
+test_missing_configuration_is_error (__main__.DataTests.test_missing_configuration_is_error) ... ok
+test_progress_visible_until_completion_callback_after_close (__main__.DataTests.test_progress_visible_until_completion_callback_after_close) ... ok
+test_shell_bad_source_preserves_existing (__main__.DataTests.test_shell_bad_source_preserves_existing) ... ok
+test_shell_keys_writes_verified_file (__main__.DataTests.test_shell_keys_writes_verified_file) ... ok
+test_shell_services_writes_both_files (__main__.DataTests.test_shell_services_writes_both_files) ... ok
+test_srvid2_conversion (__main__.DataTests.test_srvid2_conversion) ... ok
+test_transaction_idempotent_preserves_local_and_backup (__main__.DataTests.test_transaction_idempotent_preserves_local_and_backup) ... ok
+test_transaction_rollback_on_second_file_failure (__main__.DataTests.test_transaction_rollback_on_second_file_failure) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.312s
+
+OK
+Malformed publisher records omitted: 1
+Validated records: 2

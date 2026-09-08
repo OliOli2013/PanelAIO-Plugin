@@ -1,0 +1,22 @@
+test_all_existing_installers_preserved (__main__.AuditTests.test_all_existing_installers_preserved) ... ok
+test_download_does_not_clobber_caller_variables (__main__.AuditTests.test_download_does_not_clobber_caller_variables) ... ok
+test_old_validator_accepts_new_updater (__main__.AuditTests.test_old_validator_accepts_new_updater) ... ok
+test_package_gzip_and_payload (__main__.AuditTests.test_package_gzip_and_payload) ... ok
+test_parallel_fetches_have_unique_files_and_cleanup (__main__.AuditTests.test_parallel_fetches_have_unique_files_and_cleanup) ... ok
+test_partial_python_download_is_rejected (__main__.AuditTests.test_partial_python_download_is_rejected) ... ok
+test_rejected_contender_preserves_lock (__main__.AuditTests.test_rejected_contender_preserves_lock) ... ok
+test_themed_tabs_preserve_every_action_both_languages (__main__.AuditTests.test_themed_tabs_preserve_every_action_both_languages) ... ok
+test_update_checksum_failure (__main__.AuditTests.test_update_checksum_failure) ... ok
+test_update_missing_artifact (__main__.AuditTests.test_update_missing_artifact) ... ok
+test_update_noop_is_failure (__main__.AuditTests.test_update_noop_is_failure) ... ok
+test_update_opkg_failure (__main__.AuditTests.test_update_opkg_failure) ... ok
+test_update_release_fallback (__main__.AuditTests.test_update_release_fallback) ... ok
+test_update_success (__main__.AuditTests.test_update_success) ... ok
+test_update_ui_background_dedup_and_closed_guard (__main__.AuditTests.test_update_ui_background_dedup_and_closed_guard) ... ok
+test_update_wrong_database (__main__.AuditTests.test_update_wrong_database) ... ok
+test_update_wrong_payload_version (__main__.AuditTests.test_update_wrong_payload_version) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 3.845s
+
+OK

@@ -62,11 +62,13 @@ aio_acquire_lock() {
 }
 
 aio_release_lock() {
-    [ -n "$AIO_LOCK_DIR" ] && rm -rf "$AIO_LOCK_DIR" 2>/dev/null || true
+    if [ -n "$AIO_LOCK_DIR" ] && [ "$(cat "$AIO_LOCK_DIR/pid" 2>/dev/null)" = "$$" ]; then
+        rm -rf "$AIO_LOCK_DIR" 2>/dev/null || true
+    fi
     AIO_LOCK_DIR=""
 }
 
-aio_secure_download() {
+aio_secure_download() (
     URL="$1"; OUT="$2"; TIMEOUT="${3:-300}"; TRIES="${4:-3}"
     aio_validate_url "$URL" || return 1
     rm -f "$OUT" "$OUT.tmp" 2>/dev/null || true
@@ -105,11 +107,12 @@ except Exception as exc:
     print(exc, file=sys.stderr)
     sys.exit(1)
 PY
-        [ -s "$OUT.tmp" ] && mv -f "$OUT.tmp" "$OUT" && return 0
+        AIO_DOWNLOAD_RC=$?
+        [ "$AIO_DOWNLOAD_RC" -eq 0 ] && [ -s "$OUT.tmp" ] && mv -f "$OUT.tmp" "$OUT" && return 0
     fi
     rm -f "$OUT" "$OUT.tmp" 2>/dev/null || true
     return 1
-}
+)
 
 aio_not_html() {
     [ -s "$1" ] || return 1

@@ -17,7 +17,7 @@ def check(cond, msg):
 
 
 def main():
-    check(read('version.txt').strip() == '16.0.0', 'wrong version')
+    check(read('version.txt').strip() == '16.0.2', 'wrong version')
     runtime = read('runtime.py')
     check('CMD:INSTALL_PICON_UPDATER' in runtime, 'PiconUpdater action missing')
     check('CMD:INSTALL_MYUPDATER' in runtime, 'MyUpdater action missing')

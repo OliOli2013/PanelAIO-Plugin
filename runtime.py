@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 16.0.0
+Wersja 16.0.2
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -464,7 +464,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("16.0.0")
+VER = _read_local_version("16.0.2")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -820,6 +820,31 @@ def show_message_compat(session, message, message_type=MessageBox.TYPE_INFO, tim
     else:
         _open_safe()
 
+def _operation_language(session):
+    value = getattr(getattr(session, 'current_dialog', None), 'lang', None)
+    if value in ('PL', 'EN'):
+        return value
+    try:
+        value = config.plugins.panelaio.language.value
+        if value in ('PL', 'EN'):
+            return value
+        from Components.Language import language
+        return 'PL' if language.getLanguage().lower().startswith('pl') else 'EN'
+    except Exception:
+        return 'PL'
+
+
+class AIOOperationProgress(Screen):
+    def __init__(self, session, title, lang='PL'):
+        self.skin = _wizard_progress_skin().replace('title="Super Konfigurator"', 'title="AIO Panel" backgroundColor="#101820"')
+        Screen.__init__(self, session)
+        self.setTitle('AIO Panel')
+        text = ('Trwa wykonywanie:\n%s\n\nProszę czekać. Nie wyłączaj tunera.' if lang == 'PL' else 'Working:\n%s\n\nPlease wait. Do not power off the receiver.') % title
+        self['message'] = Label(text)
+        # No dismiss action: the operation, not a timeout, closes this screen.
+        self['actions'] = ActionMap(['OkCancelActions', 'ColorActions'], dict((key, lambda: None) for key in ('ok', 'cancel', 'red', 'green', 'yellow', 'blue')), -1)
+
+
 # --- FUNKCJA URUCHAMIANIA W TLE (Dla zadań wewnętrznych) ---
 def run_command_in_background(session, title, cmd_list, callback_on_finish=None, stop_on_error=True, redact=None):
     """Run shell commands asynchronously and propagate a structured result.
@@ -829,15 +854,11 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None,
     the result on both success and failure.
     """
     wait_message = None
+    lang = _operation_language(session)
     try:
-        wait_message = _safe_messagebox_open_now(
-            session,
-            "Trwa wykonywanie: {}\n\nProszę czekać...".format(title),
-            MessageBox.TYPE_INFO,
-            timeout=3
-        )
+        wait_message = session.open(AIOOperationProgress, title, lang)
     except Exception as e:
-        print("[AIO Panel] Wait MessageBox skipped:", e)
+        wait_message = _safe_messagebox_open_now(session, ('Trwa wykonywanie: %s' if lang == 'PL' else 'Working: %s') % title, MessageBox.TYPE_INFO, timeout=0)
 
     state = {'result': None}
 
@@ -860,6 +881,9 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None,
                 wait_message.close()
             except Exception:
                 pass
+        reactor.callLater(0.2, deliver_result)
+
+    def deliver_result():
         result = state.get('result') or {'success': False, 'returncode': 127, 'stderr': 'No result'}
         try:
             if result.get('success'):
@@ -875,6 +899,13 @@ def run_command_in_background(session, title, cmd_list, callback_on_finish=None,
                 _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
             except Exception as e:
                 print("[AIO Panel] callback error:", e)
+
+        else:
+            ok = bool(result.get('success'))
+            message = (('Zakończono: %s' if ok else 'Operacja nie powiodła się: %s') if lang == 'PL' else ('Completed: %s' if ok else 'Operation failed: %s')) % title
+            if not ok:
+                message += '\n\n' + ensure_unicode(result.get('stderr') or result.get('stdout') or '')[-800:]
+            show_message_compat(session, message, MessageBox.TYPE_INFO if ok else MessageBox.TYPE_ERROR, timeout=0)
 
     thread = Thread(target=command_thread)
     try:
@@ -1253,22 +1284,28 @@ def _is_remote_version_newer(local_ver, remote_ver):
 def _fetch_text_url(url, timeout=20, tries=2):
     if not url:
         return ""
+    import tempfile
     prepare_tmp_dir()
-    safe_name = re.sub(r"[^A-Za-z0-9]+", "_", ensure_unicode(url))[:80] or "remote"
-    tmp_path = os.path.join(PLUGIN_TMP_PATH, "fetch_{0}.txt".format(safe_name))
-    if _download_url_to_file(url, tmp_path, timeout=timeout, tries=tries, allow_insecure_fallback=True):
-        return _read_text_file(tmp_path, "")
-    return ""
+    fd, tmp_path = tempfile.mkstemp(prefix='fetch_', suffix='.txt', dir=PLUGIN_TMP_PATH)
+    os.close(fd)
+    try:
+        if _download_url_to_file(url, tmp_path, timeout=timeout, tries=tries, allow_insecure_fallback=True):
+            return _read_text_file(tmp_path, "")
+        return ""
+    finally:
+        for path in (tmp_path, tmp_path + '.tmp'):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
 
 def _fetch_json_url(url, timeout=20, tries=2):
-    if not url:
+    text = _fetch_text_url(url, timeout=timeout, tries=tries)
+    try:
+        return json.loads(text.lstrip(u'\ufeff')) if text else None
+    except (TypeError, ValueError):
         return None
-    prepare_tmp_dir()
-    safe_name = re.sub(r"[^A-Za-z0-9]+", "_", ensure_unicode(url))[:80] or "remote_json"
-    tmp_path = os.path.join(PLUGIN_TMP_PATH, "fetch_{0}.json".format(safe_name))
-    if _download_url_to_file(url, tmp_path, timeout=timeout, tries=tries, allow_insecure_fallback=True):
-        return _load_json_from_file(tmp_path)
-    return None
 
 def _resolve_final_url(url, timeout=20, tries=2):
     if not url or not _is_https_allowed(url):
@@ -1914,6 +1951,7 @@ def install_e2kodi(session):
 
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
+    ("🔞 Adult XXX - Instalator", "CMD:INSTALL_ADULT_XXX"),
     (r"\c00FFD200--- Softcamy ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
@@ -1964,6 +2002,7 @@ SOFTCAM_AND_PLUGINS_PL = [
 
 
 SOFTCAM_AND_PLUGINS_EN = [
+    ("🔞 Adult XXX - Installer", "CMD:INSTALL_ADULT_XXX"),
     (r"\c00FFD200--- Softcams ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
@@ -2120,16 +2159,18 @@ DIAGNOSTICS_EN = [
 
 # === SKINS / SKÓRKI ===
 SKINS_PL = [
+    ("🎨 Jihad FHD - Instalator", "CMD:INSTALL_JIHAD_SKIN"),
     ("🎨 Algare FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
-    ("🎨 Fury FHD - Instalator", "remote_script:https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh"),
+    ("🎨 Fury FHD - Instalator", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
     ("🎨 XDreamy - Instalator", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
 ]
 
 SKINS_EN = [
+    ("🎨 Jihad FHD - Installer", "CMD:INSTALL_JIHAD_SKIN"),
     ("🎨 Algare FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
-    ("🎨 Fury FHD - Installer", "remote_script:https://raw.githubusercontent.com/islam-2412/IPKS/refs/heads/main/fury/installer.sh"),
+    ("🎨 Fury FHD - Installer", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
     ("🎨 XDreamy - Installer", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
@@ -4512,7 +4553,7 @@ FUNCTION_DESCRIPTIONS = {
 }
 # === KONIEC OPISÓW FUNKCJI ===
 
-# AIO Connect 16.0.0 — descriptions kept outside the legacy dictionary body.
+# AIO Connect 16.0.2 — descriptions kept outside the legacy dictionary body.
 FUNCTION_DESCRIPTIONS["PL"].update({
     "🔎 Diagnostyka tunera": "Sprawdza kondycję tunera: system, Python, flash, RAM, temperaturę, obciążenie, sieć, OpenWebif, listy, EPG, picony i crashlogi.",
     "📄 Pełny raport diagnostyczny": "Tworzy pełny lokalny raport w /tmp. Raport nie jest wysyłany automatycznie i nie zawiera haseł ani surowego adresu MAC.",
@@ -4627,6 +4668,9 @@ class PanelAIO(Screen):
         self.fetched_data_cache = fetched_data
         self.update_info = None
         self.update_prompt_shown = False
+        self._update_check_running = False
+        self._update_manual_requested = False
+        self._self_update_running = False
         
         # Tabs (left sidebar) are built dynamically from menu sections (separators).
         # This gives each subcategory its own tab (e.g. Softcamy / Wtyczki Online / Backup & Restore ...).
@@ -4901,27 +4945,9 @@ class PanelAIO(Screen):
                     else:
                         tools_menu[i] = ("👁️ Show in receiver menu: %s" % state, action)
 
-            # Build sidebar tabs from subcategories (SEPARATOR sections)
-            tabs = []
-            # 1) Channel lists (single tab)
-            tabs.append((COL_TITLES[lang][0], final_channel_lists))
-
-            # 2) Softcam & Plugins (split)
-            for sec_title, sec_items in self._split_sections(softcam_menu, COL_TITLES[lang][1]):
-                tabs.append((sec_title, sec_items))
-
-            # 3) System tools (split)
-            for sec_title, sec_items in self._split_sections(tools_menu, COL_TITLES[lang][2]):
-                tabs.append((sec_title, sec_items))
-
-            # 3b) Skins / Skórki (single tab)
+            from Plugins.SystemPlugins.PanelAIO.data.navigation import build_tabs
             skins_menu = list(SKINS_PL if lang == 'PL' else SKINS_EN)
-            for sec_title, sec_items in self._split_sections(skins_menu, 'Skins / Skórki' if lang == 'PL' else 'Skins'):
-                tabs.append((sec_title, sec_items))
-
-            # 4) Info/Diagnostics (split)
-            for sec_title, sec_items in self._split_sections(diag_menu, COL_TITLES[lang][3]):
-                tabs.append((sec_title, sec_items))
+            tabs = build_tabs(lang, final_channel_lists, softcam_menu, tools_menu, skins_menu, diag_menu)
 
             self._set_sidebar_tabs(tabs)
             self.switch_tab(self.active_tab)
@@ -4991,7 +5017,7 @@ class PanelAIO(Screen):
         if key == "cancel":
             return
         elif key == "updates":
-            self.show_info_screen()
+            self.check_for_updates_manual()
         elif key == "sysmon":
             self.open_system_monitor()
         elif key == "netdiag":
@@ -5105,7 +5131,7 @@ class PanelAIO(Screen):
     def _source_probe(self, url, timeout=6):
         response = None
         try:
-            request = Request(url, headers={'User-Agent': 'AIO-Panel/16.0.0'})
+            request = Request(url, headers={'User-Agent': 'AIO-Panel/16.0.2'})
             response = urlopen(request, timeout=timeout)
             try:
                 response.read(128)
@@ -5577,15 +5603,60 @@ class PanelAIO(Screen):
         reactor.callLater(0.5, self.update_function_description)
 
     def check_for_updates_on_start(self):
-        Thread(target=self.perform_update_check_silent).start()
+        self._start_update_check(False)
 
     def perform_update_check_silent(self):
-        # Silent mode: do not open a modal window. Show a small bottom-left status instead.
-        self._check_update(silent=True)
+        self._start_update_check(False)
 
     def check_for_updates_manual(self):
-        self.session.openWithCallback(self._manual_update_callback, MessageBox, "Sprawdzanie dostępności aktualizacji..." if self.lang == 'PL' else "Checking for updates...", type=MessageBox.TYPE_INFO, timeout=3)
-        self._check_update(silent=False)
+        self._start_update_check(True)
+
+    def _start_update_check(self, manual):
+        if self._closed or self._self_update_running:
+            return
+        self._update_manual_requested = self._update_manual_requested or manual
+        if self._update_check_running:
+            return
+        self._update_check_running = True
+        self["update_status"].setText("Sprawdzanie aktualizacji..." if self.lang == 'PL' else "Checking for updates...")
+        urls = self._update_channel_urls()
+        def worker():
+            remote, changelog, error = '', '', ''
+            try:
+                remote = ensure_unicode(_fetch_text_url(urls['version'], timeout=10, tries=2)).strip()
+                if not re.match(r'^[0-9]+(?:\.[0-9]+){2}(?:-r[0-9]+)?$', remote):
+                    raise ValueError('Invalid version response')
+                if _version_to_tuple(remote) > _version_to_tuple(_read_local_version(VER)):
+                    changelog = ensure_unicode(_fetch_text_url(urls['changelog'], timeout=10, tries=1)).strip()[:2500]
+            except Exception as exc:
+                error = ensure_unicode(exc)
+            reactor.callFromThread(self._finish_update_check, remote, changelog, error)
+        thread = Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+
+    def _finish_update_check(self, remote, changelog, error):
+        self._update_check_running = False
+        manual = self._update_manual_requested
+        self._update_manual_requested = False
+        if self._closed:
+            return
+        self["update_status"].setText("")
+        if error:
+            AIO_LOGGER.warning('Update check: %s', error)
+            if manual:
+                show_message_compat(self.sess, TRANSLATIONS[self.lang]["update_check_error"], MessageBox.TYPE_ERROR)
+            return
+        local = _read_local_version(VER)
+        if _version_to_tuple(remote) > _version_to_tuple(local):
+            self._set_update_available_ui(remote, changelog)
+            if manual:
+                self.show_detected_update_prompt()
+        else:
+            self.update_info = None
+            self.set_language(self.lang)
+            if manual:
+                show_message_compat(self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=local), MessageBox.TYPE_INFO)
 
     def _manual_update_callback(self, result):
         pass
@@ -5617,7 +5688,7 @@ class PanelAIO(Screen):
             self.check_for_updates_manual()
             return
         remote_ver_str = ensure_unicode(self.update_info.get("version", ""))
-        changelog_text = ensure_unicode(self.update_info.get("changelog", "")) or self._fetch_remote_changelog()
+        changelog_text = ensure_unicode(self.update_info.get("changelog", "")) or TRANSLATIONS[self.lang].get("update_changelog_unavailable", "Changelog unavailable.")
         msg = TRANSLATIONS[self.lang]["update_available_msg"].format(
             latest_ver=remote_ver_str,
             current_ver=VER,
@@ -5626,51 +5697,21 @@ class PanelAIO(Screen):
         self.sess.openWithCallback(self._do_update_action, MessageBox, msg, MessageBox.TYPE_YESNO)
 
     def _check_update(self, silent=False):
-        version_url = self._update_channel_urls()['version']
-        tmp_ver_path = "/tmp/aio_version.txt"
-
-        try:
-            if not _download_url_to_file(version_url, tmp_ver_path, timeout=10, tries=3, allow_insecure_fallback=True):
-                if not silent:
-                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_check_error"], MessageBox.TYPE_ERROR)
-                return
-
-            with io.open(tmp_ver_path, 'r', encoding='utf-8', errors='ignore') as f:
-                remote_ver_str = f.read().strip()
-
-            local_ver = _version_to_tuple(VER)
-            remote_ver = _version_to_tuple(remote_ver_str)
-
-            if remote_ver > local_ver:
-                changelog_text = self._fetch_remote_changelog()
-                if silent:
-                    reactor.callFromThread(self._set_update_available_ui, remote_ver_str, changelog_text)
-                else:
-                    self.update_info = {"version": ensure_unicode(remote_ver_str), "changelog": ensure_unicode(changelog_text)}
-                    reactor.callFromThread(self.show_detected_update_prompt)
-            else:
-                self.update_info = None
-                try:
-                    reactor.callFromThread(self["update_status"].setText, "")
-                except Exception:
-                    pass
-                if not silent:
-                    reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["already_latest"].format(ver=VER), MessageBox.TYPE_INFO)
-
-        except Exception as e:
-            print("[AIO Panel] Update check error:", e)
-            if not silent:
-                reactor.callFromThread(show_message_compat, self.sess, TRANSLATIONS[self.lang]["update_generic_error"], MessageBox.TYPE_ERROR)
+        self._start_update_check(not silent)
 
     def _do_update_action(self, confirmed):
-        if not confirmed:
+        if not confirmed or self._self_update_running or self._closed:
             return
+        self._self_update_running = True
         url = self._update_channel_urls()['installer']
         status = os.path.join(PLUGIN_TMP_PATH, 'aio_self_update_%s.status' % int(time.time() * 1000))
         branch = 'test' if self._get_update_channel() == 'test' else 'main'
         command = '/bin/sh %s %s %s /bin/sh %s' % tuple(_safe_shell_arg(x) for x in (os.path.join(PLUGIN_PATH, 'run_remote_script_safe.sh'), url, status, branch))
         expected_version = ensure_unicode((self.update_info or {}).get('version', '')).strip()
         def finished(result):
+            self._self_update_running = False
+            if self._closed:
+                return
             if result and result.get('success'):
                 # Do not report success only because installer.sh returned 0.
                 # Verify that the expected version is really present on disk.
@@ -5685,6 +5726,8 @@ class PanelAIO(Screen):
                     show_message_compat(self.sess, msg, MessageBox.TYPE_ERROR, timeout=16)
                     return
                 self.update_info = None
+                self['update_status'].setText('')
+                self.set_language(self.lang)
                 show_message_compat(self.sess, ('Aktualizacja została faktycznie zainstalowana (%s). Sprawdź system i wykonaj restart GUI ręcznie.' % (installed_version or expected_version) if self.lang == 'PL' else 'The update was actually installed (%s). Check the system and restart the GUI manually.' % (installed_version or expected_version)), MessageBox.TYPE_INFO, timeout=10)
             else:
                 show_message_compat(self.sess, ('Aktualizacja nie powiodła się. Log: /tmp/aio_remote_script.log' if self.lang == 'PL' else 'Update failed. Log: /tmp/aio_remote_script.log'), MessageBox.TYPE_ERROR, timeout=14)
@@ -5938,6 +5981,9 @@ class PanelAIO(Screen):
             if _dispatch_modular_action(self, key):
                 return
             if key == 'SUPER_SETUP_WIZARD': self.run_super_setup_wizard()
+            elif key in ('INSTALL_FURY_SKIN', 'INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
+                from Plugins.SystemPlugins.PanelAIO.data.requested_installers import COMMANDS
+                run_command_in_background(self.sess, title, [COMMANDS[key]], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
             elif key == 'CHECK_FOR_UPDATES': self.check_for_updates_manual()
             elif key == 'SHOW_PENDING_AIO_UPDATE': self.show_detected_update_prompt()
             elif key == 'UPDATE_SATELLITES_XML': run_command_in_background(self.sess, title, ['/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'update_satellites_xml.sh'))], callback_on_finish=self.reload_settings_python)
@@ -6195,23 +6241,42 @@ class PanelAIO(Screen):
         run_command_in_background(self.sess, title, [_download_shell_command(url, staged, 'file')], callback_on_finish=finished)
 
     # --- NOWA, NAPRAWIONA FUNKCJA SRVID (Źródło: Aktualne repozytoria) ---
+    def _update_oscam_data(self, kind, urls, title):
+        prepare_tmp_dir()
+        token = '%s_%s' % (os.getpid(), int(time.time() * 1000))
+        status = os.path.join(PLUGIN_TMP_PATH, 'oscam_data_%s_%s.status' % (kind, token))
+        script = os.path.join(PLUGIN_PATH, 'update_oscam_data_safe.sh')
+        command = '/bin/sh %s %s %s %s' % (_safe_shell_arg(script), _safe_shell_arg(kind), _safe_shell_arg(status), ' '.join(_safe_shell_arg(url) for url in urls))
+        def finished(result):
+            if self._closed:
+                return
+            report = _load_json_from_file(status + '.json') or {}
+            verified = _read_text_file(status, '').startswith('OK|')
+            if result and result.get('success') and verified and report.get('files'):
+                changed = int(report.get('changed', 0))
+                unchanged = int(report.get('unchanged', 0))
+                if self.lang == 'PL':
+                    message = 'Zapisano zmienione pliki: %s. Bez zmian: %s.\n\nSprawdzone pliki:\n%s' % (changed, unchanged, '\n'.join(report['files']))
+                    if changed:
+                        message += '\n\nUruchom ponownie aktywny CAM w jego menedżerze, aby wczytać dane. Kopie poprzednich plików zachowano obok nich.'
+                else:
+                    message = 'Changed files: %s. Unchanged: %s.\n\nVerified files:\n%s' % (changed, unchanged, '\n'.join(report['files']))
+                    if changed:
+                        message += '\n\nRestart the active CAM from its manager to reload data. Previous files were backed up alongside them.'
+                show_message_compat(self.sess, message, MessageBox.TYPE_INFO, timeout=0)
+            else:
+                message = ('Aktualizacja nie powiodła się.\n' if self.lang == 'PL' else 'Update failed.\n')
+                message += _read_text_file(status, '') + '\nLog: /tmp/aio_oscam_data_%s.log' % kind
+                show_message_compat(self.sess, message, MessageBox.TYPE_ERROR, timeout=0)
+        run_command_in_background(self.sess, title, [command], callback_on_finish=finished)
+
     def update_oscam_srvid_files(self):
-        srvid = ['https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid', 'https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid']
-        srvid2 = ['https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid2']
-        script = os.path.join(PLUGIN_PATH, 'update_oscam_data_safe.sh')
-        status1 = os.path.join(PLUGIN_TMP_PATH, 'srvid_%s.status' % int(time.time() * 1000))
-        status2 = os.path.join(PLUGIN_TMP_PATH, 'srvid2_%s.status' % int(time.time() * 1000))
-        cmd1 = '/bin/sh %s srvid %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status1), ' '.join(_safe_shell_arg(x) for x in srvid))
-        cmd2 = '/bin/sh %s srvid2 %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status2), ' '.join(_safe_shell_arg(x) for x in srvid2))
-        run_command_in_background(self.sess, 'Aktualizacja oscam.srvid/srvid2', [cmd1, cmd2])
+        urls = ['https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid', 'https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid']
+        self._update_oscam_data('services', urls, 'Aktualizacja oscam.srvid/srvid2' if self.lang == 'PL' else 'Update oscam.srvid/srvid2')
+
     def install_softcam_key_online(self):
-        urls = ['https://raw.githubusercontent.com/oscam-emu/oscam-patched-old/master/Distribution/doc/example/SoftCam.Key', 'https://raw.githubusercontent.com/oscam-emu/oscam-emu/master/Distribution/doc/example/SoftCam.Key']
-        script = os.path.join(PLUGIN_PATH, 'update_oscam_data_safe.sh')
-        status = os.path.join(PLUGIN_TMP_PATH, 'softcamkey_%s.status' % int(time.time() * 1000))
-        cmd = '/bin/sh %s softcamkey %s %s' % (_safe_shell_arg(script), _safe_shell_arg(status), ' '.join(_safe_shell_arg(x) for x in urls))
-        run_command_in_background(self.sess, 'Aktualizacja SoftCam.Key', [cmd])
-
-
+        urls = ['https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key']
+        self._update_oscam_data('softcamkey', urls, 'Aktualizacja SoftCam.Key' if self.lang == 'PL' else 'Update SoftCam.Key')
 
     def open_feed_manager(self):
         if self.lang == 'PL':

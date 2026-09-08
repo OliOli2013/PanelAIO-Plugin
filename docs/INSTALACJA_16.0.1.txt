@@ -1,0 +1,59 @@
+AIO Panel 16.0.1 — instalacja i publikacja
+
+INSTALACJA NA TUNERZE Z OPKG
+1. Skopiuj enigma2-plugin-extensions-panelaio_16.0.1_all.ipk przez FTP do /tmp.
+2. W terminalu tunera uruchom:
+   opkg install /tmp/enigma2-plugin-extensions-panelaio_16.0.1_all.ipk
+3. Po poprawnej instalacji uruchom ponownie GUI Enigma2 z menu tunera.
+   Nie odinstalowuj wcześniej wersji 16.0.0.
+4. Otwórz panel i sprawdź wersję 16.0.1.
+
+To pakiet IPK dla obrazów z opkg. Nie jest pakietem DEB dla DreamOS.
+Pakiety eksperymentalne 17/18/19 mogą zostać uznane przez opkg za nowsze.
+Ta poprawka bazuje na 16.0.0; automatyczny downgrade nie jest wykonywany.
+
+GITHUB — PLIKI DO PODMIANY
+Repozytorium: OliOli2013/PanelAIO-Plugin, gałąź main.
+ZIP zawiera katalog github-replacement. Wgraj JEGO ZAWARTOŚĆ do katalogu głównego
+repozytorium, zachowując podkatalogi core, data, ui, control, docs, tests i release.
+Nie wgrywaj samego pliku ZIP i nie twórz na GitHubie dodatkowego katalogu github-replacement.
+Nie usuwaj pozostałych plików repozytorium — to zestaw zmienionych i nowych plików.
+
+Najlepiej zatwierdź wszystkie pliki jednym commitem. Jeżeli musisz publikować etapami:
+- najpierw pliki źródłowe/pomocnicze, release/IPK i SHA256SUMS.txt;
+- version.txt i update.json dopiero na końcu.
+
+KRYTYCZNE: wgraj również
+release/enigma2-plugin-extensions-panelaio_16.0.1_all.ipk
+SHA256SUMS.txt
+version.txt
+installer.sh
+Nie wystarczy sama podmiana runtime.py. Instalator preferuje IPK w katalogu release.
+Opcjonalnie utwórz GitHub Release z tagiem 16.0.1 i dodaj IDENTYCZNY IPK.
+Release jest źródłem zapasowym; publikacja samego katalogu release także wystarcza.
+
+Zainstalowana 16.0.0 powinna rozpoznać 16.0.1 po publikacji version.txt.
+Nowy installer.sh sprawdzono walidatorem ze starej paczki 16.0.0.
+Jeżeli stara instalacja ma błędne certyfikaty, datę, brak sieci lub uszkodzone pliki,
+zainstaluj dołączony IPK ręcznie. Panel nie może naprawić swojej niedziałającej
+ścieżki pobierania, zanim otrzyma poprawione pliki.
+
+LOGI PRZY PROBLEMIE
+/tmp/aio_github_update.log — szczegóły nowego instalatora i opkg
+/tmp/aio_remote_script.log — uruchomienie aktualizatora przez panel
+/tmp/PanelAIO/logs/postinst.log — weryfikacja poinstalacyjna
+Zgłaszając problem podaj model tunera, nazwę i wersję obrazu, wersję Pythona i log.
+
+INSTALATORY DODANE/ZMIENIONE
+Fury: dokładnie wskazany URL FuryBiss i polecenie wget z --no-check-certificate.
+Podczas audytu 08.09.2026 ten adres zwracał HTTP 404. Naprawa adresu w panelu
+nie przywraca nieistniejącego pliku po stronie autora. Nie podstawiono innego źródła.
+Jihad FHD i Adult XXX: dokładnie podane polecenia wydawców.
+Nie uruchamiano zewnętrznych instalatorów na środowisku roboczym.
+Jihad kończy skrypt kodem 0 także po błędzie opkg; jego komunikat końcowy nie jest
+dowodem zainstalowania skórki. Po instalacji sprawdź dostępność w menu skórek.
+
+TEST NA SPRZĘCIE
+Po restarcie sprawdź PL/EN, nawigację, start E2iPlayer i pozostałych używanych
+instalatorów, a także sprawdzenie aktualizacji z zakładki AIO / Aktualizacje.
+Testy dołączone do repozytorium symulują sieć i opkg; nie zastępują testu na tunerze.

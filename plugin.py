@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 """AIO Panel entry point.
 
-v16.0.0 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
+v16.0.2 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
 while building the plugin list and during GUI startup; loading the whole PanelAIO
 runtime at that moment is risky on some OpenATV 8 / beta images.  The dashboard
 runtime is imported only when the user opens AIO Panel, while the menu entry and
@@ -32,11 +32,12 @@ except Exception:
     eTimer = None
 
 PLUGIN_NAME = 'AIO Panel'
-DEFAULT_VERSION = '16.0.0'
+DEFAULT_VERSION = '16.0.2'
 MENU_VISIBILITY_FALLBACK_FILE = '/etc/enigma2/.panelaio_show_in_menu'
 
 _auto_ram_timer = None
 _auto_ram_connected = False
+_auto_ram_connection = None
 _auto_ram_active = False
 
 
@@ -133,7 +134,7 @@ def main(session, **kwargs):
 
 
 def _get_auto_ram_timer():
-    global _auto_ram_timer, _auto_ram_connected
+    global _auto_ram_timer, _auto_ram_connected, _auto_ram_connection
     if eTimer is None:
         return None
     if _auto_ram_timer is None:
@@ -145,7 +146,7 @@ def _get_auto_ram_timer():
             _auto_ram_connected = True
         except Exception:
             try:
-                _auto_ram_timer.timeout.connect(_run_auto_ram_clean_task)
+                _auto_ram_connection = _auto_ram_timer.timeout.connect(_run_auto_ram_clean_task)
                 _auto_ram_connected = True
             except Exception as e:
                 print('[AIO Panel] AIO maintenance timer connect error:', e)
@@ -160,6 +161,8 @@ def _run_auto_ram_clean_task():
         removed = 0
         if os.path.isdir(root):
             for name in os.listdir(root):
+                if name in ("locks", "logs") or name.startswith(("bootstrap_", "github_update_", "self_update_")):
+                    continue
                 path = os.path.join(root, name)
                 try:
                     if now - os.path.getmtime(path) < 86400:

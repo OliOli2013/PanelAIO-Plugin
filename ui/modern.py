@@ -420,6 +420,14 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _category_icon_name(self, title):
         text = legacy.ensure_unicode(title).lower()
+        if 'iptv' in text or 'epg' in text or 'picon' in text or '18+' in text:
+            return 'plugins.png'
+        if 'kontakt' in text or 'contact' in text:
+            return 'network.png'
+        if 'kopie' in text or 'przywr' in text:
+            return 'backup.png'
+        if 'diagn' in text:
+            return 'diagnostics.png'
         if 'list' in text or 'kana' in text or 'channel' in text:
             return 'channels.png'
         if 'softcam' in text or 'oscam' in text or 'ncam' in text:

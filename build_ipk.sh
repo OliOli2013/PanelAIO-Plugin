@@ -43,20 +43,20 @@ python3 "$PLUGIN/core/selftest.py" "$PLUGIN"
 find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
 
-# Build standard opkg/deb-format archives. AIO 15.x used xz and tested receivers accept it.
+# Gzip control/data also work on Python 2 images without lzma support.
 printf '2.0\n' > "$WORK/debian-binary"
 (
   cd "$CONTROL"
-  tar --owner=0 --group=0 -cJf "$WORK/control.tar.xz" .
+  tar --owner=0 --group=0 -czf "$WORK/control.tar.gz" .
 )
 (
   cd "$WORK/data"
-  tar --owner=0 --group=0 -cJf "$WORK/data.tar.xz" .
+  tar --owner=0 --group=0 -czf "$WORK/data.tar.gz" .
 )
 rm -f "$OUT"
 (
   cd "$WORK"
-  ar r "$OUT" debian-binary control.tar.xz data.tar.xz >/dev/null
+  ar r "$OUT" debian-binary control.tar.gz data.tar.gz >/dev/null
 )
 
 [ -s "$OUT" ] || { echo 'Build failed: IPK is empty.' >&2; exit 1; }

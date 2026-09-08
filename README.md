@@ -1,3 +1,14 @@
+# AIO Panel 16.0.2
+
+Poprawka aktualizacji oscam.srvid/srvid2 i SoftCam.Key, pierwszej zakładki Listy kanałów oraz stałych komunikatów wykonywania operacji. Szczegóły: docs/POPRAWKI_16.0.2.txt.
+
+# AIO Panel 16.0.1
+
+Maintenance release based on 16.0.0. Existing third-party installer commands are preserved.
+
+See `docs/AUDYT_16.0.1.md` and `docs/INSTALACJA_16.0.1.txt` for findings, validation scope and publication instructions.
+Upload the replacement tree including `release/enigma2-plugin-extensions-panelaio_16.0.1_all.ipk` and `SHA256SUMS.txt` together. The updater requires an IPK and does not copy source over a failed package installation.
+
 # AIO Panel 16.0.0
 
 AIO Panel to zestaw narzędzi All-In-One dla odbiorników Enigma2. Wersja 16.0.0 jest stabilnym wydaniem opartym na przetestowanej linii 15.0.2 i porządkuje architekturę, aktualizacje, diagnostykę oraz bezpieczeństwo instalatorów.

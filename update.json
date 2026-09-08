@@ -1,9 +1,9 @@
 {
   "name": "AIO Panel",
-  "version": "16.0.0",
+  "version": "16.0.2",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://github.com/OliOli2013/PanelAIO-Plugin/releases/download/16.0.0/enigma2-plugin-extensions-panelaio_16.0.0_all.ipk",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "AIO Panel 16.0.0: modular runtime, safer GitHub Release IPK bootstrap, fixed fresh-install ZIP validation, verified self-update result, trusted sources, diagnostics, favorites/search/history and AIO Connect."
+  "changelog": "AIO Panel 16.0.2: fixed oscam.srvid/srvid2 and SoftCam.Key updates, channel lists first and persistent operation messages."
 }

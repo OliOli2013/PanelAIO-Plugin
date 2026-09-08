@@ -1,125 +1,84 @@
 #!/bin/sh
-# AIO Panel 16.0.0-r1 - IPK-first transactional installer/updater with source-recovery fallback.
+# AIO Panel 16.0.2 package updater. Compatible with the 16.0.0 validator.
 set -u
-REPO="OliOli2013/PanelAIO-Plugin"
+REPO='OliOli2013/PanelAIO-Plugin'
 BRANCH="${1:-main}"
-case "$BRANCH" in main|test) ;; *) echo "[PanelAIO] Unsupported update branch: $BRANCH" >&2; exit 2 ;; esac
-BASE="/usr/lib/enigma2/python/Plugins"; DST="$BASE/SystemPlugins/PanelAIO"; OLD="$BASE/Extensions/PanelAIO"
-SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
-BOOT="/tmp/PanelAIO/bootstrap_$$"
-mkdir -p "$BOOT/core" 2>/dev/null || { echo '[PanelAIO] Cannot create bootstrap directory.' >&2; exit 1; }
+case "$BRANCH" in main|test) ;; *) echo 'Unsupported branch' >&2; exit 2 ;; esac
+BASE="https://raw.githubusercontent.com/$REPO/$BRANCH"
+DST='/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO'
+PKG='enigma2-plugin-extensions-panelaio'
+WORK=$(mktemp -d /tmp/aio-self-update.XXXXXX) || exit 1
+LOG='/tmp/aio_github_update.log'
+AIO_LOCK_DIR=''
+cleanup() { rm -rf "$WORK"; if command -v aio_release_lock >/dev/null 2>&1; then aio_release_lock; fi; }
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+fail() { printf '[AIO] ERROR: %s\n' "$1" | tee -a "$LOG" >&2; exit 1; }
 
-# Fresh-install bootstrap: wget .../installer.sh | /bin/sh has no companion files yet.
-# Download only the exact AIO helper from this repository/branch, sanity-check it, then source it.
-if [ -f "$SELF_DIR/aio_safe_common.sh" ]; then
-    AIO_PLUGIN_DIR="$SELF_DIR"; . "$SELF_DIR/aio_safe_common.sh"
-elif [ -f "$DST/aio_safe_common.sh" ]; then
-    AIO_PLUGIN_DIR="$DST"; . "$DST/aio_safe_common.sh"
-else
-    COMMON_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/aio_safe_common.sh"
-    command -v wget >/dev/null 2>&1 || { echo '[PanelAIO] wget is required.' >&2; exit 1; }
-    wget -q -O "$BOOT/aio_safe_common.sh" "$COMMON_URL" || { echo '[PanelAIO] Cannot bootstrap aio_safe_common.sh.' >&2; exit 1; }
-    [ -s "$BOOT/aio_safe_common.sh" ] || { echo '[PanelAIO] Empty bootstrap helper.' >&2; exit 1; }
-    grep -q 'aio_secure_download' "$BOOT/aio_safe_common.sh" || { echo '[PanelAIO] Invalid bootstrap helper.' >&2; exit 1; }
-    AIO_PLUGIN_DIR="$BOOT"; . "$BOOT/aio_safe_common.sh" || exit 1
-fi
-TMP="/tmp/PanelAIO/github_update_$$"; EXTRACT="$TMP/extract"; ZIP="$TMP/repo.zip"; NEW="$DST.aio-new-$$"; BAK="$DST.aio-old-$$"; LOG="/tmp/aio_github_update.log"
-: > "$LOG" 2>/dev/null || true
-log(){ printf '%s\n' "[PanelAIO] $*" | tee -a "$LOG"; }
-cleanup(){ rm -rf "$TMP" "$NEW" "$BOOT" 2>/dev/null || true; aio_release_lock; }
-fail(){ log "ERROR: $1"; if [ -d "$BAK" ] && [ ! -d "$DST" ]; then mv "$BAK" "$DST" 2>/dev/null || true; fi; cleanup; trap - EXIT HUP INT TERM; exit 1; }
-trap 'cleanup' EXIT HUP INT TERM
-aio_acquire_lock plugin_update || fail "Another AIO update is already running."
-rm -rf "$TMP" "$NEW" "$BAK" 2>/dev/null || true; mkdir -p "$EXTRACT" "$NEW" || fail "Cannot create staging directories."
-
-# Preferred route: exactly the same IPK artifact that is distributed to users.
-VERSION_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/version.txt"
-VERSION_FILE="$TMP/version.txt"
-if aio_secure_download "$VERSION_URL" "$VERSION_FILE" 30 2 >/dev/null 2>&1; then
-    VERSION=$(tr -d '\r\n ' < "$VERSION_FILE" 2>/dev/null || true)
-else
-    VERSION=""
-fi
-case "$VERSION" in
-    ''|*[!0-9.]* ) VERSION="" ;;
-esac
-IPK_RUNNER=""
-if [ -x "$DST/safe_ipk_install.sh" ] && [ -s "$DST/core/ipk_validator.py" ]; then
-    IPK_RUNNER="$DST/safe_ipk_install.sh"
-elif [ -n "$VERSION" ]; then
-    # Bootstrap the same safe IPK validator for a completely fresh install.
-    aio_secure_download "https://raw.githubusercontent.com/${REPO}/${BRANCH}/safe_ipk_install.sh" "$BOOT/safe_ipk_install.sh" 30 2 >/dev/null 2>&1 || true
-    aio_secure_download "https://raw.githubusercontent.com/${REPO}/${BRANCH}/core/ipk_validator.py" "$BOOT/core/ipk_validator.py" 30 2 >/dev/null 2>&1 || true
-    if [ -s "$BOOT/safe_ipk_install.sh" ] && [ -s "$BOOT/core/ipk_validator.py" ]; then
-        chmod 700 "$BOOT/safe_ipk_install.sh" 2>/dev/null || true
-        IPK_RUNNER="$BOOT/safe_ipk_install.sh"
+# Always obtain current helpers, including when called by an older installed copy.
+bootstrap_download() (
+    B_URL="$1"; B_OUT="$2"
+    if command -v wget >/dev/null 2>&1; then
+        wget -q -T 30 -O "$B_OUT.part" "$B_URL" && [ -s "$B_OUT.part" ] && mv "$B_OUT.part" "$B_OUT" && exit 0
     fi
-fi
-if [ -n "$VERSION" ] && [ -n "$IPK_RUNNER" ]; then
-    IPK_NAME="enigma2-plugin-extensions-panelaio_${VERSION}_all.ipk"
-    STATUS="$TMP/ipk.status"
-    # Prefer the GitHub Release asset. The repository /release/ copy is only a
-    # secondary mirror and may intentionally be absent from the main branch.
-    IPK_URL_RELEASE="https://github.com/${REPO}/releases/download/${VERSION}/${IPK_NAME}"
-    IPK_URL_REPO="https://raw.githubusercontent.com/${REPO}/${BRANCH}/release/${IPK_NAME}"
-    log "Trying GitHub Release IPK first: $IPK_NAME"
-    if /bin/sh "$IPK_RUNNER" "$IPK_URL_RELEASE" '^enigma2-plugin-extensions-panelaio$' "$STATUS" >> "$LOG" 2>&1; then
-        log "IPK update completed successfully from GitHub Release: $VERSION"
-        cleanup; trap - EXIT HUP INT TERM; exit 0
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --connect-timeout 15 --max-time 60 -o "$B_OUT.part" "$B_URL" && [ -s "$B_OUT.part" ] && mv "$B_OUT.part" "$B_OUT" && exit 0
     fi
-    log "GitHub Release IPK failed; trying repository release mirror."
-    if /bin/sh "$IPK_RUNNER" "$IPK_URL_REPO" '^enigma2-plugin-extensions-panelaio$' "$STATUS" >> "$LOG" 2>&1; then
-        log "IPK update completed successfully from repository mirror: $VERSION"
-        cleanup; trap - EXIT HUP INT TERM; exit 0
-    fi
-    log "Release IPK not available or failed validation; switching to source-recovery mode."
+    exit 1
+)
+bootstrap_download "$BASE/aio_safe_common.sh" "$WORK/aio_safe_common.sh" || fail 'Cannot download update helper over HTTPS. Check date, CA certificates and network.'
+/bin/sh -n "$WORK/aio_safe_common.sh" || fail 'Invalid helper'
+AIO_PLUGIN_DIR="$WORK"
+. "$WORK/aio_safe_common.sh" || fail 'Cannot load helper'
+aio_acquire_lock plugin_update || fail 'Another AIO update is running'
+: > "$LOG"
+command -v opkg >/dev/null 2>&1 || fail 'This IPK update requires opkg. DreamOS/DEB needs its own package.'
+mkdir -p "$WORK/core" || fail 'Cannot create staging directory'
+for HELPER in core/ipk_validator.py; do
+    aio_secure_download "$BASE/$HELPER" "$WORK/$HELPER" 30 2 >> "$LOG" 2>&1 || fail 'Cannot download package validator'
+done
+PY=$(aio_python) || fail 'Python is missing'
+aio_secure_download "$BASE/version.txt" "$WORK/version.txt" 30 2 >> "$LOG" 2>&1 || fail 'Cannot download version'
+VERSION=$(tr -d '\r\n ' < "$WORK/version.txt")
+printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || fail 'Invalid version response'
+NAME="${PKG}_${VERSION}_all.ipk"
+# Keep the repository mirror in the replacement ZIP so releases are optional.
+RELEASE="https://github.com/$REPO/releases/download/$VERSION/$NAME"
+MIRROR="$BASE/release/$NAME"
+if ! aio_secure_download "$MIRROR" "$WORK/update.ipk" 180 2 >> "$LOG" 2>&1; then
+    aio_secure_download "$RELEASE" "$WORK/update.ipk" 180 2 >> "$LOG" 2>&1 || fail 'IPK missing in both repository mirror and GitHub Release'
 fi
-
-# Recovery route: staged source installation. This remains only as a fallback.
-URL1="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"; URL2="https://codeload.github.com/${REPO}/zip/refs/heads/${BRANCH}"
-aio_secure_download "$URL1" "$ZIP" 600 3 || aio_secure_download "$URL2" "$ZIP" 600 3 || fail "Cannot download repository ZIP over HTTPS."
-aio_not_html "$ZIP" || fail "HTML response received instead of ZIP."
-# Fresh wget|sh installations initially have only aio_safe_common.sh.  Ensure
-# the companion archive validator exists before validating the downloaded ZIP.
-if [ ! -s "$AIO_PLUGIN_DIR/core/archive_validator.py" ]; then
-    mkdir -p "$BOOT/core" 2>/dev/null || fail "Cannot create validator bootstrap directory."
-    aio_secure_download "https://raw.githubusercontent.com/${REPO}/${BRANCH}/core/archive_validator.py" "$BOOT/core/archive_validator.py" 30 2 >/dev/null 2>&1 || fail "Cannot bootstrap archive validator."
-    [ -s "$BOOT/core/archive_validator.py" ] || fail "Archive validator bootstrap is empty."
-    AIO_PLUGIN_DIR="$BOOT"
+aio_secure_download "$BASE/SHA256SUMS.txt" "$WORK/SHA256SUMS.txt" 30 2 >> "$LOG" 2>&1 || fail 'Cannot download checksums'
+EXPECTED=$(awk -v p="release/$NAME" '$2==p {print $1}' "$WORK/SHA256SUMS.txt")
+[ "${#EXPECTED}" -eq 64 ] || fail 'Package checksum missing or ambiguous'
+ACTUAL=$(aio_sha256 "$WORK/update.ipk") || fail 'Cannot hash package'
+[ "$EXPECTED" = "$ACTUAL" ] || fail 'Checksum mismatch; repository publication may be incomplete. Retry later.'
+META=$("$PY" "$WORK/core/ipk_validator.py" "$WORK/update.ipk" '^enigma2-plugin-extensions-panelaio$' 2>> "$LOG") || fail 'Invalid IPK'
+[ "$META" = "OK|$PKG|$VERSION|all" ] || fail 'Package metadata does not match advertised version'
+CURRENT=$(opkg list-installed "$PKG" 2>/dev/null | awk -v p="$PKG" '$1==p {print $3; exit}')
+if [ -n "$CURRENT" ] && opkg compare-versions "$CURRENT" '>>' "$VERSION"; then
+    fail 'Installed package is newer. Downgrade was not performed.'
 fi
-aio_validate_archive "$ZIP" zip 100000 1073741824 >> "$LOG" 2>&1 || fail "Unsafe or damaged repository ZIP."
-command -v unzip >/dev/null 2>&1 || fail "unzip is missing. Install it before running the source updater."
-unzip -oq "$ZIP" -d "$EXTRACT" >> "$LOG" 2>&1 || fail "Cannot extract repository ZIP."
-SRC=""
-for D in "$EXTRACT/PanelAIO-Plugin-$BRANCH" "$EXTRACT/PanelAIO-Plugin-$BRANCH/AIO-Panel"; do [ -f "$D/plugin.py" ] && [ -f "$D/version.txt" ] && { SRC="$D"; break; }; done
-if [ -z "$SRC" ]; then F=$(find "$EXTRACT" -type f -name plugin.py -print -quit 2>/dev/null); [ -n "$F" ] && SRC=$(dirname "$F"); fi
-[ -n "$SRC" ] || fail "Plugin source root not found."
-cp -pR "$SRC"/. "$NEW/" || fail "Cannot copy staged plugin."
-rm -rf "$NEW/.git" "$NEW/.github" "$NEW/release" "$NEW/releases" "$NEW/control" "$NEW/packaging" "$NEW/tests" "$NEW/tools" 2>/dev/null || true
-rm -f "$NEW/.gitattributes" "$NEW/.gitignore" "$NEW/build_ipk.sh" "$NEW/Picony.zip" "$NEW/SHA256SUMS.txt" "$NEW/PLIKI_DO_PODMIANY.txt" "$NEW/update.json" "$NEW/README.md" "$NEW/RELEASES.md" 2>/dev/null || true
-rm -f "$NEW"/AIO_PANEL_*_ZMIANY.txt "$NEW"/AIO_PANEL_*_POPRAWKI.txt "$NEW"/AIO_PANEL_AWARYJNE_USUNIECIE.txt 2>/dev/null || true
-rm -f "$NEW"/AIO_Panel_*_TEST_REPORT.txt "$NEW"/*_FIX_TEST_REPORT.txt "$NEW"/ARCHITECTURE_*.md "$NEW"/CHANNELS_FIX_TEST_REPORT.txt 2>/dev/null || true
-rm -f "$NEW"/CHANNEL_INSTALL_FIX_*.txt "$NEW"/FIXES_*.txt "$NEW"/GITHUB_REPLACEMENT_INSTRUCTIONS.txt "$NEW"/LIST_ORDER_FIX_*.txt 2>/dev/null || true
-rm -f "$NEW"/SUPERCONFIG_*.txt "$NEW"/SUPER_CONFIG_*.txt "$NEW"/UPDATE_ONLINE_FIX_*.txt 2>/dev/null || true
-find "$NEW" -depth -type d -name __pycache__ -print 2>/dev/null | while IFS= read -r D; do rm -rf "$D" 2>/dev/null || true; done
-find "$NEW" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-for REQUIRED in plugin.py runtime.py legacy_plugin.py version.txt BUILD_ID.txt install_archive_script.sh picon_install_script.sh install_iptv_dream_safe.sh install_s4aupdater_safe.sh install_picon_updater_safe.sh install_myupdater_safe.sh aio_safe_common.sh core/logger.py core/result.py core/action_registry.py core/source_registry.py core/selftest.py ui/modern.py ui/screens/connect.py assets/modern/qr_site.png; do [ -s "$NEW/$REQUIRED" ] || fail "Missing required file: $REQUIRED"; done
-PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail "Python interpreter not found."
-if "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
-    "$PY" -m compileall -q "$NEW" >> "$LOG" 2>&1 || fail "Python syntax validation failed."
-else
-    "$PY" -m py_compile "$NEW/plugin.py" "$NEW/runtime.py" "$NEW/legacy_plugin.py" "$NEW/ui/modern.py" "$NEW/ui/screens/connect.py" "$NEW/core/logger.py" "$NEW/core/result.py" "$NEW/core/action_registry.py" "$NEW/core/activity.py" "$NEW/core/source_registry.py" >> "$LOG" 2>&1 || fail "Python 2 compatibility syntax validation failed."
+# Use the same operation lock as other AIO package installations.
+UPDATE_LOCK="$AIO_LOCK_DIR"
+AIO_LOCK_DIR=''
+if ! aio_acquire_lock opkg; then
+    AIO_LOCK_DIR="$UPDATE_LOCK"
+    fail 'Another package operation is running'
 fi
-find "$NEW" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r S; do /bin/sh -n "$S" >> "$LOG" 2>&1 || exit 1; done || fail "Shell syntax validation failed."
-"$PY" "$NEW/core/selftest.py" "$NEW" >> "$LOG" 2>&1 || fail "AIO 16.0.0 self-test failed."
-find "$NEW" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
-find "$NEW" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true
-find "$NEW" -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true
-[ -d "$DST" ] && mv "$DST" "$BAK" || true
-mv "$NEW" "$DST" || { [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Atomic activation failed."; }
-[ -s "$DST/plugin.py" ] && [ -s "$DST/runtime.py" ] && [ -s "$DST/legacy_plugin.py" ] || { rm -rf "$DST" 2>/dev/null || true; [ -d "$BAK" ] && mv "$BAK" "$DST" 2>/dev/null || true; fail "Post-activation validation failed."; }
-if [ -d "$OLD" ]; then rm -rf "$OLD.aio-legacy" 2>/dev/null || true; mv "$OLD" "$OLD.aio-legacy" 2>/dev/null || true; fi
-rm -rf "$BAK" "$OLD.aio-legacy" 2>/dev/null || true
-sync 2>/dev/null || true
-log "Installed version: $(cat "$DST/version.txt" 2>/dev/null || echo unknown). Manual GUI restart is recommended after verification."
-cleanup; trap - EXIT HUP INT TERM; exit 0
+PACKAGE_LOCK="$AIO_LOCK_DIR"
+cleanup() {
+    rm -rf "$WORK"
+    AIO_LOCK_DIR="$PACKAGE_LOCK"; aio_release_lock
+    AIO_LOCK_DIR="$UPDATE_LOCK"; aio_release_lock
+}
+printf '[AIO] Installing %s\n' "$VERSION" | tee -a "$LOG"
+# Do not fall through to a source copy after a package-manager failure.
+# Such a copy would leave the package database inconsistent with installed files.
+opkg install --force-reinstall "$WORK/update.ipk" >> "$LOG" 2>&1 || fail 'opkg failed; see /tmp/aio_github_update.log'
+INSTALLED=$(opkg list-installed "$PKG" 2>/dev/null | awk -v p="$PKG" '$1==p {print $3; exit}')
+[ "$INSTALLED" = "$VERSION" ] || fail 'Package database version did not change'
+[ "$(cat "$DST/version.txt" 2>/dev/null)" = "$VERSION" ] || fail 'Installed files have wrong version'
+"$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail 'Installed payload self-test failed'
+printf '[AIO] Verified version %s. Restart Enigma2 GUI manually.\n' "$VERSION" | tee -a "$LOG"
+exit 0

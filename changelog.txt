@@ -1,3 +1,38 @@
+AIO Panel 16.0.2 — 2026-09-08
+PL:
+- Listy kanałów jako pierwsza zakładka po otwarciu panelu.
+- Stały komunikat pracy podczas instalacji i operacji w tle; zamyka się po zakończeniu.
+- Naprawa oscam.srvid/srvid2: odczyt działającego źródła i poprawna konwersja do srvid2.
+- Aktualizacja zachowuje lokalne wpisy usług spoza źródła online.
+- SoftCam.Key: działające źródło zamiast dwóch adresów 404; walidacja danych.
+- Wykrywanie aktywnego katalogu OSCam/NCam, wariantów nazw procesów, oscam-emu i katalogów keys.
+- Kopie danych, kontrola zapisu, wycofanie zmian w razie błędu zapisu i raport ścieżek.
+- Osobny komunikat błędu; brak pozornego sukcesu. Po zmianie plików komunikat przypomina o restarcie aktywnego CAM.
+EN:
+- Channel lists open first; persistent progress notification for background operations.
+- Fixed service data and SoftCam.Key updates, active config detection and verified writes.
+- Backups, rollback on write failures and explicit changed/unchanged file report.
+- Restart the active CAM from its manager to load changed data.
+
+AIO Panel 16.0.1 — 2026-09-08
+PL:
+- Naprawa aktualizacji AIO: instalator zgodny z walidatorem 16.0.0.
+- Spójna wersja IPK, version.txt i metadanych; SHA-256 oraz kontrola faktycznej instalacji.
+- IPK dostępny z katalogu release w repozytorium; GitHub Release jako źródło zapasowe.
+- Sprawdzanie aktualizacji w tle, bez blokowania GUI i kolizji plików tymczasowych.
+- Poprawiona własność blokad oraz odrzucanie niepełnych pobrań.
+- Pakowanie gzip dla obrazów bez obsługi xz w Pythonie.
+- Tematyczne zakładki PL/EN; wszystkie dotychczasowe akcje zachowane.
+- Jihad FHD i Adult XXX; polecenie Fury zmienione na wskazany FuryBiss.
+- Dotychczasowe polecenia pozostałych instalatorów bez zmian.
+- UWAGA: wskazany URL FuryBiss zwracał HTTP 404 podczas audytu.
+EN:
+- Self-update compatible with the 16.0.0 validator; consistent package metadata.
+- SHA-256, payload and installed-version verification; repository IPK mirror.
+- Background update checks, unique download files, lock ownership and partial-download fixes.
+- Gzip packaging, thematic PL/EN tabs, Jihad FHD and Adult XXX.
+- Existing third-party installer commands preserved. Requested FuryBiss URL returned 404.
+
 [16.0.0]
 AIO Panel 16.0.0
 Data: 13.08.2026

@@ -1,0 +1,84 @@
+AIO Panel 16.0.2 — poprawki zgłoszone po 16.0.1
+8 września 2026
+
+1. LISTY KANAŁÓW
+Pierwszą zakładką po uruchomieniu są Listy kanałów. Dotyczy PL i EN.
+
+2. KOMUNIKAT WYKONYWANIA
+Instalacje i operacje uruchamiane w tle pokazują własne okno AIO:
+„Trwa wykonywanie: [nazwa]. Proszę czekać. Nie wyłączaj tunera.”
+Okno nie znika po 3 sekundach: zamyka się po zakończeniu zadania.
+Wynik jest przekazywany dopiero po zamknięciu tego okna, aby nie powodować
+kolizji okien modalnych Enigma2. Funkcje bez własnej obsługi wyniku pokazują
+komunikat zakończenia lub błędu. Instalacje korzystające z konsoli zachowują
+widoczną konsolę. Polecenia dotychczasowych instalatorów nie zostały zmienione.
+
+3. OSCAM.SRVID / OSCAM.SRVID2
+Stary adres srvid2 zwraca HTTP 404. Działający adres srvid zawiera dane
+w starszym formacie, w tym rekord z kilkoma SID. Poprawka obsługuje taki rekord,
+normalizuje kodowanie i tworzy oba pliki z właściwą kolejnością pól.
+Srvid: CAID:SID|provider|name|type|description
+Srvid2: SID:CAID|name|type|description|provider
+Źródła zachowano z dotychczasowego katalogu srvid:
+https://raw.githubusercontent.com/openmb/open-pli-core/master/meta-openpli/recipes-openpli/enigma2-softcams/enigma2-plugin-softcams-oscam/oscam.srvid
+https://raw.githubusercontent.com/bmihovski/Oscam-Services-Bulcrypt/master/oscam.srvid
+Nie jest to gwarancja najnowszej ani pełnej bazy wszystkich kanałów. Źródło
+podstawowe dało w sprawdzeniu 165 rekordów po normalizacji, zapasowe 119.
+Dlatego aktualizacja zachowuje istniejące wpisy usług spoza pobranego zakresu.
+Przy ponownym pobraniu identycznych danych panel pokazuje „Bez zmian”.
+
+4. SOFTCAM.KEY
+Oba dotychczasowe adresy przykładów oscam-emu zwracają HTTP 404.
+Nowe źródło danych:
+https://raw.githubusercontent.com/MOHAMED19OS/SoftCam_Emu/main/SoftCam.Key
+Podczas sprawdzenia: HTTP 200, 211 poprawnych rekordów; 1 nieprawidłowy rekord
+wydawcy pominięto. Linie ozdobne zamieniane są w komentarze. Wartości danych
+nie są wypisywane w logach. Panel pobiera plik danych, nie wykonuje go jako kodu.
+Dostępność źródła i format nie oznaczają gwarancji użyteczności każdego wpisu.
+
+5. WŁAŚCIWE KATALOGI, KOPIE I WYNIK
+Wykrywanie aktywnego OSCam/NCam obejmuje wersjonowane nazwy procesów,
+-c katalog, -ckatalog i --config-dir=katalog. Gdy CAM nie działa, sprawdzane są
+istniejące konfiguracje, również podkatalogi oscam-emu i ncam. Dla SoftCam.Key
+uwzględniane są istniejące /usr/keys i /var/keys, z deduplikacją dowiązań.
+Brak znalezionej konfiguracji to jawny błąd, nie pozorny sukces.
+Przed zapisem powstają kopie *.aio-bak-[data]-[pid]. Pliki są przygotowywane
+obok docelowych, aktywowane przez rename i weryfikowane po zapisie.
+Błąd podczas aktywacji powoduje próbę wycofania już zastosowanych zmian.
+Nie jest to ochrona przed fizyczną awarią nośnika lub utratą zasilania.
+Wynik pokazuje liczbę zmienionych/niezmienionych plików i ich dokładne ścieżki.
+Po zmianie danych uruchom ponownie aktywny CAM w jego menedżerze — komunikat
+przypomina o tym. Nie uruchamiamy innej, przypadkowo znalezionej binarki CAM.
+
+LOGI
+/tmp/aio_oscam_data_services.log
+/tmp/aio_oscam_data_softcamkey.log
+Raport konkretnej operacji: /tmp/PanelAIO/oscam_data_*.status.json
+
+INSTALACJA IPK
+Prześlij enigma2-plugin-extensions-panelaio_16.0.2_all.ipk do /tmp tunera:
+opkg install /tmp/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk
+Po instalacji wykonaj restart GUI Enigma2. Nie odinstalowuj wcześniej panelu.
+IPK dotyczy obrazów z opkg; nie jest pakietem DEB dla DreamOS.
+
+PODMIANA NA GITHUBIE
+Wgraj zawartość katalogu github-replacement z ZIP do katalogu głównego
+OliOli2013/PanelAIO-Plugin, zachowując podkatalogi. Nie wgrywaj samego ZIP.
+Paczka zawiera pełen zestaw zmian od 16.0.0, także wcześniejsze poprawki 16.0.1.
+Wgraj również release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk,
+SHA256SUMS.txt, installer.sh, version.txt i update.json.
+Najlepiej zatwierdź cały komplet jednym commitem. Przy wgrywaniu etapami
+version.txt i update.json dodaj na końcu. Nie usuwaj pozostałych plików repo.
+Nie opublikowano tych zmian automatycznie na GitHubie.
+
+WERYFIKACJA
+30 testów: 17 regresji poprzedniej poprawki + 13 testów danych OSCam i UI.
+Obejmują rzeczywiste zapisy do odizolowanych katalogów testowych, oba formaty,
+wykrywanie ścieżek, dowiązania, backup, rollback, niezmienione dane, błędne
+źródła i działanie wrappera shell, kolejność zamknięcia okna i callbacku.
+Sprawdzono budowę IPK, self-test, składnię Python/shell i postinst.
+Pobrania wskazanych źródeł sprawdzono na żywo; skryptów zewnętrznych nie wykonywano.
+Nie przeprowadzono testów na fizycznym tunerze ani interpreterze Python 2.
+
+Poprzedni raport AUDYT_16.0.1.md pozostaje dokumentem historycznym.
+Bieżąca instrukcja i lista zmian znajdują się w tym pliku.
