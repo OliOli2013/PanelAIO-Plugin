@@ -1,35 +1,46 @@
 # ============================================================
-# OSCam DVBAPI - POLAND PRIORITY
-# Polish platforms first, foreign platforms remain available
+# OSCam DVBAPI - POLAND / AIO PANEL
+# Universal Polish satellite priority profile
+# Updated: 2026-09-10
+#
+# Goal:
+# - prioritise CAIDs used by Polish satellite platforms
+# - keep foreign platforms and other satellites available
+# - no global ignore rules
+# - no CAID mapping or delays affecting other packages
 # ============================================================
 
 # ------------------------------------------------------------
-# CANAL+ Polska
+# CANAL+ Polska / Hot Bird 13E
+# Main/current systems first; legacy/fallback systems later.
 # ------------------------------------------------------------
-P: 1884
-
-# ------------------------------------------------------------
-# Polsat Box
-# Kolejność zoptymalizowana pod szybszy start kanałów
-# ------------------------------------------------------------
-P: 1803
-P: 1861
-P: 186C
-P: 1870
-P: 06ED
-
-# ------------------------------------------------------------
-# CANAL+ / pozostałe polskie systemy
-# ------------------------------------------------------------
+P: 1884:000000
 P: 1813:000068
-P: 0B01
+P: 0B01:000000
 P: 0100:000068
+
+# ------------------------------------------------------------
+# Polsat Box / Hot Bird 13E
+# 1861/1803 are placed first as the most useful generic
+# priorities; remaining broadcast CAIDs stay as fallbacks.
+# ------------------------------------------------------------
+P: 1861:000000
+P: 1803:000000
+P: 186C:000000
+P: 1870:000000
+P: 06ED:000000
+
+# ------------------------------------------------------------
+# Orange Polska SAT / Hot Bird 13E
+# Provider-specific rule avoids prioritising unrelated Viaccess
+# packages using CAID 0500 on other satellites/providers.
+# ------------------------------------------------------------
 P: 0500:032A00
 
 # ============================================================
-# BRAK I:
-# BRAK I: 0
-#
-# Pozostałe CAID-y nie są blokowane.
-# Zagraniczne platformy działają normalnie.
+# IMPORTANT
+# There are intentionally NO I: rules and NO "I: 0" rule.
+# CAIDs/providers not listed above remain available to OSCam.
+# This allows foreign platforms and services from other
+# satellites to use their normal CAIDs/readers.
 # ============================================================
