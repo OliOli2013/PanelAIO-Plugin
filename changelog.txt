@@ -1,3 +1,22 @@
+AIO Panel 16.0.3 — 2026-09-14
+PL:
+- Dodano AIOHD NEXT 3.2.1 do sekcji „Skórki” jako nową pozycję instalacyjną.
+- AIOHD NEXT można teraz zainstalować bezpośrednio z poziomu AIO Panel.
+- Instalator korzysta z oficjalnego wydania GitHub AIOHD NEXT 3.2.1-r3.
+- Polecenie instalacji pobiera pakiet IPK do /tmp, instaluje go przez opkg i usuwa plik tymczasowy po zakończeniu.
+- Dodano obsługę pozycji AIOHD NEXT zarówno w polskiej, jak i angielskiej wersji interfejsu.
+- Ujednolicono numer wersji 16.0.3 w metadanych pakietu i kontroli postinst, aby aktualizacja instalowała się poprawnie.
+- Pozostałe funkcje AIO Panel pozostają bez zmian względem wersji 16.0.2.
+
+EN:
+- Added AIOHD NEXT 3.2.1 to the Skins section as a new installable item.
+- AIOHD NEXT can now be installed directly from AIO Panel.
+- The installer uses the official AIOHD NEXT 3.2.1-r3 GitHub release.
+- The install command downloads the IPK to /tmp, installs it with opkg and removes the temporary file afterwards.
+- Added AIOHD NEXT entry for both Polish and English interface variants.
+- Unified the 16.0.3 package version in metadata and postinst validation so the update installs correctly.
+- All other AIO Panel functions remain unchanged from version 16.0.2.
+
 AIO Panel 16.0.2 — 2026-09-08
 PL:
 - Listy kanałów jako pierwsza zakładka po otwarciu panelu.
