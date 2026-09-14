@@ -12,8 +12,8 @@ for F in core/oscam_data.py data/navigation.py data/requested_installers.py plug
     [ -s "$DST/$F" ] || fail "missing required file: $F"
 done
 
-[ "$(cat "$DST/version.txt" 2>/dev/null)" = "16.0.2" ] || fail "unexpected version.txt"
-grep -Fq 'AIO Panel 16.0.2' "$DST/BUILD_ID.txt" || fail "16.0.2 build marker missing"
+[ "$(cat "$DST/version.txt" 2>/dev/null)" = "16.0.3" ] || fail "unexpected version.txt"
+grep -Fq 'AIO Panel 16.0.3' "$DST/BUILD_ID.txt" || fail "16.0.3 build marker missing"
 
 PY=""
 command -v python3 >/dev/null 2>&1 && PY=python3
@@ -32,7 +32,7 @@ find "$DST" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r S; do
     /bin/sh -n "$S" >> "$LOG" 2>&1 || exit 1
 done || fail "shell syntax validation failed"
 
-"$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail "AIO 16.0.2 self-test failed"
+"$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail "AIO 16.0.3 self-test failed"
 
 find "$DST" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
 find "$DST" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true

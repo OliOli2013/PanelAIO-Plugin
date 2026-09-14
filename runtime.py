@@ -2159,6 +2159,7 @@ DIAGNOSTICS_EN = [
 
 # === SKINS / SKÓRKI ===
 SKINS_PL = [
+    ("🎨 AIOHD NEXT - Instalator", "CMD:INSTALL_AIOHD_NEXT"),
     ("🎨 Jihad FHD - Instalator", "CMD:INSTALL_JIHAD_SKIN"),
     ("🎨 Algare FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
     ("🎨 Fury FHD - Instalator", "CMD:INSTALL_FURY_SKIN"),
@@ -2168,6 +2169,7 @@ SKINS_PL = [
 ]
 
 SKINS_EN = [
+    ("🎨 AIOHD NEXT - Installer", "CMD:INSTALL_AIOHD_NEXT"),
     ("🎨 Jihad FHD - Installer", "CMD:INSTALL_JIHAD_SKIN"),
     ("🎨 Algare FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
     ("🎨 Fury FHD - Installer", "CMD:INSTALL_FURY_SKIN"),
@@ -5981,7 +5983,7 @@ class PanelAIO(Screen):
             if _dispatch_modular_action(self, key):
                 return
             if key == 'SUPER_SETUP_WIZARD': self.run_super_setup_wizard()
-            elif key in ('INSTALL_FURY_SKIN', 'INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
+            elif key in ('INSTALL_AIOHD_NEXT', 'INSTALL_FURY_SKIN', 'INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
                 from Plugins.SystemPlugins.PanelAIO.data.requested_installers import COMMANDS
                 run_command_in_background(self.sess, title, [COMMANDS[key]], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
             elif key == 'CHECK_FOR_UPDATES': self.check_for_updates_manual()
