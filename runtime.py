@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 16.0.2
+Wersja 16.0.3
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -464,7 +464,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("16.0.2")
+VER = _read_local_version("16.0.3")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -4553,7 +4553,7 @@ FUNCTION_DESCRIPTIONS = {
 }
 # === KONIEC OPISÓW FUNKCJI ===
 
-# AIO Connect 16.0.2 — descriptions kept outside the legacy dictionary body.
+# AIO Connect 16.0.3 — descriptions kept outside the legacy dictionary body.
 FUNCTION_DESCRIPTIONS["PL"].update({
     "🔎 Diagnostyka tunera": "Sprawdza kondycję tunera: system, Python, flash, RAM, temperaturę, obciążenie, sieć, OpenWebif, listy, EPG, picony i crashlogi.",
     "📄 Pełny raport diagnostyczny": "Tworzy pełny lokalny raport w /tmp. Raport nie jest wysyłany automatycznie i nie zawiera haseł ani surowego adresu MAC.",
@@ -5131,7 +5131,7 @@ class PanelAIO(Screen):
     def _source_probe(self, url, timeout=6):
         response = None
         try:
-            request = Request(url, headers={'User-Agent': 'AIO-Panel/16.0.2'})
+            request = Request(url, headers={'User-Agent': 'AIO-Panel/16.0.3'})
             response = urlopen(request, timeout=timeout)
             try:
                 response.read(128)

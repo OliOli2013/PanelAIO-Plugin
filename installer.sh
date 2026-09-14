@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 16.0.2 package updater. Compatible with the 16.0.0 validator.
+# AIO Panel 16.0.3 package updater. Compatible with the 16.0.0 validator.
 set -u
 
 REPO='OliOli2013/PanelAIO-Plugin'

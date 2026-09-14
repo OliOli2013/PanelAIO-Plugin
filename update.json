@@ -1,9 +1,9 @@
 {
   "name": "AIO Panel",
-  "version": "16.0.2",
+  "version": "16.0.3",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.3_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "AIO Panel 16.0.2: fixed oscam.srvid/srvid2 and SoftCam.Key updates, channel lists first and persistent operation messages."
+  "changelog": "AIO Panel 16.0.3: added AIOHD NEXT skin installation to the Skins section."
 }

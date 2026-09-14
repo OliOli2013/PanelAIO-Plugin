@@ -1,4 +1,4 @@
-AIO Panel 16.0.2 — maintenance release
+AIO Panel 16.0.3 — maintenance release
 Build date: 2026-09-08
 Base: 16.0.0-r1; repository 191bc4d5709bab19a2487a96bc7b2ba2ad4d8372
 Preserves existing third-party installer commands.
@@ -6,3 +6,5 @@ Fixes verified package self-update, download isolation, lock ownership and async
 Adds thematic navigation, Jihad FHD and Adult XXX; Fury URL as requested.
 
 16.0.2: fixed OSCam auxiliary data updates, channel lists first, persistent operation screen.
+
+16.0.3: added AIOHD NEXT skin installation to the Skins section.

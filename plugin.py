@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 """AIO Panel entry point.
 
-v16.0.2 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
+v16.0.3 keeps the heavy runtime layer lazy-loaded, preserves the 14.0.1 action engine and adds the integrated AIO Connect module.  Enigma2 imports plugin.py
 while building the plugin list and during GUI startup; loading the whole PanelAIO
 runtime at that moment is risky on some OpenATV 8 / beta images.  The dashboard
 runtime is imported only when the user opens AIO Panel, while the menu entry and
@@ -32,7 +32,7 @@ except Exception:
     eTimer = None
 
 PLUGIN_NAME = 'AIO Panel'
-DEFAULT_VERSION = '16.0.2'
+DEFAULT_VERSION = '16.0.3'
 MENU_VISIBILITY_FALLBACK_FILE = '/etc/enigma2/.panelaio_show_in_menu'
 
 _auto_ram_timer = None

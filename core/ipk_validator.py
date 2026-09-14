@@ -135,7 +135,7 @@ def main(argv):
             raise ValueError('invalid Package field')
         if len(argv) > 2 and argv[2] and not re.match(argv[2], package, re.I):
             raise ValueError('unexpected package name: %s' % package)
-        if package == 'enigma2-plugin-extensions-panelaio' and version == '16.0.2':
+        if package == 'enigma2-plugin-extensions-panelaio' and version in ('16.0.2', '16.0.3'):
             validate_aio_payload(argv[1])
         print('OK|%s|%s|%s' % (package, version, arch)); return 0
     except Exception as exc:
