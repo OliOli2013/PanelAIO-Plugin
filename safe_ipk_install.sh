@@ -16,6 +16,6 @@ META=$("$PY" "$PLUGIN_DIR/core/ipk_validator.py" "$FILE" "$EXPECTED" 2>> "$LOG")
 if [ -n "$SHA" ]; then GOT=$(aio_sha256 "$FILE" 2>/dev/null || true); [ "$GOT" = "$SHA" ] || fail "Suma SHA-256 IPK nie pasuje." checksum; fi
 PACKAGE=$(printf '%s' "$META" | awk -F'|' '{print $2}')
 log "Instalacja pakietu: $PACKAGE"
-opkg install --force-reinstall "$FILE" >> "$LOG" 2>&1 || opkg install "$FILE" >> "$LOG" 2>&1 || fail "opkg nie zainstalował pakietu." install
+opkg --force-reinstall install "$FILE" >> "$LOG" 2>&1 || opkg install "$FILE" >> "$LOG" 2>&1 || fail "opkg nie zainstalował pakietu." install
 opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$PACKAGE" || fail "Pakiet nie jest widoczny jako zainstalowany." verify
 status "OK|$PACKAGE|log=$LOG"; log "OK: $PACKAGE"; cleanup; trap - EXIT HUP INT TERM; exit 0

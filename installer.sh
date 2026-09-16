@@ -158,7 +158,7 @@ printf '[AIO] Installing %s\n' "$VERSION" | tee -a "$LOG"
 # been installed correctly. Therefore we capture the opkg result and verify
 # the AIO package independently before deciding whether the update failed.
 OPKG_RC=0
-opkg install --force-reinstall "$WORK/update.ipk" >> "$LOG" 2>&1 || OPKG_RC=$?
+opkg --force-reinstall install "$WORK/update.ipk" >> "$LOG" 2>&1 || OPKG_RC=$?
 
 INSTALLED=$(opkg list-installed "$PKG" 2>/dev/null \
     | awk -v p="$PKG" '$1==p {print $3; exit}')
