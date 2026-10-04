@@ -16,6 +16,19 @@ META=$("$PY" "$PLUGIN_DIR/core/ipk_validator.py" "$FILE" "$EXPECTED" 2>> "$LOG")
 if [ -n "$SHA" ]; then GOT=$(aio_sha256 "$FILE" 2>/dev/null || true); [ "$GOT" = "$SHA" ] || fail "Suma SHA-256 IPK nie pasuje." checksum; fi
 PACKAGE=$(printf '%s' "$META" | awk -F'|' '{print $2}')
 log "Instalacja pakietu: $PACKAGE"
-opkg --force-reinstall install "$FILE" >> "$LOG" 2>&1 || opkg install "$FILE" >> "$LOG" 2>&1 || fail "opkg nie zainstalował pakietu." install
-opkg list-installed 2>/dev/null | awk '{print $1}' | grep -qx "$PACKAGE" || fail "Pakiet nie jest widoczny jako zainstalowany." verify
+VERSION=$(printf '%s' "$META" | awk -F'|' '{print $3}')
+RC=0
+if command -v opkg >/dev/null 2>&1; then
+    opkg --force-reinstall install "$FILE" >> "$LOG" 2>&1 || RC=$?
+    INSTALLED=$(opkg list-installed "$PACKAGE" 2>/dev/null | awk -v p="$PACKAGE" '$1==p {print $3; exit}')
+    STATE=$(opkg status "$PACKAGE" 2>/dev/null | awk -F': ' '$1=="Status" {print $2; exit}')
+elif command -v dpkg >/dev/null 2>&1; then
+    dpkg -i "$FILE" >> "$LOG" 2>&1 || RC=$?
+    INSTALLED=$(dpkg-query -W -f='${Version}' "$PACKAGE" 2>/dev/null || true)
+    STATE=$(dpkg-query -W -f='${Status}' "$PACKAGE" 2>/dev/null || true)
+else
+    fail "Brak opkg/dpkg." dependency
+fi
+[ "$INSTALLED" = "$VERSION" ] && [ "$STATE" = 'install ok installed' ] || fail "Nie potwierdzono wersji/statusu pakietu (rc=$RC)." verify
+[ "$RC" -eq 0 ] || log "Menedżer pakietów zwrócił $RC, ale pakiet $PACKAGE $VERSION jest zainstalowany. Sprawdź log."
 status "OK|$PACKAGE|log=$LOG"; log "OK: $PACKAGE"; cleanup; trap - EXIT HUP INT TERM; exit 0

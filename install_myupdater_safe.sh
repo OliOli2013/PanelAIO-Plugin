@@ -20,7 +20,7 @@ aio_acquire_lock remote_installer || fail 'Inny instalator zdalny jest już uruc
 command -v wget >/dev/null 2>&1 || fail 'Brak polecenia wget.' dependency
 log 'Pobieranie MyUpdater v5.1 z zaufanego źródła OliOli2013/MyUpdater-Plugin...'
 # Keep the exact wget options requested for this installer, but write to a local file.
-wget -q -O "$FILE" "$URL" || fail 'Nie udało się pobrać instalatora MyUpdater.' download
+aio_secure_download "$URL" "$FILE" 120 3 >> "$LOG" 2>&1 || fail 'Nie udało się pobrać instalatora MyUpdater.' download
 [ -s "$FILE" ] || fail 'Pobrany instalator jest pusty.' validation
 aio_not_html "$FILE" || fail 'Pobrano HTML zamiast instalatora.' validation
 PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail 'Brak Pythona do walidacji.' dependency

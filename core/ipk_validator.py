@@ -118,7 +118,10 @@ def validate_aio_payload(path):
                     pass
                 handle.close()
         required = ('plugin.py', 'runtime.py', 'version.txt', 'core/selftest.py',
-                    'data/navigation.py', 'data/requested_installers.py')
+                    'data/navigation.py', 'data/requested_installers.py', 'data/catalog.py', 'core/list_health.py', 'core/feed_inventory.py',
+                    'core/password.py', 'install_feed_package.sh')
+        if control_fields(path).get('version') != '17.0.0':
+            required = required[:6]
         if any(prefix + '/' + name not in seen for name in required):
             raise ValueError('incomplete AIO payload')
 
@@ -135,7 +138,7 @@ def main(argv):
             raise ValueError('invalid Package field')
         if len(argv) > 2 and argv[2] and not re.match(argv[2], package, re.I):
             raise ValueError('unexpected package name: %s' % package)
-        if package == 'enigma2-plugin-extensions-panelaio' and version in ('16.0.2', '16.0.3'):
+        if package == 'enigma2-plugin-extensions-panelaio' :
             validate_aio_payload(argv[1])
         print('OK|%s|%s|%s' % (package, version, arch)); return 0
     except Exception as exc:

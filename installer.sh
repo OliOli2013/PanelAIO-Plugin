@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 16.0.3 package updater. Compatible with the 16.0.0 validator.
+# AIO Panel 17.0.0 package updater. Compatible with the 16.0.0 validator.
 set -u
 
 REPO='OliOli2013/PanelAIO-Plugin'
@@ -16,7 +16,18 @@ esac
 BASE="https://raw.githubusercontent.com/$REPO/$BRANCH"
 DST='/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO'
 PKG='enigma2-plugin-extensions-panelaio'
-WORK=$(mktemp -d /tmp/aio-self-update.XXXXXX) || exit 1
+WORK=''
+for ROOT in /tmp /media/hdd /media/usb; do
+    [ -d "$ROOT" ] && [ -w "$ROOT" ] || continue
+    if [ "$ROOT" != /tmp ]; then
+        awk -v p="$ROOT" '$2==p {yes=1} END{exit yes?0:1}' /proc/mounts || continue
+    fi
+    FREE=$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')
+    case "$FREE" in ''|*[!0-9]*) continue ;; esac
+    [ "$FREE" -ge 8192 ] || continue
+    WORK=$(mktemp -d "$ROOT/aio-self-update.XXXXXX") && break
+done
+[ -n "$WORK" ] || { echo 'No writable staging space (8 MiB required)'; exit 1; }
 LOG='/tmp/aio_github_update.log'
 AIO_LOCK_DIR=''
 
@@ -41,6 +52,10 @@ bootstrap_download() (
     B_OUT="$2"
 
     if command -v wget >/dev/null 2>&1; then
+        wget -4 -q -T 30 -O "$B_OUT.part" "$B_URL" \
+            && [ -s "$B_OUT.part" ] \
+            && mv "$B_OUT.part" "$B_OUT" \
+            && exit 0
         wget -q -T 30 -O "$B_OUT.part" "$B_URL" \
             && [ -s "$B_OUT.part" ] \
             && mv "$B_OUT.part" "$B_OUT" \
@@ -55,6 +70,27 @@ bootstrap_download() (
             && exit 0
     fi
 
+    B_PY="${AIO_PYTHON:-}"
+    [ -n "$B_PY" ] || B_PY=$(command -v python3 || command -v python || true)
+    if [ -n "$B_PY" ]; then
+        "$B_PY" - "$B_URL" "$B_OUT.part" <<'PYTHON'
+from __future__ import print_function
+import sys
+try:
+    from urllib.request import Request, urlopen
+except ImportError:
+    from urllib2 import Request, urlopen
+try:
+    response = urlopen(Request(sys.argv[1], headers={'User-Agent': 'AIO-Panel'}), timeout=30)
+    data = response.read(262145)
+    response.close()
+    if not data or len(data) > 262144: raise ValueError('invalid helper size')
+    with open(sys.argv[2], 'wb') as handle: handle.write(data)
+except Exception as exc:
+    print(exc, file=sys.stderr); sys.exit(1)
+PYTHON
+        [ "$?" -eq 0 ] && [ -s "$B_OUT.part" ] && mv "$B_OUT.part" "$B_OUT" && exit 0
+    fi
     exit 1
 )
 
@@ -70,8 +106,14 @@ aio_acquire_lock plugin_update || fail 'Another AIO update is running'
 
 : > "$LOG"
 
-command -v opkg >/dev/null 2>&1 \
-    || fail 'This IPK update requires opkg. DreamOS/DEB needs its own package.'
+FORMAT=ipk
+if command -v opkg >/dev/null 2>&1; then
+    FORMAT=ipk
+elif command -v dpkg >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
+    FORMAT=deb
+else
+    fail 'No supported package manager (opkg/apt)'
+fi
 
 mkdir -p "$WORK/core" || fail 'Cannot create staging directory'
 
@@ -90,7 +132,7 @@ VERSION=$(tr -d '\r\n ' < "$WORK/version.txt")
 printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
     || fail 'Invalid version response'
 
-NAME="${PKG}_${VERSION}_all.ipk"
+NAME="${PKG}_${VERSION}_all.$FORMAT"
 
 # Keep the repository mirror in the replacement ZIP so releases are optional.
 RELEASE="https://github.com/$REPO/releases/download/$VERSION/$NAME"
@@ -122,12 +164,20 @@ META=$("$PY" "$WORK/core/ipk_validator.py" \
 [ "$META" = "OK|$PKG|$VERSION|all" ] \
     || fail 'Package metadata does not match advertised version'
 
-CURRENT=$(opkg list-installed "$PKG" 2>/dev/null \
-    | awk -v p="$PKG" '$1==p {print $3; exit}')
-
-if [ -n "$CURRENT" ] && opkg compare-versions "$CURRENT" '>>' "$VERSION"; then
-    fail 'Installed package is newer. Downgrade was not performed.'
+if [ "$FORMAT" = ipk ]; then
+    CURRENT=$(opkg list-installed "$PKG" 2>/dev/null | awk -v p="$PKG" '$1==p {print $3; exit}')
+    if [ -n "$CURRENT" ] && opkg compare-versions "$CURRENT" '>>' "$VERSION"; then
+        fail 'Installed package is newer. Downgrade was not performed.'
+    fi
+else
+    CURRENT=$(dpkg-query -W -f='${Version}' "$PKG" 2>/dev/null || true)
+    if [ -n "$CURRENT" ] && dpkg --compare-versions "$CURRENT" gt "$VERSION"; then
+        fail 'Installed package is newer. Downgrade was not performed.'
+    fi
 fi
+FREE=$(aio_free_kb "$(dirname "$DST")")
+case "$FREE" in ''|*[!0-9]*) fail 'Cannot determine free flash space' ;; esac
+[ "$FREE" -ge 6144 ] || fail 'Insufficient flash space (6 MiB required)'
 
 # Use the same operation lock as other AIO package installations.
 UPDATE_LOCK="$AIO_LOCK_DIR"
@@ -158,15 +208,17 @@ printf '[AIO] Installing %s\n' "$VERSION" | tee -a "$LOG"
 # been installed correctly. Therefore we capture the opkg result and verify
 # the AIO package independently before deciding whether the update failed.
 OPKG_RC=0
-opkg --force-reinstall install "$WORK/update.ipk" >> "$LOG" 2>&1 || OPKG_RC=$?
-
-INSTALLED=$(opkg list-installed "$PKG" 2>/dev/null \
-    | awk -v p="$PKG" '$1==p {print $3; exit}')
+if [ "$FORMAT" = ipk ]; then
+    opkg --force-reinstall install "$WORK/update.ipk" >> "$LOG" 2>&1 || OPKG_RC=$?
+    INSTALLED=$(opkg list-installed "$PKG" 2>/dev/null | awk -v p="$PKG" '$1==p {print $3; exit}')
+    PKG_STATUS=$(opkg status "$PKG" 2>/dev/null | awk -F': ' '$1=="Status" {print $2; exit}')
+else
+    dpkg -i "$WORK/update.ipk" >> "$LOG" 2>&1 || OPKG_RC=$?
+    INSTALLED=$(dpkg-query -W -f='${Version}' "$PKG" 2>/dev/null || true)
+    PKG_STATUS=$(dpkg-query -W -f='${Status}' "$PKG" 2>/dev/null || true)
+fi
 
 FILE_VERSION=$(cat "$DST/version.txt" 2>/dev/null || true)
-
-PKG_STATUS=$(opkg status "$PKG" 2>/dev/null \
-    | awk -F': ' '$1=="Status" {print $2; exit}')
 
 AIO_VERIFIED=0
 

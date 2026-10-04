@@ -89,3 +89,9 @@ def health_targets(include_scripts=True):
                 label = url
             targets.append(('Installer: ' + label, url))
     return targets
+
+TRUSTED_REMOTE_SCRIPTS.update([
+    'https://raw.githubusercontent.com/islam-2412/FuryBiss/refs/heads/main/fury/installer.sh',
+    'https://raw.githubusercontent.com/ahmeds200917/A.Shawky/refs/heads/main/install_jihad.sh',
+    'https://raw.githubusercontent.com/Belfagor2005/xxxplugin/main/installer.sh',
+])

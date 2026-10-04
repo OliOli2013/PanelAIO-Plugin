@@ -51,6 +51,10 @@ class SecureExecutor(object):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd, env=env or self.env, shell=False)
         try:
             stdout, stderr = process.communicate(timeout=timeout)
+        except getattr(subprocess, 'TimeoutExpired', RuntimeError):
+            process.kill()
+            stdout, stderr = process.communicate()
+            raise CommandError('Command timed out', returncode=255, stdout=stdout, stderr=stderr)
         except TypeError:
             # Python 2 subprocess has no communicate(timeout=...).
             state = {'timed_out': False}

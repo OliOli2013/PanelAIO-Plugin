@@ -52,7 +52,8 @@ def _validate_mynonpublic_urls(text):
 
 
 def validate(path, profile=None):
-    data = open(path, 'rb').read(MAX_SIZE + 1)
+    with open(path, 'rb') as handle:
+        data = handle.read(MAX_SIZE + 1)
     if not data or len(data) > MAX_SIZE:
         raise ValueError('remote script is empty or too large')
     try:

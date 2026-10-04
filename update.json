@@ -1,9 +1,9 @@
 {
   "name": "AIO Panel",
-  "version": "16.0.3",
+  "version": "17.0.0",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_16.0.3_all.ipk",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "AIO Panel 16.0.3: added AIOHD NEXT skin installation to the Skins section."
+  "changelog": "AIO Panel 17.0.0, poprawiona paczka: realne skórki z feedu, weryfikacja zawartości list przed wyświetleniem, AIO/Aktualizacje na końcu zakładek."
 }

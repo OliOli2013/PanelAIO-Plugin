@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '16.0.3'
+VERSION = '17.0.0'
 
 
 def _read(path):
@@ -40,6 +40,7 @@ def run(root):
 
     required = [
         'plugin.py', 'runtime.py', 'legacy_plugin.py',
+        'data/catalog.py', 'core/list_health.py', 'core/feed_inventory.py', 'core/password.py', 'install_feed_package.sh', 'install_fury_package.sh',
         'core/logger.py', 'core/result.py', 'core/action_registry.py',
         'core/action_dispatcher.py', 'core/activity.py', 'core/source_registry.py',
         'core/plugin_state.py', 'core/selftest.py',
@@ -102,17 +103,17 @@ def run(root):
     installer_expectations = {
         'install_picon_updater_safe.sh': (
             'https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh',
-            'wget -qO "$FILE" "$URL"',
+            'aio_secure_download "$URL" "$FILE"',
             'picon-updater',
         ),
         'install_myupdater_safe.sh': (
             'https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh',
-            'wget -q -O "$FILE" "$URL"',
+            'aio_secure_download "$URL" "$FILE"',
             'myupdater',
         ),
         'install_iptv_dream_safe.sh': (
             'https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh',
-            'wget -q --no-check-certificate',
+            'aio_secure_download "$URL" "$FILE"',
             'iptv-dream',
         ),
         'install_s4aupdater_safe.sh': (

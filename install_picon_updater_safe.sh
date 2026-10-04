@@ -20,11 +20,19 @@ aio_acquire_lock remote_installer || fail 'Inny instalator zdalny jest już uruc
 command -v wget >/dev/null 2>&1 || fail 'Brak polecenia wget.' dependency
 log 'Pobieranie PiconUpdater z zaufanego źródła OliOli2013/PiconUpdater...'
 # Keep the exact wget option form requested for this installer, but write to a local file.
-wget -qO "$FILE" "$URL" || fail 'Nie udało się pobrać instalatora PiconUpdater.' download
+aio_secure_download "$URL" "$FILE" 120 3 >> "$LOG" 2>&1 || fail 'Nie udało się pobrać instalatora PiconUpdater.' download
 [ -s "$FILE" ] || fail 'Pobrany instalator jest pusty.' validation
 aio_not_html "$FILE" || fail 'Pobrano HTML zamiast instalatora.' validation
 PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail 'Brak Pythona do walidacji.' dependency
 "$PY" "$PLUGIN_DIR/core/remote_script_validator.py" "$FILE" picon-updater >> "$LOG" 2>&1 || fail 'Instalator PiconUpdater nie przeszedł walidacji AIO.' validation
+# Keep the panel alive. Only the reviewed unconditional PiconUpdater restart is replaced.
+"$PY" - "$FILE" <<'PYTHON' || fail 'Nie można wyłączyć wymuszonego restartu.' validation
+import sys
+path = sys.argv[1]
+with open(path, 'r') as handle: text = handle.read()
+text = text.replace('killall -9 enigma2 2>/dev/null || true', ': # AIO: restart GUI manually')
+with open(path, 'w') as handle: handle.write(text)
+PYTHON
 HASH=$(aio_sha256 "$FILE" 2>/dev/null || true); log "SHA-256: $HASH"
 chmod 700 "$FILE" || fail 'Nie można ustawić praw instalatora.' execute
 (umask 022; PATH=/usr/sbin:/usr/bin:/sbin:/bin; export PATH; /bin/sh "$FILE") >> "$LOG" 2>&1 || fail 'Instalator PiconUpdater zakończył się błędem.' execute

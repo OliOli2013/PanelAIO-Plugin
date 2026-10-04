@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 16.0.3
+Wersja 17.0.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -32,6 +32,7 @@ from twisted.internet import reactor
 # Wykrywanie wersji Pythona
 IS_PY2 = sys.version_info[0] < 3
 IS_PY3 = sys.version_info[0] >= 3
+os.environ['AIO_PYTHON'] = sys.executable
 
 # --- String helpers (critical for Python 2 Enigma2 MenuList) ---
 # Enigma2's MenuList on many Python2 images expects native `str` (bytes). Passing `unicode`
@@ -411,7 +412,7 @@ def run_auto_ram_clean_task():
 try:
     g_auto_ram_timer.callback.append(run_auto_ram_clean_task)
 except AttributeError:
-    g_auto_ram_timer.timeout.connect(run_auto_ram_clean_task)
+    g_auto_ram_connection = g_auto_ram_timer.timeout.connect(run_auto_ram_clean_task)
 
 def _apply_auto_ram_from_config():
     """Restore automatic AIO maintenance setting after GUI/system restart."""
@@ -464,7 +465,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("16.0.3")
+VER = _read_local_version("17.0.0")
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
@@ -1776,7 +1777,7 @@ except Exception as exc:
 PY
     OK=1
 fi
-[ "$OK" -eq 1 ] && [ -s "$OUT.tmp" ] || { rm -f "$OUT.tmp"; echo '[AIO Panel] ERROR: S4a archive download failed'; exit 66; }
+[ "$OK" -eq 1 ] && [ -s "$OUT.tmp" ] || { rm -f "$OUT.tmp"; echo '[AIO Panel] ERROR: S4a source unavailable or empty (0 B). Existing channels were not changed.'; exit 66; }
 HEAD=$(dd if="$OUT.tmp" bs=1024 count=1 2>/dev/null | tr 'A-Z' 'a-z')
 case "$HEAD" in *'<html'*|*'<!doctype'*|*'404: not found'*|*'access denied'*) rm -f "$OUT.tmp"; echo '[AIO Panel] ERROR: server returned HTML'; exit 67 ;; esac
 mv -f "$OUT.tmp" "$OUT"
@@ -1853,7 +1854,7 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
 
     if archive_type == 'ipk':
         safe_script = os.path.join(PLUGIN_PATH, 'safe_ipk_install.sh')
-        expected = '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+        expected = '^enigma2-plugin-(extensions|systemplugins|skins)-[A-Za-z0-9.+_-]+$'
         command = '/bin/sh {script} {url} {expected} {status}'.format(script=_safe_shell_arg(safe_script), url=_safe_shell_arg(url), expected=_safe_shell_arg(expected), status=_safe_shell_arg(status_path))
 
         def ipk_finished(command_result):
@@ -1979,18 +1980,18 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📻 NeoRadio Online - Instalator", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
     ("📺 Bouquet Maker Xtream - Instalator", "CMD:INSTALL_BMX_SAFE"),
     ("🔄 MyUpdater v5.1 - Instalator", "CMD:INSTALL_MYUPDATER"),
-    ("📺 JediMakerXtream - Instalator", "remote_script:https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh"),
+    ("📺 JediMakerXtream - Instalator", "feed:jedimaker"),
     ("▶️ YouTube - Instalator", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Instalator (Picony)", "CMD:INSTALL_PICON_UPDATER"),
-    ("🖼️ ChocholousekPicons - Instalator", "remote_script_bash:https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup|install"),
-    ("🔑 CIEFP Oscam Editor - Instalator", "remote_script:https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh"),
+    ("🖼️ ChocholousekPicons - Instalator", "feed:chocholousek"),
+    ("🔑 CIEFP Oscam Editor - Instalator", "feed:ciefp"),
     ("📺 e-stralker - Instalator (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
         ("▶️ VAVOO - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
     ("📺 TV Garden - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
     ("🔎 Simple ZOOM Panel - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
-    ("⚽ FootOnsat - Instalator", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
+    ("⚽ FootOnsat - Instalator", "feed:footonsat"),
     (r"\c00FFD200--- AIO Connect ---\c00ffffff", "SEPARATOR"),
     ("🔎 Diagnostyka tunera", "CMD:AIO_CONNECT_DIAGNOSTICS"),
     ("📄 Pełny raport diagnostyczny", "CMD:AIO_CONNECT_REPORT"),
@@ -2030,18 +2031,18 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📻 NeoRadio Online - Installer", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
     ("📺 Bouquet Maker Xtream - Installer", "CMD:INSTALL_BMX_SAFE"),
     ("🔄 MyUpdater v5.1 - Installer", "CMD:INSTALL_MYUPDATER"),
-    ("📺 JediMakerXtream - Installer", "remote_script:https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh"),
+    ("📺 JediMakerXtream - Installer", "feed:jedimaker"),
     ("▶️ YouTube - Installer", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Installer (Picons)", "CMD:INSTALL_PICON_UPDATER"),
-    ("🖼️ ChocholousekPicons - Installer", "remote_script_bash:https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup|install"),
-    ("🔑 CIEFP Oscam Editor - Installer", "remote_script:https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh"),
+    ("🖼️ ChocholousekPicons - Installer", "feed:chocholousek"),
+    ("🔑 CIEFP Oscam Editor - Installer", "feed:ciefp"),
     ("📺 e-stralker - Installer (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
         ("▶️ VAVOO - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
     ("📺 TV Garden - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh"),
     ("🔎 Simple ZOOM Panel - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh"),
-    ("⚽ FootOnsat - Installer", "remote_script:https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh"),
+    ("⚽ FootOnsat - Installer", "feed:footonsat"),
     (r"\c00FFD200--- AIO Connect ---\c00ffffff", "SEPARATOR"),
     ("🔎 Receiver diagnostics", "CMD:AIO_CONNECT_DIAGNOSTICS"),
     ("📄 Full diagnostic report", "CMD:AIO_CONNECT_REPORT"),
@@ -2165,7 +2166,7 @@ SKINS_PL = [
     ("🎨 Fury FHD - Instalator", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
-    ("🎨 XDreamy - Instalator", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
+    ("🎨 XDreamy - Instalator", "safe_ipk:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/xDreamy.ipk|^enigma2-plugin-skins-.*$"),
 ]
 
 SKINS_EN = [
@@ -2175,7 +2176,7 @@ SKINS_EN = [
     ("🎨 Fury FHD - Installer", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
-    ("🎨 XDreamy - Installer", "remote_script:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh"),
+    ("🎨 XDreamy - Installer", "safe_ipk:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/xDreamy.ipk|^enigma2-plugin-skins-.*$"),
 ]
 
 
@@ -2960,7 +2961,7 @@ class AIOLoadingScreen(Screen):
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session
-        self['message'] = Label('Ładowanie danych AIO Panel...\n\nLoading AIO Panel data...')
+        self['message'] = Label('Sprawdzanie list kanałów i ładowanie danych...\n\nChecking channel archives and loading data...')
         self.fetched_data_cache = None
         self._panel_opened = False
         self._loading_timeout_call = None
@@ -3006,7 +3007,7 @@ class AIOLoadingScreen(Screen):
 
     def start_async_data_load(self):
         if self._loading_timeout_call is None:
-            self._loading_timeout_call = reactor.callLater(30, self._loading_timeout_fallback)
+            self._loading_timeout_call = reactor.callLater(180, self._loading_timeout_fallback)
         thread = Thread(target=self._background_data_loader)
         try: thread.setDaemon(True)
         except Exception: pass
@@ -3018,11 +3019,21 @@ class AIOLoadingScreen(Screen):
         except Exception as exc: print('[AIO Panel] repo list load:', exc)
         try: s4a_lists_full = _get_s4aupdater_lists_dynamic_sync()
         except Exception as exc: print('[AIO Panel] S4a list load:', exc)
+        from Plugins.SystemPlugins.PanelAIO.core.list_health import filter_lists
+        from Plugins.SystemPlugins.PanelAIO.core.feed_inventory import skin_packages
+        candidates = [item for source, rows in (('repo', repo_lists), ('s4a', s4a_lists_full))
+                      for item in rows if not _is_excluded_channel_list_item(item[0], item[1])
+                      and _channel_item_is_recent(item, source=source)]
+        all_checked = filter_lists(candidates)
+        checked_actions = set(item[1] for item in all_checked)
+        repo_lists = [item for item in repo_lists if item[1] in checked_actions]
+        s4a_lists_full = [item for item in s4a_lists_full if item[1] in checked_actions]
+        available_skins = skin_packages()
         try: best_oscam_version = _get_best_oscam_version_info_sync()
         except Exception as exc: print('[AIO Panel] OSCam version load:', exc)
         try: local_oscam_version = _get_local_oscam_version_info_sync()
         except Exception as exc: print('[AIO Panel] local OSCam version:', exc)
-        self.fetched_data_cache = {'repo_lists': repo_lists, 's4a_lists_full': s4a_lists_full, 'best_oscam_version': best_oscam_version, 'local_oscam_version': local_oscam_version}
+        self.fetched_data_cache = {'repo_lists': repo_lists, 's4a_lists_full': s4a_lists_full, 'best_oscam_version': best_oscam_version, 'local_oscam_version': local_oscam_version, 'available_skins': available_skins}
         reactor.callFromThread(self._on_data_loaded)
 
     def _open_panel_safe(self, fetched_data=None):
@@ -4555,7 +4566,7 @@ FUNCTION_DESCRIPTIONS = {
 }
 # === KONIEC OPISÓW FUNKCJI ===
 
-# AIO Connect 16.0.3 — descriptions kept outside the legacy dictionary body.
+# AIO Connect 17.0.0 — descriptions kept outside the legacy dictionary body.
 FUNCTION_DESCRIPTIONS["PL"].update({
     "🔎 Diagnostyka tunera": "Sprawdza kondycję tunera: system, Python, flash, RAM, temperaturę, obciążenie, sieć, OpenWebif, listy, EPG, picony i crashlogi.",
     "📄 Pełny raport diagnostyczny": "Tworzy pełny lokalny raport w /tmp. Raport nie jest wysyłany automatycznie i nie zawiera haseł ani surowego adresu MAC.",
@@ -4903,6 +4914,9 @@ class PanelAIO(Screen):
                 except Exception:
                     pass
             
+            from Plugins.SystemPlugins.PanelAIO.data.catalog import menu_items
+            known_actions = set(action for _, action in softcam_menu)
+            softcam_menu.extend(item for item in menu_items(lang, sys.version_info[0], exclude_skins=True) if item[1] not in known_actions)
             # --- FILTROWANIE DLA PYTHON 2 (Kompatybilność) ---
             if IS_PY2:
                  softcam_filtered = []
@@ -4949,8 +4963,12 @@ class PanelAIO(Screen):
 
             from Plugins.SystemPlugins.PanelAIO.data.navigation import build_tabs
             skins_menu = list(SKINS_PL if lang == 'PL' else SKINS_EN)
+            skins_menu = [item for item in skins_menu if item[1] != 'CMD:INSTALL_FURY_SKIN']
+            softcam_menu.append(('FuryBiss — instalator' if lang == 'PL' else 'FuryBiss — installer', 'CMD:INSTALL_FURY_SKIN'))
+            skins_menu.extend(menu_items(lang, sys.version_info[0], only_skins=True, available_skins=self.fetched_data_cache.get('available_skins', [])))
             tabs = build_tabs(lang, final_channel_lists, softcam_menu, tools_menu, skins_menu, diag_menu)
 
+            tabs = [(ensure_str(label), [(ensure_str(name), ensure_str(action)) for name, action in items]) for label, items in tabs]
             self._set_sidebar_tabs(tabs)
             self.switch_tab(self.active_tab)
             
@@ -5133,7 +5151,7 @@ class PanelAIO(Screen):
     def _source_probe(self, url, timeout=6):
         response = None
         try:
-            request = Request(url, headers={'User-Agent': 'AIO-Panel/16.0.3'})
+            request = Request(url, headers={'User-Agent': 'AIO-Panel/17.0.0'})
             response = urlopen(request, timeout=timeout)
             try:
                 response.read(128)
@@ -5825,7 +5843,7 @@ class PanelAIO(Screen):
             url = ipk_match.group(1)
             if not _is_https_allowed(url):
                 return None
-            expected = '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+            expected = '^enigma2-plugin-(extensions|systemplugins|skins)-[A-Za-z0-9.+_-]+$'
             if 'neoradio' in url.lower():
                 expected = '^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$'
             elif 'youtube' in url.lower():
@@ -5901,7 +5919,16 @@ class PanelAIO(Screen):
                 _record_recent(name, action)
         except Exception as exc:
             _log_exception('action history/logging', exc)
-        if action.startswith('picons:'):
+        if action.startswith('feed:'):
+            key = action.split(':', 1)[1]
+            from Plugins.SystemPlugins.PanelAIO.data.catalog import command_for
+            try:
+                command = command_for(key, PLUGIN_PATH)
+            except ValueError as exc:
+                show_message_compat(self.sess, ensure_unicode(exc), MessageBox.TYPE_ERROR)
+                return
+            run_command_in_background(self.sess, title, [command], callback_on_finish=self._show_action_result)
+        elif action.startswith('picons:'):
             self._prompt_picon_target(title, action.split(':', 1)[1])
         elif action.startswith('s4archive:'):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python, action_type='channels_s4a')
@@ -5965,7 +5992,7 @@ class PanelAIO(Screen):
             spec = action.split(':', 1)[1]
             parts = spec.split('|', 1)
             url = parts[0].strip()
-            expected = parts[1].strip() if len(parts) > 1 else '^enigma2-plugin-(extensions|systemplugins)-[A-Za-z0-9.+_-]+$'
+            expected = parts[1].strip() if len(parts) > 1 else '^enigma2-plugin-(extensions|systemplugins|skins)-[A-Za-z0-9.+_-]+$'
             if not _is_https_allowed(url):
                 show_message_compat(self.sess, 'Nieprawidłowe źródło IPK.', MessageBox.TYPE_ERROR)
                 return
@@ -5985,7 +6012,11 @@ class PanelAIO(Screen):
             if key == 'SUPER_SETUP_WIZARD': self.run_super_setup_wizard()
             elif key in ('INSTALL_AIOHD_NEXT', 'INSTALL_FURY_SKIN', 'INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
                 from Plugins.SystemPlugins.PanelAIO.data.requested_installers import COMMANDS
-                run_command_in_background(self.sess, title, [COMMANDS[key]], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
+                command = ('/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_fury_package.sh'))) if key == 'INSTALL_FURY_SKIN' else self._safe_legacy_action_command(title, COMMANDS[key])
+                if not command:
+                    show_message_compat(self.sess, 'Nieprawidłowe źródło instalatora.' if self.lang == 'PL' else 'Invalid installer source.', MessageBox.TYPE_ERROR)
+                    return
+                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
             elif key == 'CHECK_FOR_UPDATES': self.check_for_updates_manual()
             elif key == 'SHOW_PENDING_AIO_UPDATE': self.show_detected_update_prompt()
             elif key == 'UPDATE_SATELLITES_XML': run_command_in_background(self.sess, title, ['/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'update_satellites_xml.sh'))], callback_on_finish=self.reload_settings_python)
@@ -5998,7 +6029,7 @@ class PanelAIO(Screen):
             elif key == 'INSTALL_E2IPLAYER':
                 # Dedicated direct command restored from the tested 14.0.1 fix.
                 # Do not route E2iPlayer through the generic remote-script validator.
-                command = 'wget -q "https://raw.githubusercontent.com/oe-mirrors/e2iplayer/refs/heads/python3/e2iplayer_install.sh" -O - | /bin/sh'
+                command = '/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_e2iplayer.sh'))
                 run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
             elif key == 'MANAGE_DVBAPI': self.manage_dvbapi()
             elif key == 'UPDATE_DVBAPI_POLAND': self.update_oscam_dvbapi_poland()
@@ -7070,20 +7101,31 @@ class PanelAIO(Screen):
     def set_system_password(self):
         def callback(password):
             password = ensure_unicode(password)
-            if not password: return
+            if not password:
+                return
+            if any(char in password for char in ('\n', '\r', ':', '\x00')):
+                show_message_compat(self.sess, 'Hasło zawiera niedozwolony znak.' if self.lang == 'PL' else 'Invalid character in password.', MessageBox.TYPE_ERROR)
+                return
+            prepare_tmp_dir()
             fd, temp_path = tempfile.mkstemp(prefix='aio-pass-', dir=PLUGIN_TMP_PATH)
             try:
-                os.write(fd, ensure_str('root:%s\n' % password).encode('utf-8') if IS_PY3 else ensure_str('root:%s\n' % password))
-            finally:
-                os.close(fd)
-            os.chmod(temp_path, 0o600)
-            cmd = 'chpasswd < %s; RC=$?; rm -f %s; exit $RC' % (_safe_shell_arg(temp_path), _safe_shell_arg(temp_path))
-            run_command_in_background(self.sess, 'Zmiana hasła root', [cmd])
-        kwargs = {'title': 'Nowe hasło root'}
+                with os.fdopen(fd, 'wb') as handle:
+                    handle.write(('root:%s\n' % password).encode('utf-8'))
+                os.chmod(temp_path, 0o600)
+                script = os.path.join(PLUGIN_PATH, 'core/password.py')
+                cmd = '%s %s %s' % tuple(_safe_shell_arg(x) for x in (sys.executable, script, temp_path))
+                run_command_in_background(self.sess, 'Zmiana hasła root' if self.lang == 'PL' else 'Root password', [cmd], callback_on_finish=self._show_action_result)
+            except Exception:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+        kwargs = {'title': 'Nowe hasło root' if self.lang == 'PL' else 'New root password'}
         if Input is not None:
-            password_type = getattr(Input, 'PASSWORD', getattr(Input, 'PIN', None))
-            if password_type is not None: kwargs['type'] = password_type
+            password_type = getattr(Input, 'PASSWORD', None)
+            if password_type is not None:
+                kwargs['type'] = password_type
         self.sess.openWithCallback(callback, InputBox, **kwargs)
+
     def restart_oscam(self, *args):
         status = os.path.join(PLUGIN_TMP_PATH, 'oscam_control_%s.status' % int(time.time() * 1000))
         cmd = '/bin/sh %s restart %s' % (_safe_shell_arg(os.path.join(PLUGIN_PATH, 'oscam_control_script.sh')), _safe_shell_arg(status))

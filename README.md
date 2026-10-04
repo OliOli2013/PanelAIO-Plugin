@@ -1,3 +1,19 @@
+# AIO Panel 17.0.0
+
+Autor: Paweł Pawełek. Panel dla Enigma2 z kodem zgodnym składniowo z Python 2.7 i Python 3.
+
+Poprawiona paczka 2026-10-04 (nadal 17.0.0): weryfikacja archiwów list przed wyświetleniem, skórki dobrane z rzeczywistych indeksów feedu, AIO / Aktualizacje na końcu.
+
+Nowe instalatory z feedu obrazu, poprawiona weryfikacja aktualizacji, zmiana hasła z fallbackiem passwd, bezpieczniejszy rollback list kanałów. Zachowane PL/EN, AIO Connect, wyszukiwanie, historia i zakładka Listy kanałów jako pierwsza.
+
+Instalacja, podmiana repozytorium i logi: [INSTRUKCJA_17.0.0.txt](INSTRUKCJA_17.0.0.txt).
+Wyniki audytu i ograniczenia: [AUDYT_17.0.0.md](AUDYT_17.0.0.md).
+Pakiety: `release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk` oraz `.deb`.
+
+Testy automatyczne nie zastępują testów na tunerach. Dostępność dodatków zależy od feedu danego obrazu; pakiet DEB nie gwarantuje wszystkich historycznych funkcji na DreamOS.
+
+## Historia dokumentacji
+
 # AIO Panel 16.0.2
 
 Poprawka aktualizacji oscam.srvid/srvid2 i SoftCam.Key, pierwszej zakładki Listy kanałów oraz stałych komunikatów wykonywania operacji. Szczegóły: docs/POPRAWKI_16.0.2.txt.

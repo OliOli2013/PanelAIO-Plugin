@@ -1,3 +1,19 @@
+17.0.0 — poprawiona paczka, 2026-10-04
+- Skórki: rzeczywiste pakiety z feedu obrazu, poprawione Metrix ATV i PLi FullNight, dodana Umbra. Niedostępne pakiety są ukryte.
+- Listy: pełne pobranie i kontrola archiwum przed wyświetleniem; HTTP 200 ani nowa data nie wystarczają.
+- AIO / Aktualizacje: ostatnia zakładka.
+- Numer wersji pozostaje 17.0.0; instalacja ponowna opkg --force-reinstall.
+
+AIO Panel 17.0.0 — 03.10.2026
+- Nowy katalog instalatorów z feedów obrazu: nagrywanie, EPG, multimedia, sieć i skiny.
+- Weryfikacja pobrania przed uruchomieniem E2iPlayer; brak fałszywego sukcesu pustej potoku.
+- Instalatory skinów przez istniejący walidator IPK/skryptu.
+- Zmiana hasła: prywatny plik, czyszczenie oraz fallback passwd przez PTY.
+- Pobrania: odrzucanie pustej/uciętej odpowiedzi, osobne pliki dla równoległych żądań.
+- Aktualizator: transport Python/IPv4/curl, kontrola wolnego miejsca, weryfikacja pakietu.
+- Zachowana kolejność zakładek, listy kanałów jako pierwsze, PL/EN i AIO Connect.
+- Nie obejmuje testów fizycznych tunerów ani naprawy zewnętrznych serwerów.
+
 AIO Panel 16.0.3 — 2026-09-14
 PL:
 - Dodano AIOHD NEXT 3.2.1 do sekcji „Skórki” jako nową pozycję instalacyjną.

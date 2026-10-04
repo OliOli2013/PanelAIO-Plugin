@@ -19,7 +19,7 @@ mkdir -p "$PLUGIN" "$CONTROL" "$OUTDIR"
   tar -cf - \
     --exclude='./.git' --exclude='./.github' --exclude='./release' --exclude='./releases' \
     --exclude='./control' --exclude='./docs' --exclude='./tests' --exclude='./tools' \
-    --exclude='./build_ipk.sh' --exclude='./README.md' --exclude='./RELEASES.md' \
+    --exclude='./build_ipk.sh' --exclude='./AUDYT_17.0.0.md' --exclude='./INSTRUKCJA_17.0.0.txt' --exclude='./TEST_RESULTS.txt' --exclude='./SOURCE_AUDIT.json' --exclude='./LIVE_LIST_CHECK.json' --exclude='./README.md' --exclude='./RELEASES.md' \
     --exclude='./GITKRAKEN_16.0.0.txt' --exclude='./SHA256SUMS.txt' --exclude='./update.json' \
     --exclude='./Picony.zip' --exclude='./__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
     .
@@ -43,6 +43,13 @@ python3 "$PLUGIN/core/selftest.py" "$PLUGIN"
 find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
 
+if [ -n "${AIO_TEST_PYTHON2:-}" ]; then
+  "$AIO_TEST_PYTHON2" -m compileall -q "$PLUGIN"
+  "$AIO_TEST_PYTHON2" "$PLUGIN/core/selftest.py" "$PLUGIN"
+fi
+# Python 2 compileall writes .pyc beside sources; never ship host bytecode.
+find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
 # Gzip control/data also work on Python 2 images without lzma support.
 printf '2.0\n' > "$WORK/debian-binary"
 (
@@ -73,6 +80,9 @@ print(h.hexdigest())
 PY
 )
 fi
+DEB="$OUTDIR/${PKG}_${VERSION}_all.deb"
+cp "$OUT" "$DEB"
 printf '%s  %s\n' "$HASH" "release/$(basename "$OUT")" > "$ROOT/SHA256SUMS.txt"
+printf '%s  %s\n' "$HASH" "release/$(basename "$DEB")" >> "$ROOT/SHA256SUMS.txt"
 echo "Built: $OUT"
 echo "SHA256: $HASH"

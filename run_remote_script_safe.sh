@@ -16,6 +16,10 @@ aio_secure_download "$URL" "$FILE" 300 3 || fail "Nie udało się pobrać instal
 aio_not_html "$FILE" || fail "Pobrano HTML zamiast instalatora." validation
 PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail "Brak Pythona do walidacji." dependency
 "$PY" "$PLUGIN_DIR/core/remote_script_validator.py" "$FILE" >> "$LOG" 2>&1 || fail "Instalator zawiera niedozwolone lub ryzykowne konstrukcje." validation
+FIRST=$(head -n 1 "$FILE")
+case "$FIRST" in *bash*) SHELL_BIN=/bin/bash ;; esac
+[ -x "$SHELL_BIN" ] || fail "Instalator wymaga $SHELL_BIN." dependency
+"$SHELL_BIN" -n "$FILE" >> "$LOG" 2>&1 || fail "Niepoprawna składnia instalatora." validation
 HASH=$(aio_sha256 "$FILE" 2>/dev/null || true); log "SHA-256: $HASH"; chmod 700 "$FILE" || fail "Nie można ustawić praw pliku." execute
 (umask 022; PATH=/usr/sbin:/usr/bin:/sbin:/bin; export PATH; "$SHELL_BIN" "$FILE" "$@") >> "$LOG" 2>&1 || fail "Instalator zakończył się błędem." execute
 status "OK|sha256=$HASH|log=$LOG"; log "Instalator zakończony poprawnie."; cleanup; trap - EXIT HUP INT TERM; exit 0

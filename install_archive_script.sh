@@ -31,7 +31,14 @@ log() { printf '%s\n' "$*" | tee -a "$LOG_FILE"; }
 status() { printf '%s\n' "$*" > "$STATUS_FILE.tmp" 2>/dev/null && mv -f "$STATUS_FILE.tmp" "$STATUS_FILE" 2>/dev/null || true; }
 
 cleanup() {
-    [ -n "$WORK" ] && rm -rf "$WORK" 2>/dev/null || true
+    if [ "$APPLY_STARTED" -eq 1 ]; then
+        if restore_snapshot; then APPLY_STARTED=0; fi
+    fi
+    if [ "$APPLY_STARTED" -eq 0 ]; then
+        [ -n "$WORK" ] && rm -rf "$WORK" 2>/dev/null || true
+    else
+        log "Rollback nie powiódł się. Zachowano kopię: $BACKUP"
+    fi
     [ -n "$ARCHIVE" ] && rm -f "$ARCHIVE" 2>/dev/null || true
     aio_release_lock
 }
@@ -41,7 +48,7 @@ count_files() { find "$1" -type f 2>/dev/null | wc -l | tr -d ' '; }
 copy_e2_set() {
     SRC="$1"; DST="$2"; mkdir -p "$DST" || return 1
     for N in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist; do
-        [ -f "$SRC/$N" ] && cp -p "$SRC/$N" "$DST/$N" || true
+        if [ -f "$SRC/$N" ]; then cp -p "$SRC/$N" "$DST/$N" || return 1; fi
     done
     for F in "$SRC"/*.tv "$SRC"/*.radio "$SRC"/*.del; do
         [ -f "$F" ] || continue
@@ -53,7 +60,7 @@ copy_e2_set() {
 copy_tuxbox_set() {
     SRC="$1"; DST="$2"; mkdir -p "$DST" || return 1
     for N in satellites.xml cables.xml terrestrial.xml; do
-        [ -f "$SRC/$N" ] && cp -p "$SRC/$N" "$DST/$N" || true
+        if [ -f "$SRC/$N" ]; then cp -p "$SRC/$N" "$DST/$N" || return 1; fi
     done
     return 0
 }
@@ -116,7 +123,7 @@ fail() {
     MSG="$1"; STAGE="${2:-unknown}"
     log "!!! BŁĄD [$STAGE]: $MSG"
     if [ "$APPLY_STARTED" -eq 1 ]; then
-        if restore_snapshot; then log "Rollback zakończony poprawnie."; else log "UWAGA: rollback nie został w pełni potwierdzony."; fi
+        if restore_snapshot; then APPLY_STARTED=0; log "Rollback zakończony poprawnie."; else log "UWAGA: rollback nie został w pełni potwierdzony."; fi
     fi
     status "ERROR|$MSG|$STAGE|rollback=$ROLLBACK_OK|log=$LOG_FILE"
     cleanup
@@ -196,7 +203,8 @@ score_source_dir() {
     printf '%s\n' "$SCORE"
 }
 
-trap 'cleanup' EXIT HUP INT TERM
+trap 'cleanup' EXIT
+trap 'fail "Instalacja została przerwana sygnałem." interrupted' HUP INT TERM
 
 aio_acquire_lock channel_lists || fail "Inna operacja list kanałów jest już wykonywana." lock
 [ -n "$ARCHIVE" ] && [ -s "$ARCHIVE" ] || fail "Archiwum nie istnieje albo jest puste." arguments
@@ -237,13 +245,13 @@ copy_tuxbox_set "$SOURCE" "$STAGE_TUXBOX" || fail "Nie można przygotować XML t
 for N in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist; do
     if [ ! -f "$STAGE_E2/$N" ]; then
         F=$(find "$EXTRACT" -type f -name "$N" -print -quit 2>/dev/null)
-        [ -n "$F" ] && cp -p "$F" "$STAGE_E2/$N" || true
+        if [ -n "$F" ]; then cp -p "$F" "$STAGE_E2/$N" || fail "Nie można przygotować pliku $N." staging; fi
     fi
 done
 for N in satellites.xml cables.xml terrestrial.xml; do
     if [ ! -f "$STAGE_TUXBOX/$N" ]; then
         F=$(find "$EXTRACT" -type f -name "$N" -print -quit 2>/dev/null)
-        [ -n "$F" ] && cp -p "$F" "$STAGE_TUXBOX/$N" || true
+        if [ -n "$F" ]; then cp -p "$F" "$STAGE_TUXBOX/$N" || fail "Nie można przygotować XML $N." staging; fi
     fi
 done
 

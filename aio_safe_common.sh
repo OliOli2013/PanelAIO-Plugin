@@ -9,6 +9,7 @@ AIO_LOCK_DIR=""
 _aio_log() { printf '%s\n' "$*"; }
 
 aio_python() {
+    if [ -n "${AIO_PYTHON:-}" ] && [ -x "$AIO_PYTHON" ]; then printf '%s\n' "$AIO_PYTHON"; return 0; fi
     if command -v python3 >/dev/null 2>&1; then printf '%s\n' python3; return 0; fi
     if command -v python >/dev/null 2>&1; then printf '%s\n' python; return 0; fi
     return 1
@@ -92,17 +93,21 @@ try:
     url = os.environ['AIO_URL']; out = os.environ['AIO_OUT']; timeout = int(os.environ.get('AIO_TIMEOUT', '300'))
     req = Request(url, headers={'User-Agent': 'Enigma2-AIO-Panel'})
     response = urlopen(req, timeout=timeout)
+    expected = int(response.headers.get('Content-Length') or -1)
+    written = 0
     handle = open(out, 'wb')
     try:
         while True:
             chunk = response.read(65536)
             if not chunk: break
             handle.write(chunk)
+            written += len(chunk)
     finally:
         handle.close()
         try: response.close()
         except Exception: pass
-    if os.path.getsize(out) <= 0: raise ValueError('empty download')
+    if written <= 0: raise ValueError('empty download')
+    if expected >= 0 and written != expected: raise ValueError('truncated download')
 except Exception as exc:
     print(exc, file=sys.stderr)
     sys.exit(1)

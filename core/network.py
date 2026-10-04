@@ -74,6 +74,10 @@ class HTTPClient(object):
                                 progress_cb(written, total)
                             except Exception:
                                 pass
+                if written <= 0:
+                    raise IOError('Empty download')
+                if total >= 0 and written != total:
+                    raise IOError('Truncated download')
                 if expected_sha256:
                     digest = sha256_of_file(tmp_name)
                     if digest.lower() != expected_sha256.lower():
@@ -83,20 +87,28 @@ class HTTPClient(object):
             except Exception as exc:
                 last_error = exc
                 LOGGER.warning('download failed for %s on attempt %s: %s', url, attempt, exc)
-                time.sleep(1)
+                if attempt <= self.retries:
+                    time.sleep(1)
             finally:
                 try:
                     if response is not None:
                         response.close()
                 except Exception:
                     pass
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
         raise last_error
 
     def get_text(self, url, timeout=None):
-        target = os.path.join(self.cache_dir, 'aio_text_cache.txt')
-        path = self.download(url, target, timeout=timeout)
-        with open(path, 'rb') as handle:
-            return ensure_unicode(handle.read())
+        fd, target = tempfile.mkstemp(prefix='aio-text-', dir=self.cache_dir)
+        os.close(fd)
+        try:
+            path = self.download(url, target, timeout=timeout)
+            with open(path, 'rb') as handle:
+                return ensure_unicode(handle.read())
+        finally:
+            if os.path.exists(target):
+                os.unlink(target)
 
     def get_json(self, url, timeout=None, default=None):
         try:

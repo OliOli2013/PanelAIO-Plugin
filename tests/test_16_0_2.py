@@ -52,6 +52,8 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(methods(BASELINE/'runtime.py'), methods(ROOT/'runtime.py'))
 
     def test_themed_tabs_preserve_every_action_both_languages(self):
+        catalog = module('catalog', ROOT/'data/catalog.py')
+        sys.modules['Plugins.SystemPlugins.PanelAIO.data.catalog'] = catalog
         nav = module('navigation', ROOT/'data/navigation.py')
         values = menu_values(ROOT/'runtime.py')
         for lang in ('PL', 'EN'):
@@ -66,11 +68,13 @@ class AuditTests(unittest.TestCase):
 
     def test_package_gzip_and_payload(self):
         val = module('ipk', ROOT/'core/ipk_validator.py')
-        ipk = ROOT/'release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk'
+        ipk = ROOT/'release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk'
         members = val.read_ar_members(str(ipk))
         self.assertEqual(set(members), {'debian-binary','control.tar.gz','data.tar.gz'})
-        self.assertEqual(val.control_fields(str(ipk))['version'], '16.0.2')
+        self.assertEqual(val.control_fields(str(ipk))['version'], '17.0.0')
         val.validate_aio_payload(str(ipk))
+        with tarfile.open(fileobj=io.BytesIO(members['data.tar.gz'])) as archive:
+            self.assertFalse(any(m.name.endswith(('.pyc', '.pyo')) or '__pycache__' in m.name for m in archive))
 
     def test_rejected_contender_preserves_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -113,7 +117,7 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(len(jobs),1)
         self.assertTrue(panel._update_manual_requested)
         panel._closed=True
-        panel._finish_update_check('16.0.2','','')
+        panel._finish_update_check('17.0.0','','')
         self.assertEqual(len(texts),1)
         self.assertFalse(panel._update_check_running)
 
@@ -143,6 +147,7 @@ class AuditTests(unittest.TestCase):
 import io, os, pathlib, sys, tarfile
 root=pathlib.Path(os.environ['TEST_ROOT']); repo=pathlib.Path(os.environ['TEST_REPO']);mode=os.environ['TEST_MODE']
 args=sys.argv[1:];tool=pathlib.Path(sys.argv[0]).name
+args=[a for a in args if a!='--force-reinstall']
 if tool=='python3':
  if args==['-']:sys.exit(1)
  os.execv(sys.executable,[sys.executable]+args)
@@ -150,15 +155,16 @@ if tool in ('wget','curl'):
  url=args[-1]; flag='-O' if tool=='wget' else '-o';out=pathlib.Path(args[args.index(flag)+1])
  if url.endswith('.ipk'):
   if mode=='missing' or (mode=='fallback' and 'raw.githubusercontent' in url):sys.exit(1)
-  src=repo/'release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk'
+  src=repo/'release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk'
  else:
   src=repo/url.split('/main/',1)[1]
  data=src.read_bytes()
- if mode=='checksum' and url.endswith('SHA256SUMS.txt'):data=b'0'*64+b'  release/enigma2-plugin-extensions-panelaio_16.0.2_all.ipk\n'
+ if mode=='checksum' and url.endswith('SHA256SUMS.txt'):data=b'0'*64+b'  release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk\n'
  out.write_bytes(data);sys.exit(0)
 if args[0]=='list-installed':
  print('enigma2-plugin-extensions-panelaio - '+(root/'db').read_text());sys.exit(0)
 if args[0]=='compare-versions':sys.exit(1)
+if args[0]=='status':print('Status: install ok installed');sys.exit(0)
 if args[0]=='install':
  (root/'install-called').touch()
  if mode=='opkg_error':sys.exit(1)
@@ -171,7 +177,7 @@ if args[0]=='install':
     for entry in tar:
      if not entry.isfile():continue
      name=entry.name.split('/PanelAIO/',1)[-1];target=root/'installed'/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(tar.extractfile(entry).read())
- if mode!='bad_db':(root/'db').write_text('16.0.2')
+ if mode!='bad_db':(root/'db').write_text('17.0.0')
  if mode=='bad_files':(root/'installed/version.txt').write_text('16.0.0')
  sys.exit(0)
 sys.exit(2)
