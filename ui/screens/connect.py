@@ -64,7 +64,7 @@ PLUGIN_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(_
 ASSET_PATH = os.path.join(PLUGIN_PATH, 'assets', 'modern')
 REPORT_PATH = '/tmp/aio_panel_connect_report.txt'
 DYNAMIC_QR_PATH = '/tmp/aio_panel_connect_qr.png'
-SITE_ROOT = 'https://olioli2013.github.io/aio-iptv-projekt/'
+SITE_ROOT = 'https://aio-iptv-projekt.pages.dev/'
 COMMUNITY_URL = SITE_ROOT + 'community.html'
 REPORT_PAGE = SITE_ROOT + 'report-error.html'
 SITE_QR = os.path.join(ASSET_PATH, 'qr_site.png')
@@ -557,7 +557,7 @@ def _redact_ip(value):
 def diagnostic_report(data):
     temp = 'brak' if data['temperature'] is None else '%.1f°C' % data['temperature']
     lines = [
-        'AIO Panel 16.0.0 — AIO Connect',
+        'AIO Panel 17.0.1 — AIO Connect',
         'Raport utworzony: %s' % data['time'],
         'Kod urządzenia: %s (anonimowy skrót)' % data['device_code'],
         '',
@@ -798,7 +798,7 @@ class AIOConnectQRScreen(Screen):
         path = None
         for source in sources:
             try:
-                request = Request(source, headers={'User-Agent': 'AIOPanel/16.0.0', 'Accept': 'image/png,image/*'})
+                request = Request(source, headers={'User-Agent': 'AIOPanel/17.0.1', 'Accept': 'image/png,image/*'})
                 response = urlopen(request, timeout=12)
                 raw = response.read()
                 try:
@@ -957,7 +957,7 @@ class AIOConnectUpdatesScreen(Screen):
     def _fetch_update(self, url):
         if not url:
             return {}
-        request = Request(url, headers={'User-Agent': 'AIOPanel/16.0.0', 'Cache-Control': 'no-cache'})
+        request = Request(url, headers={'User-Agent': 'AIOPanel/17.0.1', 'Cache-Control': 'no-cache'})
         response = urlopen(request, timeout=7)
         raw = response.read()
         try:
@@ -983,7 +983,7 @@ class AIOConnectUpdatesScreen(Screen):
             local = installed.get(package, '-') if package else 'Android / telefon'
             latest = _u(remote.get('version') or '?')
             if project['name'] == 'AIO Panel':
-                local = '16.0.0'
+                local = '17.0.1'
             status = 'APLIKACJA'
             if package:
                 if local == '-':
@@ -1185,7 +1185,7 @@ PRIVACY_PL = '''AIO Connect — informacje i prywatność
 • Adres IP jest w raporcie maskowany (np. 192.168.x.x).
 • Wtyczka nie wysyła raportu, haseł ani danych dostępowych automatycznie.
 • Kod urządzenia jest krótkim skrótem SHA-256 i nie zawiera surowego adresu MAC ani numeru seryjnego.
-• Kod QR otwiera stronę AIO-IPTV.pl, formularz zgłoszenia lub Społeczność AIO.
+• Kod QR otwiera stronę AIO Team, formularz zgłoszenia lub Społeczność AIO.
 • Użytkownik sam decyduje, czy skopiuje albo opublikuje raport.
 
 Strona projektu:
@@ -1207,7 +1207,7 @@ def open_connect_action(session, action, lang='PL'):
         data = collect_diagnostics()
         session.open(AIOConnectQRScreen, 'AIO Connect — zgłoś problem', report_url(data), REPORT_QR)
     elif action == 'site_qr':
-        session.open(AIOConnectQRScreen, 'AIO-IPTV.pl', SITE_ROOT, SITE_QR)
+        session.open(AIOConnectQRScreen, 'AIO Team', SITE_ROOT, SITE_QR)
     elif action == 'community_join':
         text = COMMUNITY_JOIN_PL if _is_pl(lang) else COMMUNITY_JOIN_EN
         title = 'Dołącz do AIO Społeczności' if _is_pl(lang) else 'Join the AIO Community'

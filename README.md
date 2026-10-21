@@ -1,4 +1,6 @@
-# AIO Panel 17.0.0
+# AIO Panel 17.0.1
+
+Aktualizacja 2026-10-21: picony 13E / 19.2E / 13E+19.2E, Obsidian FHD, nowe QR i adres https://aio-iptv-projekt.pages.dev/, naprawiony changelog. Super Konfigurator bez zmian.
 
 Autor: Paweł Pawełek. Panel dla Enigma2 z kodem zgodnym składniowo z Python 2.7 i Python 3.
 

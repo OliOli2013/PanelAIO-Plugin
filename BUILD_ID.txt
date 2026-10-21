@@ -1,6 +1,5 @@
-AIO Panel 17.0.0
-Build date: 2026-10-03
-Base repository commit: 5268dfbdbac0c93b842639717b37368c38e55495
-Baseline package SHA256: 726131e2335a7bd36e71c6c226b9a92e480f40aa7c6f8ad2f4c18e2ae86ce400
-Image-feed catalog; verified self-update; private password fallback; safer channel rollback.
-Python 2.7.18 / Python 3 syntax validation. Hardware validation pending.
+AIO Panel 17.0.1
+Build date: 2026-10-21
+Base repository commit: 24336cba1a8e9df4d9bb59b418915a1b14f005c7
+Update: satellite picon selector, Obsidian FHD, Cloudflare Pages QR and site, changelog fix.
+Python 2.7/3 syntax compatibility is intended; hardware testing is still required.

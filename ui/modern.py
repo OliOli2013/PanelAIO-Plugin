@@ -324,7 +324,7 @@ class ModernPanelAIO(legacy.PanelAIO):
         if self.lang == 'PL':
             self['support_label'].setText('Nowoczesne centrum narzędzi Enigma2')
             self['qr_support_label'].setText('WSPARCIE')
-            self['site_qr_label'].setText('STRONA AIO-IPTV.PL')
+            self['site_qr_label'].setText('STRONA AIO TEAM')
             self['key_red'].setText('●  Polski')
             self['key_green'].setText('●  English')
             self['key_yellow'].setText('●  Restart GUI')
@@ -332,7 +332,7 @@ class ModernPanelAIO(legacy.PanelAIO):
         else:
             self['support_label'].setText('Modern Enigma2 tools and maintenance hub')
             self['qr_support_label'].setText('SUPPORT')
-            self['site_qr_label'].setText('AIO-IPTV.PL WEBSITE')
+            self['site_qr_label'].setText('AIO TEAM WEBSITE')
             self['key_red'].setText('●  Polski')
             self['key_green'].setText('●  English')
             self['key_yellow'].setText('●  Restart GUI')

@@ -466,12 +466,17 @@ def _read_local_version(default="0.0"):
         return default
 
 VER = _read_local_version("17.0.0")
+# The interactive picon menu uses remote archives; never bundle them in IPK.
+# Full Super Configurator preserves its original picon URL and workflow.
+PICON_SET_13E = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"
+PICON_SET_19E = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony1.zip"
+PICON_SET_COMBINED = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony2.zip"
 CUSTOM_UPDATES_MANIFEST_LOCAL = os.path.join(PLUGIN_PATH, "custom_updates.json")
 CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/custom_updates.json"
 
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
-FOOT = "AIO {} | build r1 | {} | AIO-IPTV.pl • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
+FOOT = "AIO {} | build r2 | {} | AIO Team • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
@@ -599,7 +604,7 @@ def _info_screen_skin():
         <widget name="title" position="16,14" size="658,26" font="Regular;20" halign="center" valign="center" />
         <widget name="site_qr" position="20,48" size="72,72" pixmap="{qr_site}" alphatest="blend" scale="1" />
         <widget name="author" position="108,48" size="562,20" font="Regular;16" halign="left" valign="center" />
-        <widget name="facebook" position="108,70" size="562,20" font="Regular;15" halign="left" valign="center" />
+        <widget name="website" position="108,70" size="562,20" font="Regular;15" halign="left" valign="center" />
         <widget name="site_hint" position="108,92" size="562,20" font="Regular;15" halign="left" valign="center" foregroundColor="cyan" />
         <widget name="legal_title" position="16,126" size="658,24" font="Regular;19" halign="center" foregroundColor="yellow" />
         <widget name="legal_text" position="16,156" size="658,142" font="Regular;14" halign="center" valign="top" />
@@ -612,7 +617,7 @@ def _info_screen_skin():
         <widget name="title" position="20,16" size="720,30" font="Regular;24" halign="center" valign="center" />
         <widget name="site_qr" position="24,54" size="84,84" pixmap="{qr_site}" alphatest="blend" scale="1" />
         <widget name="author" position="126,54" size="610,22" font="Regular;18" halign="left" valign="center" />
-        <widget name="facebook" position="126,80" size="610,22" font="Regular;17" halign="left" valign="center" />
+        <widget name="website" position="126,80" size="610,22" font="Regular;17" halign="left" valign="center" />
         <widget name="site_hint" position="126,106" size="610,22" font="Regular;17" halign="left" valign="center" foregroundColor="cyan" />
         <widget name="legal_title" position="20,144" size="720,26" font="Regular;22" halign="center" foregroundColor="yellow" />
         <widget name="legal_text" position="20,176" size="720,154" font="Regular;16" halign="center" valign="top" />
@@ -624,7 +629,7 @@ def _info_screen_skin():
         <widget name="title" position="20,18" size="860,35" font="Regular;28" halign="center" valign="center" />
         <widget name="site_qr" position="28,62" size="96,96" pixmap="{qr_site}" alphatest="blend" scale="1" />
         <widget name="author" position="145,62" size="730,25" font="Regular;22" halign="left" valign="center" />
-        <widget name="facebook" position="145,91" size="730,25" font="Regular;20" halign="left" valign="center" />
+        <widget name="website" position="145,91" size="730,25" font="Regular;20" halign="left" valign="center" />
         <widget name="site_hint" position="145,120" size="730,25" font="Regular;20" halign="left" valign="center" foregroundColor="cyan" />
         <widget name="legal_title" position="20,166" size="860,30" font="Regular;24" halign="center" foregroundColor="yellow" />
         <widget name="legal_text" position="20,204" size="860,161" font="Regular;18" halign="center" valign="top" />
@@ -1996,7 +2001,7 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("🔎 Diagnostyka tunera", "CMD:AIO_CONNECT_DIAGNOSTICS"),
     ("📄 Pełny raport diagnostyczny", "CMD:AIO_CONNECT_REPORT"),
     ("📱 Zgłoś problem przez telefon / QR", "CMD:AIO_CONNECT_REPORT_QR"),
-    ("🌐 Strona AIO-IPTV.pl / QR", "CMD:AIO_CONNECT_SITE_QR"),
+    ("🌐 Strona AIO Team / QR", "CMD:AIO_CONNECT_SITE_QR"),
     ("👥 Dołącz do AIO Społeczności", "CMD:AIO_CONNECT_JOIN_COMMUNITY"),
     ("ℹ️ Informacje i prywatność", "CMD:AIO_CONNECT_PRIVACY"),
 ]
@@ -2047,7 +2052,7 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("🔎 Receiver diagnostics", "CMD:AIO_CONNECT_DIAGNOSTICS"),
     ("📄 Full diagnostic report", "CMD:AIO_CONNECT_REPORT"),
     ("📱 Report a problem by phone / QR", "CMD:AIO_CONNECT_REPORT_QR"),
-    ("🌐 AIO-IPTV.pl website / QR", "CMD:AIO_CONNECT_SITE_QR"),
+    ("🌐 AIO Team website / QR", "CMD:AIO_CONNECT_SITE_QR"),
     ("👥 Join the AIO Community", "CMD:AIO_CONNECT_JOIN_COMMUNITY"),
     ("ℹ️ Information and privacy", "CMD:AIO_CONNECT_PRIVACY"),
 ]
@@ -2062,7 +2067,7 @@ SYSTEM_TOOLS_PL = [
     ("🗑️ Menadżer Deinstalacji", "CMD:UNINSTALL_MANAGER"),
     ("🔎 Sprawdź aktualizacje zainstalowanych wtyczek", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Aktualizuj satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("🖼️ Pobierz Picony (Transparent)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🖼️ Pobierz Picony (wybierz satelitę)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 Monitor Systemowy", "CMD:SYSTEM_MONITOR"),
     ("📄 Przeglądarka Logów", "CMD:LOG_VIEWER"),
     ("⏰ Menedżer Cron", "CMD:CRON_MANAGER"),
@@ -2087,7 +2092,7 @@ SYSTEM_TOOLS_EN = [
     ("🗑️ Uninstallation Manager", "CMD:UNINSTALL_MANAGER"),
     ("🔎 Check updates for installed plugins", "CMD:PLUGIN_UPDATE_MANAGER"),
     ("📡 Update satellites.xml", "CMD:UPDATE_SATELLITES_XML"),
-    ("🖼️ Download Picons (Transparent)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
+    ("🖼️ Download Picons (choose satellite)", "picons:https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"),
     ("📊 System Monitor", "CMD:SYSTEM_MONITOR"),
     ("📄 Log Viewer", "CMD:LOG_VIEWER"),
     ("⏰ Cron Manager", "CMD:CRON_MANAGER"),
@@ -2167,6 +2172,7 @@ SKINS_PL = [
     ("🎨 Luka FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
     ("🎨 XDreamy - Instalator", "safe_ipk:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/xDreamy.ipk|^enigma2-plugin-skins-.*$"),
+    ("🎨 Obsidian FHD - Instalator", "safe_ipk:https://raw.githubusercontent.com/dali44g/Obsidian-FHD/main/release/enigma2-plugin-skins-obsidian-fhd_all.ipk|^enigma2-plugin-skins-obsidian-fhd$"),
 ]
 
 SKINS_EN = [
@@ -2177,6 +2183,7 @@ SKINS_EN = [
     ("🎨 Luka FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
     ("🎨 XDreamy - Installer", "safe_ipk:https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/xDreamy.ipk|^enigma2-plugin-skins-.*$"),
+    ("🎨 Obsidian FHD - Installer", "safe_ipk:https://raw.githubusercontent.com/dali44g/Obsidian-FHD/main/release/enigma2-plugin-skins-obsidian-fhd_all.ipk|^enigma2-plugin-skins-obsidian-fhd$"),
 ]
 
 
@@ -3102,7 +3109,7 @@ class AIOInfoScreen(Screen):
 
         self["title"] = Label("AIO Panel v{}".format(VER))
         self["author"] = Label("Twórca: Paweł Pawełek | aio-iptv@wp.pl")
-        self["facebook"] = Label("Strona WWW: https://olioli2013.github.io/aio-iptv-projekt")
+        self["website"] = Label("Strona WWW: https://aio-iptv-projekt.pages.dev")
         self["site_qr"] = Pixmap()
         self["site_hint"] = Label("Zeskanuj kod QR, aby odwiedzić stronę twórcy")
         self["legal_title"] = Label("--- Nota Prawna i Licencyjna ---")
@@ -3125,7 +3132,7 @@ class AIOInfoScreen(Screen):
                           "Wsparcie dla autora\n" \
                           "Jeśli doceniasz moją pracę, możesz postawić mi wirtualną kawę.\n" \
                           "Jest to dobrowolne, ale bardzo motywuje do dalszej pracy. Dziękuję!\n\n" \
-                          "Strona twórcy: https://olioli2013.github.io/aio-iptv-projekt\n" \
+                          "Strona twórcy: https://aio-iptv-projekt.pages.dev\n" \
                           "Kontakt / wsparcie: aio-iptv@wp.pl"
         
         self["legal_text"] = Label(legal_note_text)
@@ -3136,60 +3143,54 @@ class AIOInfoScreen(Screen):
         self.onShown.append(self.fetch_changelog)
 
     def fetch_changelog(self):
-        Thread(target=self._background_changelog_fetch).start()
+        thread = Thread(target=self._background_changelog_fetch)
+        try:
+            thread.setDaemon(True)
+        except Exception:
+            pass
+        thread.start()
 
     def _background_changelog_fetch(self):
-        changelog_url = self._update_channel_urls()['changelog']
-        tmp_changelog_path = os.path.join(PLUGIN_TMP_PATH, 'changelog_info.txt')
-        prepare_tmp_dir()
-        
-        found_version_tag = "" 
-        
+        # InfoScreen does not inherit PanelAIO._update_channel_urls().
+        # Read remotely with bounded timeout; fall back to bundled changelog.
+        source = 'LOCAL'
+        raw_text = ''
         try:
-            cmd_log = "wget -O {} {}".format(tmp_changelog_path, changelog_url)
-            process = subprocess.Popen(cmd_log, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate() 
+            url = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/changelog.txt'
+            raw_text = ensure_unicode(_fetch_text_url(url, timeout=10, tries=1) or '')
+            if raw_text.strip():
+                source = 'REMOTE'
+        except Exception as exc:
+            print('[AIO Panel] Changelog online unavailable:', exc)
+        if not raw_text.strip():
+            raw_text = ensure_unicode(_read_text_file(os.path.join(PLUGIN_PATH, 'changelog.txt'), '') or '')
 
-            changelog_text = "Nie można pobrać listy zmian."
-            if os.path.exists(tmp_changelog_path) and os.path.getsize(tmp_changelog_path) > 0:
-                # UNIVERSAL FIX: Use io.open
-                with io.open(tmp_changelog_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    lines = f.readlines()
-                
-                changes = []
-                version_count = 0
-                in_version_block = False
-
-                for line in lines:
-                    line = line.strip()
-                    
-                    if line.startswith("[") and line.endswith("]"):
-                        version_count += 1
-                        if version_count > 1: 
+        version_tag = ''
+        message = ('Brak wpisów w changelogu.' if raw_text.strip() else
+                   'Nie można odczytać listy zmian.')
+        if raw_text.strip():
+            items = [line.strip() for line in raw_text.splitlines()]
+            items = [line for line in items if line]
+            if items:
+                found = re.search(r'\d+\.\d+\.\d+', items[0])
+                version_tag = ('[' + found.group(0) + ']') if found else ''
+                details = []
+                for line in items[1:]:
+                    if line.startswith('- '):
+                        details.append(line[2:])
+                        if len(details) >= 5:
                             break
-                        in_version_block = True
-                        found_version_tag = line 
-                        continue 
-                    
-                    if in_version_block and line:
-                        changes.append(line)
-                            
-                if changes: 
-                    changelog_text = "\n".join(changes)
-                else:
-                    changelog_text = "Nie znaleziono żadnych wpisów w changelogu."
-            else:
-                local_text = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "")
-                if local_text:
-                    changelog_text = "Tryb lokalny (offline):\n" + "\n".join(local_text.splitlines()[:12])
-                    found_version_tag = "LOCAL"
-        except Exception as e:
-            print("[AIO Panel] Info screen changelog fetch error:", e)
-            local_text = _read_text_file(os.path.join(PLUGIN_PATH, "changelog.txt"), "")
-            changelog_text = ("Tryb lokalny (offline):\n" + "\n".join(local_text.splitlines()[:12])) if local_text else "Błąd podczas pobierania listy zmian."
-            found_version_tag = "LOCAL" if local_text else found_version_tag
-        
-        reactor.callFromThread(self.update_changelog_label, changelog_text, found_version_tag)
+                    elif details:
+                        break
+                message = '\n'.join(u'• ' + line for line in details) if details else items[0]
+                if len(message) > 420:
+                    message = message[:417].rstrip() + '...'
+        if source == 'LOCAL':
+            version_tag = 'LOCAL'
+        try:
+            reactor.callFromThread(self.update_changelog_label, message, version_tag)
+        except Exception as exc:
+            print('[AIO Panel] Changelog UI update failed:', exc)
 
     def update_changelog_label(self, text, version_tag):
         self["changelog_text"].setText(text)
@@ -4446,7 +4447,7 @@ FUNCTION_DESCRIPTIONS = {
         "🗑️ Menadżer Deinstalacji": "Odinstalowywanie pakietów z systemu",
         "🔎 Sprawdź aktualizacje zainstalowanych wtyczek": "Sprawdza zainstalowane wtyczki i pokazuje dwie sekcje aktualizacji: OPKG oraz GitHub/Custom.\nPozwala uruchomić aktualizację tylko dla pozycji, dla których wykryto nowszą wersję.",
         "📡 Aktualizuj satellites.xml": "Pobiera i aktualizuje satellites.xml w systemie.\nPrzydatne przy dodawaniu nowych transponderów; zalecany restart Enigmy2.",
-        "🖼️ Pobierz Picony (Transparent)": "Pobiera zestaw piconów (transparent) obejmujący 13E, 19.2E oraz IPTV i przed instalacją pyta o katalog docelowy.\nMożesz wybrać lokalizację domyślną albo urządzenie zewnętrzne; po zakończeniu zalecany jest restart GUI lub pełny restart przy większych zmianach.",
+        "🖼️ Pobierz Picony (wybierz satelitę)": "Wybiera paczkę piconów 13E, 19.2E lub 13E+19.2E, a następnie katalog docelowy.\nMożesz wybrać lokalizację domyślną albo urządzenie zewnętrzne; po zakończeniu zalecany jest restart GUI lub pełny restart przy większych zmianach.",
         "📊 Monitor Systemowy": "Podgląd wykorzystania CPU, RAM, temperatury",
         "📄 Przeglądarka Logów": "Przeglądanie logów systemowych i Enigmy2",
         "⏰ Menedżer Cron": "Zarządzanie zadaniami harmonogramu",
@@ -4525,7 +4526,7 @@ FUNCTION_DESCRIPTIONS = {
         ">>> Super Setup Wizard (First Installation)": "Automatic first-time receiver setup.\n\nRuns in order:\n- install channel list (Polska 13E AIO Panel)\n- install Softcam support\n- install OSCam-Emu, select it as the active softcam and start it\n- download picons (Transparent)\nFinally reloads the channel list. Restart the GUI manually only if required.",
         "🗑️ Uninstallation Manager": "Uninstall packages from system",
         "📡 Update satellites.xml": "Downloads and updates satellites.xml in your system.\nRecommended after changes: restart Enigma2 for full effect.",
-        "🖼️ Download Picons (Transparent)": "Downloads a transparent picon set covering 13E, 19.2E and IPTV, then asks for the target folder before installation.\nYou can keep the default path or choose an external device; GUI restart or a full reboot is recommended after larger changes.",
+        "🖼️ Download Picons (choose satellite)": "Choose picons for 13E, 19.2E or 13E+19.2E, then select the target directory.\nYou can keep the default path or choose an external device; GUI restart or a full reboot is recommended after larger changes.",
         "📊 System Monitor": "View CPU, RAM, temperature usage",
         "📄 Log Viewer": "Browse system and Enigma2 logs",
         "⏰ Cron Manager": "Manage scheduled tasks",
@@ -4570,8 +4571,8 @@ FUNCTION_DESCRIPTIONS = {
 FUNCTION_DESCRIPTIONS["PL"].update({
     "🔎 Diagnostyka tunera": "Sprawdza kondycję tunera: system, Python, flash, RAM, temperaturę, obciążenie, sieć, OpenWebif, listy, EPG, picony i crashlogi.",
     "📄 Pełny raport diagnostyczny": "Tworzy pełny lokalny raport w /tmp. Raport nie jest wysyłany automatycznie i nie zawiera haseł ani surowego adresu MAC.",
-    "📱 Zgłoś problem przez telefon / QR": "Wyświetla kod QR prowadzący do formularza zgłoszenia na AIO-IPTV.pl z podstawowymi danymi tunera.",
-    "🌐 Strona AIO-IPTV.pl / QR": "Wyświetla lokalny kod QR strony AIO-IPTV.pl. Działa także bez generatora QR online.",
+    "📱 Zgłoś problem przez telefon / QR": "Wyświetla kod QR prowadzący do formularza zgłoszenia na AIO Team z podstawowymi danymi tunera.",
+    "🌐 Strona AIO Team / QR": "Wyświetla lokalny kod QR strony AIO Team. Działa także bez generatora QR online.",
     "👥 Społeczność AIO / QR": "Otwiera kod QR prowadzący bezpośrednio do Społeczności AIO.",
     "👥 Dołącz do AIO Społeczności": "Pokazuje możliwości Społeczności AIO i prostą instrukcję rejestracji przez bezpieczny link e-mail. Kod QR otwiera stronę na telefonie.",
     "🔄 Centrum aktualizacji AIO": "Sprawdza zainstalowane i najnowsze wersje najważniejszych projektów AIO.",
@@ -4581,8 +4582,8 @@ FUNCTION_DESCRIPTIONS["PL"].update({
 FUNCTION_DESCRIPTIONS["EN"].update({
     "🔎 Receiver diagnostics": "Checks receiver health: image, Python, flash, RAM, temperature, load, network, OpenWebif, bouquets, EPG, picons and crash logs.",
     "📄 Full diagnostic report": "Creates a full local report in /tmp. It is not sent automatically and contains no passwords or raw MAC address.",
-    "📱 Report a problem by phone / QR": "Shows a QR code leading to the AIO-IPTV.pl report page with basic receiver information.",
-    "🌐 AIO-IPTV.pl website / QR": "Shows a bundled QR code for the AIO-IPTV.pl website.",
+    "📱 Report a problem by phone / QR": "Shows a QR code leading to the AIO Team report page with basic receiver information.",
+    "🌐 AIO Team website / QR": "Shows a bundled QR code for the AIO Team website.",
     "👥 AIO Community / QR": "Shows a QR code leading directly to the AIO Community.",
     "🔄 AIO update centre": "Checks installed and latest versions of the main AIO projects.",
     "🛡 Safe tools": "Local report, temporary-file cleanup, crash-log retention, bouquet reload and softcam/GUI restart with confirmation.",
@@ -5799,6 +5800,29 @@ class PanelAIO(Screen):
             return
         install_archive(self.sess, title, url, callback_on_finish=self.reload_settings_python, picon_path=picon_path)
 
+    def _prompt_picon_pack(self, title):
+        """Select the satellite pack; the existing target directory chooser runs next.
+
+        This menu-only method never changes Super Setup Wizard picon handling.
+        """
+        choices = [
+            (('Picony 13E' if self.lang == 'PL' else 'Picons 13E'), PICON_SET_13E),
+            (('Picony 19.2E (Astra)' if self.lang == 'PL' else 'Picons 19.2E (Astra)'), PICON_SET_19E),
+            (('Picony 13E + 19.2E' if self.lang == 'PL' else 'Picons 13E + 19.2E'), PICON_SET_COMBINED),
+        ]
+        label = 'Wybierz zestaw piconów' if self.lang == 'PL' else 'Choose picon package'
+        self.sess.openWithCallback(
+            lambda choice: self._on_picon_pack_selected(title, choice),
+            ChoiceBox, title=label, list=choices)
+
+    def _on_picon_pack_selected(self, title, choice):
+        if not choice:
+            return
+        url = choice[1]
+        if url not in (PICON_SET_13E, PICON_SET_19E, PICON_SET_COMBINED):
+            return
+        self._prompt_picon_target(title, url)
+
     def _prompt_picon_target(self, title, url):
         default_path = '/usr/share/enigma2/picon'
         choices = []
@@ -5929,7 +5953,7 @@ class PanelAIO(Screen):
                 return
             run_command_in_background(self.sess, title, [command], callback_on_finish=self._show_action_result)
         elif action.startswith('picons:'):
-            self._prompt_picon_target(title, action.split(':', 1)[1])
+            self._prompt_picon_pack(title)
         elif action.startswith('s4archive:'):
             install_archive(self.sess, title, action.split(':', 1)[1], callback_on_finish=self.reload_settings_python, action_type='channels_s4a')
         elif action.startswith('archive:'):

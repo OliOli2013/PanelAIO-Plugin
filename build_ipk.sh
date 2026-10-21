@@ -21,7 +21,7 @@ mkdir -p "$PLUGIN" "$CONTROL" "$OUTDIR"
     --exclude='./control' --exclude='./docs' --exclude='./tests' --exclude='./tools' \
     --exclude='./build_ipk.sh' --exclude='./AUDYT_17.0.0.md' --exclude='./INSTRUKCJA_17.0.0.txt' --exclude='./TEST_RESULTS.txt' --exclude='./SOURCE_AUDIT.json' --exclude='./LIVE_LIST_CHECK.json' --exclude='./README.md' --exclude='./RELEASES.md' \
     --exclude='./GITKRAKEN_16.0.0.txt' --exclude='./SHA256SUMS.txt' --exclude='./update.json' \
-    --exclude='./Picony.zip' --exclude='./__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
+    --exclude='./Picony.zip' --exclude='./Picony1.zip' --exclude='./Picony2.zip' --exclude='./__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
     .
 ) | tar -xf - -C "$PLUGIN"
 

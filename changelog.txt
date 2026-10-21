@@ -1,3 +1,11 @@
+AIO Panel 17.0.1 — 2026-10-21
+- Dodano wybór piconów 13E, 19.2E lub 13E+19.2E przed wyborem katalogu instalacji.
+- Super Konfigurator i działające instalatory pozostają bez zmian.
+- Dodano skórkę Obsidian FHD do menu PL/EN.
+- Zmieniono adres strony oraz kody QR na aio-iptv-projekt.pages.dev; usunięto stare oznaczenia.
+- Naprawiono wyświetlanie changelogu w informacjach o AIO Panel.
+- Naprawiono walidację budowania IPK i wyłączono archiwa piconów z paczki.
+
 17.0.0 — poprawiona paczka, 2026-10-04
 - Rozszerzono katalog instalacyjny o nowe wtyczki, dodatki i skórki dla Enigma2.
 - Dodano weryfikację archiwów list kanałów przed wyświetleniem; błędne, puste i uszkodzone paczki są ukrywane.
