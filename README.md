@@ -1,68 +1,79 @@
-# AIO Panel 17.0.1
+# 📺 AIO Panel 17.0.1 – Enigma2
 
-Aktualizacja 2026-10-21: picony 13E / 19.2E / 13E+19.2E, Obsidian FHD, nowe QR i adres https://aio-iptv-projekt.pages.dev/, naprawiony changelog. Super Konfigurator bez zmian.
+**Aktualizacja: 21 października 2026 r.**  
+**Autor: Paweł Pawełek | AIO Team**
 
-Autor: Paweł Pawełek. Panel dla Enigma2 z kodem zgodnym składniowo z Python 2.7 i Python 3.
+AIO Panel to rozbudowane centrum narzędzi dla odbiorników Enigma2, umożliwiające wygodne zarządzanie listami kanałów, wtyczkami, skórkami, piconami, emulatorami oraz ustawieniami systemowymi.
 
-Poprawiona paczka 2026-10-04 (nadal 17.0.0): weryfikacja archiwów list przed wyświetleniem, skórki dobrane z rzeczywistych indeksów feedu, AIO / Aktualizacje na końcu.
+Wersja **17.0.1** rozwija funkcjonalność wydania 17.0.0, wprowadzając nowe możliwości instalacji piconów oraz poprawki interfejsu i informacji o wtyczce.
 
-Nowe instalatory z feedu obrazu, poprawiona weryfikacja aktualizacji, zmiana hasła z fallbackiem passwd, bezpieczniejszy rollback list kanałów. Zachowane PL/EN, AIO Connect, wyszukiwanie, historia i zakładka Listy kanałów jako pierwsza.
+## 🆕 Co nowego w wersji 17.0.1?
 
-Instalacja, podmiana repozytorium i logi: [INSTRUKCJA_17.0.0.txt](INSTRUKCJA_17.0.0.txt).
-Wyniki audytu i ograniczenia: [AUDYT_17.0.0.md](AUDYT_17.0.0.md).
-Pakiety: `release/enigma2-plugin-extensions-panelaio_17.0.0_all.ipk` oraz `.deb`.
+### 🖼️ Nowy wybór zestawów piconów
 
-Testy automatyczne nie zastępują testów na tunerach. Dostępność dodatków zależy od feedu danego obrazu; pakiet DEB nie gwarantuje wszystkich historycznych funkcji na DreamOS.
+Dodano możliwość wyboru jednego z trzech zestawów:
 
-## Historia dokumentacji
+- **Hot Bird 13°E** – picony satelitarne wraz z piconami IPTV.
+- **Astra 19.2°E** – zestaw piconów dla satelity Astra.
+- **Hot Bird 13°E + Astra 19.2°E** – wspólny zestaw piconów satelitarnych.
 
-# AIO Panel 16.0.2
+Po wybraniu zestawu użytkownik może wskazać katalog docelowy instalacji.
 
-Poprawka aktualizacji oscam.srvid/srvid2 i SoftCam.Key, pierwszej zakładki Listy kanałów oraz stałych komunikatów wykonywania operacji. Szczegóły: docs/POPRAWKI_16.0.2.txt.
+Dotychczasowa obsługa piconów w Super Konfiguratorze pozostaje bez zmian.
 
-# AIO Panel 16.0.1
+### 🎨 Nowa skórka Obsidian FHD
 
-Maintenance release based on 16.0.0. Existing third-party installer commands are preserved.
+Dodano **Obsidian FHD** do sekcji „Skórki”, umożliwiając jej instalację bezpośrednio z poziomu AIO Panel.
 
-See `docs/AUDYT_16.0.1.md` and `docs/INSTALACJA_16.0.1.txt` for findings, validation scope and publication instructions.
-Upload the replacement tree including `release/enigma2-plugin-extensions-panelaio_16.0.1_all.ipk` and `SHA256SUMS.txt` together. The updater requires an IPK and does not copy source over a failed package installation.
+### ℹ️ Poprawione informacje o wtyczce
 
-# AIO Panel 16.0.0
+- Naprawiono wyświetlanie historii aktualizacji (changelog).
+- Zaktualizowano adres projektu w interfejsie.
+- Odświeżono kody QR do strony, społeczności AIO i zgłaszania problemów.
+- Usunięto nieaktualne oznaczenia.
 
-AIO Panel to zestaw narzędzi All-In-One dla odbiorników Enigma2. Wersja 16.0.0 jest stabilnym wydaniem opartym na przetestowanej linii 15.0.2 i porządkuje architekturę, aktualizacje, diagnostykę oraz bezpieczeństwo instalatorów.
+### 🔧 Poprawki techniczne
 
-## Instalacja
+- Ujednolicono numer wersji 17.0.1 w plikach i metadanych.
+- Poprawiono kontrolę poprawności budowania pakietów IPK/DEB.
+- Zachowano działające instalatory, Super Konfigurator oraz dotychczasową strukturę menu.
+- Zachowano polską i angielską wersję interfejsu.
 
-```sh
-wget -q -O - https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh | /bin/sh
-```
+## 📥 Aktualizacja i instalacja
 
-Instalator 16.0.0 działa również na tunerze bez wcześniejszej instalacji AIO Panel. Preferuje paczkę IPK z katalogu `release/`, a instalację źródłową wykorzystuje tylko jako ścieżkę awaryjną.
+### 🔵 Aktualizacja z obecnej wersji
 
-## Najważniejsze funkcje
+1. Uruchom **AIO Panel** na odbiorniku Enigma2.
+2. Naciśnij **niebieski przycisk na pilocie – „Aktualizacja”**.
+3. Potwierdź aktualizację i wykonuj instrukcje wyświetlane na ekranie.
 
-- listy kanałów AIO i obsługa bezpiecznego rollbacku,
-- Softcam/OSCam oraz Super Konfigurator,
-- instalatory wtyczek i skórek,
-- E2iPlayer, IPTV Dream, PiconUpdater, MyUpdater, S4aUpdater,
-- AIO Connect i lokalny raport diagnostyczny,
-- wyszukiwarka AIO, Ulubione, Ostatnio używane,
-- Health Check źródeł,
-- Stable/Test update channel,
-- backup/restore list kanałów i Oscam,
-- diagnostyka systemu, logi, usługi, cron i konserwacja AIO.
+### 📦 Instalacja ręczna
 
-## Architektura 16.x
+Można również pobrać i zainstalować odpowiedni pakiet:
 
-`plugin.py` pozostaje lekkim entry pointem Enigma2. Aktywny backend znajduje się w `runtime.py`, natomiast `legacy_plugin.py` istnieje wyłącznie dla zgodności starszych importów. Nowe akcje użytkowe są rejestrowane i kierowane przez moduły `core/` zamiast dalszego powiększania warstwy legacy.
+- **[AIO Panel 17.0.1 – IPK](release/enigma2-plugin-extensions-panelaio_17.0.1_all.ipk)**
+- **[AIO Panel 17.0.1 – DEB](release/enigma2-plugin-extensions-panelaio_17.0.1_all.deb)**
 
-## Bezpieczeństwo instalatorów
+Wybierz pakiet zgodny z systemem i menedżerem pakietów odbiornika.
 
-Zdalne instalatory są ograniczone do jawnego Trusted Source Registry. Dla wybranych instalatorów AIO pobiera skrypt do prywatnego pliku w `/tmp`, sprawdza odpowiedź i profil źródła, zapisuje SHA-256, a dopiero potem uruchamia skrypt. S4aUpdater jest świadomym wyjątkiem legacy HTTP i jest dodatkowo oznaczany ostrzeżeniem.
+## ✅ Kontrola jakości
 
-## Python
+Przed publikacją przeprowadzono audyt statyczny wersji 17.0.1:
 
-AIO Panel zachowuje kompatybilność z Python 2 dla istniejących funkcji legacy. Rozwój nowych modułów jest ukierunkowany na Python 3; funkcje wymagające Python 3 są ukrywane lub blokowane na starszych obrazach.
+- **62 kontrole zakończone pomyślnie.**
+- **0 błędów podczas audytu.**
+- Potwierdzono integralność archiwów piconów.
+- Zweryfikowano strukturę pakietów instalacyjnych.
+- Potwierdzono działanie interfejsu na OpenATV z Pythonem 3.14.
 
-Autor: **Paweł Pawełek**  
-Kontakt: `aio-iptv@wp.pl`
+Zgodność działania na wszystkich odbiornikach i starszych systemach Python 2 wymaga dalszej weryfikacji.
+
+## 📌 Ważne
+
+Wersja 17.0.1 nie zmienia działania Super Konfiguratora ani istniejących instalatorów. Jest aktualizacją funkcjonalną i techniczną względem wydania 17.0.0.
+
+---
+
+**AIO Panel – Wszystko w jednym miejscu dla Enigma2.**
+
+**© AIO Team | Paweł Pawełek**
