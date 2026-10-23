@@ -34,10 +34,11 @@ mkdir -p "$PARENT" || fail "Nie można utworzyć katalogu docelowego." install
 rm -rf "$STAGED" "$BACKUP" 2>/dev/null || true
 cp -a "$SOURCE" "$STAGED" >> "$LOG" 2>&1 || fail "Nie można przygotować nowej wersji." install
 [ -f "$STAGED/$MARKER" ] || fail "Walidacja stagingu nie powiodła się." verify
+if [ -n "$PY" ]; then "$PY" "$PLUGIN_DIR/core/python_syntax_check.py" "$STAGED" >> "$LOG" 2>&1 || fail "Kod Python nie przechodzi walidacji przed podmianą." verify; fi
 if [ -d "$TARGET" ]; then mv "$TARGET" "$BACKUP" || fail "Nie można zabezpieczyć starej wersji." backup; fi
 if ! mv "$STAGED" "$TARGET"; then [ -d "$BACKUP" ] && mv "$BACKUP" "$TARGET" 2>/dev/null || true; fail "Nie można aktywować nowej wersji." activate; fi
 chmod -R u+rwX,go+rX "$TARGET" 2>/dev/null || true
-if [ -n "$PY" ]; then "$PY" -m compileall -q "$TARGET" >> "$LOG" 2>&1 || { rm -rf "$TARGET"; [ -d "$BACKUP" ] && mv "$BACKUP" "$TARGET"; fail "Kod Python nie przechodzi kompilacji." verify; }; fi
+
 rm -rf "$BACKUP" 2>/dev/null || true
 sync 2>/dev/null || true
 status "OK|$TARGET|log=$LOG"; log "OK: $TARGET"; cleanup; trap - EXIT HUP INT TERM; exit 0

@@ -15,6 +15,7 @@ TRUSTED_REMOTE_SCRIPTS = set([
     'https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/main/installer.sh',
     'https://raw.githubusercontent.com/OliOli2013/PiconUpdater/main/installer.sh',
     'https://raw.githubusercontent.com/OliOli2013/IPTV-Dream-Plugin/main/installer.sh',
+    'https://raw.githubusercontent.com/OliOli2013/OpenCamView-Plugin/main/installer.sh',
     'https://raw.githubusercontent.com/AMAJamry/AJPanel/main/installer.sh',
     'https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/main/installer.sh',
     'https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh',

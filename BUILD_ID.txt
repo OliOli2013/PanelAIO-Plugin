@@ -1,5 +1,5 @@
-AIO Panel 17.0.1
-Build date: 2026-10-21
+AIO Panel 17.0.2
+Build date: 2026-10-23
 Base repository commit: 24336cba1a8e9df4d9bb59b418915a1b14f005c7
 Update: satellite picon selector, Obsidian FHD, Cloudflare Pages QR and site, changelog fix.
 Python 2.7/3 syntax compatibility is intended; hardware testing is still required.

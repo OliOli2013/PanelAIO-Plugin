@@ -1,3 +1,11 @@
+AIO Panel 17.0.2 — 2026-10-23
+- Dodano OpenCamView 2.0.1 do Wtyczek Online (PL/EN): instalacja z oficjalnego GitHuba z kontrolą skryptu i SHA-256 pakietu, wymaga Python 3.
+- Naprawiono instalację E2iPlayer przy niedostępnych feedach opkg.
+- Preferowany jest pakiet systemowy; alternatywnie instalowane są źródła oe-mirrors z kontrolą archiwum i przywracaniem poprzedniej wersji.
+- Walidacja składni AIO i archiwów nie wymaga py_compile/compileall na tunerze.
+- Naprawiono przerwanie konfiguracji opkg przez brak py_compile w niepełnym środowisku Python.
+- Pozostałe funkcje AIO Panel pozostają bez zmian.
+
 AIO Panel 17.0.1 — 2026-10-21
 - Dodano wybór piconów 13E, 19.2E lub 13E+19.2E przed wyborem katalogu instalacji.
 - Super Konfigurator i działające instalatory pozostają bez zmian.

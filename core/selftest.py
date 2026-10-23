@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '17.0.1'
+VERSION = '17.0.2'
 
 
 def _read(path):
