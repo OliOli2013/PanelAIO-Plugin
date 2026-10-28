@@ -1,0 +1,59 @@
+{
+  "project": "AIO Panel",
+  "snapshot": "17.0.3",
+  "source_provenance": "GitHub blob SHA1 checked before mirroring",
+  "packages": [
+    {
+      "key": "jedi",
+      "ver": "6.37",
+      "package": "enigma2-plugin-extensions-jedimakerxtream",
+      "fmt": "ipk",
+      "size": 3693386,
+      "git_sha": "c321cbee581835e2357eb5e0da401a43a339d671",
+      "url": "https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/enigma2-plugin-extensions-jedimakerxtream_6.37_all.ipk",
+      "filename": "enigma2-plugin-extensions-jedimakerxtream_6.37_all.ipk",
+      "mirror_sha256": "0f83ff218885767aba50b978eba7b9c72a489f0bba0a1aa3c6ce73b3c8189ec5",
+      "mirror_size": 3693316,
+      "declared_version": "6.37.20240530"
+    },
+    {
+      "key": "jedi",
+      "ver": "6.37",
+      "package": "enigma2-plugin-extensions-jedimakerxtream",
+      "fmt": "deb",
+      "size": 2772068,
+      "git_sha": "f49e0635d39a9963f9e2019f34ab0dbdeff06e8c",
+      "url": "https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/enigma2-plugin-extensions-jedimakerxtream_6.37_all.deb",
+      "filename": "enigma2-plugin-extensions-jedimakerxtream_6.37_all.deb",
+      "mirror_sha256": "2a3af502e34823ff5ee190a2c36b473603c25345cb79afe920b7f4e0c165f821",
+      "mirror_size": 2772068,
+      "declared_version": "6.37-20240530"
+    },
+    {
+      "key": "chocho",
+      "ver": "5.0.240904",
+      "package": "enigma2-plugin-extensions-chocholousek-picons",
+      "fmt": "ipk",
+      "size": 128774,
+      "git_sha": "8af984e3c0a6b7760f0879f8e5a8cbea75c8e418",
+      "url": "https://raw.githubusercontent.com/s3n0/e2plugins/master/ChocholousekPicons/released_build/enigma2-plugin-extensions-chocholousek-picons_5.0.240904_all.ipk",
+      "filename": "enigma2-plugin-extensions-chocholousek-picons_5.0.240904_all.ipk",
+      "mirror_sha256": "ed89bd4a4ac3b450585ff28ceb8d8a7ce263c47753f4d781f5304b4102daef86",
+      "mirror_size": 128774,
+      "declared_version": "5.0.240904"
+    },
+    {
+      "key": "chocho",
+      "ver": "5.0.240904",
+      "package": "enigma2-plugin-extensions-chocholousek-picons",
+      "fmt": "deb",
+      "size": 128774,
+      "git_sha": "9833280a3ae063c7f3d5893d6a9c0173887d76b5",
+      "url": "https://raw.githubusercontent.com/s3n0/e2plugins/master/ChocholousekPicons/released_build/enigma2-plugin-extensions-chocholousek-picons_5.0.240904_all.deb",
+      "filename": "enigma2-plugin-extensions-chocholousek-picons_5.0.240904_all.deb",
+      "mirror_sha256": "2587696ccb20e3b41c9cd933eae688071abaa32711adf0e7cd740f485878e8af",
+      "mirror_size": 128774,
+      "declared_version": "5.0.240904"
+    }
+  ]
+}
