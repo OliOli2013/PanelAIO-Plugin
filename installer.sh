@@ -179,16 +179,29 @@ fi
 # staging directory. Use statvfs first: BusyBox df column layout varies by image.
 # This is a safety check: an actual shortage still blocks the update.
 FLASH_PATH=$(dirname "$DST")
-FREE_SOURCE='statvfs'
+FREE_SOURCE='statvfs-root-aware'
 FREE=$("$PY" - "$FLASH_PATH" 2>> "$LOG" <<'AIO_STATVFS'
 from __future__ import print_function
 import os, sys
 try:
     st = os.statvfs(sys.argv[1])
     size = st.f_frsize or st.f_bsize
-    if size <= 0 or st.f_bavail < 0:
+    if size <= 0 or st.f_bavail < 0 or st.f_bfree < 0:
         raise ValueError('invalid filesystem counters')
-    print((int(st.f_bavail) * int(size)) // 1024)
+    # The Enigma2 memory screen shows f_bfree.  f_bavail excludes filesystem
+    # reserved blocks, which root can normally use when installing packages.
+    # On some ext4 images f_bavail is zero despite substantial f_bfree.
+    if int(getattr(st, 'f_flag', 0)) & int(getattr(os, 'ST_RDONLY', 1)):
+        print('READ_ONLY')
+        sys.exit(0)
+    free_user = (int(st.f_bavail) * int(size)) // 1024
+    free_root = (int(st.f_bfree) * int(size)) // 1024
+    is_root = (os.geteuid() == 0)
+    free_usable = free_root if is_root else free_user
+    print(free_usable)
+    # Detailed evidence is written to /tmp/aio_github_update.log.
+    sys.stderr.write('statvfs: user=%d KiB, total(root)=%d KiB, euid=%d, used=%d KiB\n' %
+                     (free_user, free_root, os.geteuid(), free_usable))
 except Exception as exc:
     print('statvfs failed: %s' % exc, file=sys.stderr)
     sys.exit(1)
@@ -200,7 +213,7 @@ case "$FREE" in
         FREE=$(aio_free_kb "$FLASH_PATH")
         ;;
 esac
-case "$FREE" in ''|*[!0-9]*) fail 'Cannot determine free flash space' ;; esac
+case "$FREE" in READ_ONLY) fail 'AIO destination filesystem is read-only' ;; ''|*[!0-9]*) fail 'Cannot determine free flash space' ;; esac
 printf '[AIO] Free flash at %s: %s KiB (source: %s; required: 6144 KiB)\n' \
     "$FLASH_PATH" "$FREE" "$FREE_SOURCE" | tee -a "$LOG"
 if [ "$FREE" -lt 6144 ]; then
