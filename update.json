@@ -1,9 +1,9 @@
 {
   "name": "AIO Panel",
-  "version": "17.0.1",
+  "version": "17.0.3",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_17.0.1_all.ipk",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_17.0.3_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "AIO Panel 17.0.1: picony 13E/19.2E/oba, Obsidian FHD, nowa strona i QR, naprawiony changelog."
+  "changelog": "17.0.3: JediMakerXtream i ChocholousekPicons z GitHub (IPK/DEB), PHub w Dla doroslych 18+."
 }

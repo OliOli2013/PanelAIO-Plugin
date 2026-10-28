@@ -65,6 +65,10 @@ def validate(path, profile=None):
         raise ValueError('HTML response received instead of script')
     if '\x00' in text:
         raise ValueError('binary/NUL data in script')
+    # Full-line shell comments are not executable. Ignore comment-only
+    # lines only when looking for a piped downloader command.
+    active_lines = '\n'.join(line for line in text.splitlines()
+                             if not line.lstrip().startswith('#'))
     for pattern in DENY_PATTERNS:
         # Dedicated trusted installers may intentionally restart Enigma2 after
         # a successful installation. The exception is profile-scoped and never
@@ -73,7 +77,8 @@ def validate(path, profile=None):
             continue
         if profile in ('picon-updater', 'myupdater') and pattern == r'killall[^\n]*enigma2':
             continue
-        if re.search(pattern, text, re.I | re.M):
+        scan_text = active_lines if pattern == r'(?:wget|curl)[^\n|;]*(?:\||;)\s*(?:ba)?sh\b' else text
+        if re.search(pattern, scan_text, re.I | re.M):
             raise ValueError('blocked script construct: %s' % pattern)
 
     if profile == 'mynonpublic-softcam':

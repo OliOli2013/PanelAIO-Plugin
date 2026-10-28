@@ -1,5 +1,6 @@
-AIO Panel 17.0.2
-Build date: 2026-10-23
-Base repository commit: 24336cba1a8e9df4d9bb59b418915a1b14f005c7
-Update: satellite picon selector, Obsidian FHD, Cloudflare Pages QR and site, changelog fix.
-Python 2.7/3 syntax compatibility is intended; hardware testing is still required.
+AIO Panel 17.0.3
+Build date: 2026-10-28
+Base source: AIO Panel 17.0.2
+Update: JediMakerXtream and ChocholousekPicons from publisher GitHub IPK/DEB packages, PHub 18+ installer.
+PHub remote endpoint could not be audited at build time; install is subject to strict validation.
+Python 2.7/3 syntax compatibility intended; test on actual receiver before publishing.

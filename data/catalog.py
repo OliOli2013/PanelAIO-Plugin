@@ -29,8 +29,6 @@ ROWS = [
  ('skin-simple','Umbra — skórka z feedu','Umbra — image feed skin','skins',['enigma2-plugin-skins-umbra']),
  ('skin-hdglass','HD Glass — jeśli dostępny w feedzie','HD Glass — if available in feed','skins',['enigma2-skin-fullhdglass17']),
  ('jediepg','Jedi EPG Xtream — przypisanie EPG','Jedi EPG Xtream — EPG assignment','epg',['enigma2-plugin-extensions-jediepgxtream']),
- ('jedimaker','JediMakerXtream — bukiety IPTV','JediMakerXtream — IPTV bouquets','iptv',['enigma2-plugin-extensions-jedimakerxtream']),
- ('chocholousek','ChocholousekPicons — picony','ChocholousekPicons — picons','epg',['enigma2-plugin-extensions-chocholousekpicons']),
  ('ciefp','CIEFP OSCam Editor','CIEFP OSCam Editor','softcam',['enigma2-plugin-extensions-ciefposcameditor']),
  ('footonsat','FootOnSat — wydarzenia sportowe','FootOnSat — sports events','plugins',['enigma2-plugin-extensions-footonsat']),
 ]

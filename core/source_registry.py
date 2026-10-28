@@ -21,7 +21,6 @@ TRUSTED_REMOTE_SCRIPTS = set([
     'https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh',
     'https://raw.githubusercontent.com/Belfagor2005/TVGarden/main/installer.sh',
     'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh',
-    'https://raw.githubusercontent.com/biko-73/JediMakerXtream/main/installer.sh',
     'https://raw.githubusercontent.com/ciefp/CiefpOscamEditor/main/installer.sh',
     'https://raw.githubusercontent.com/fairbird/FootOnsat/main/Download/install.sh',
     'https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh',
@@ -30,7 +29,6 @@ TRUSTED_REMOTE_SCRIPTS = set([
     'https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh',
     'https://raw.githubusercontent.com/islam-2412/FuryBiss/refs/heads/main/fury/installer.sh',
     'https://raw.githubusercontent.com/Insprion80/Skins/main/xDreamy/installer.sh',
-    'https://github.com/s3n0/e2plugins/raw/master/ChocholousekPicons/online-setup',
 ])
 
 

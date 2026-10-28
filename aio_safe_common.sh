@@ -31,7 +31,7 @@ aio_url_host() {
 aio_host_allowed() {
     H=$(aio_url_host "$1")
     case "$H" in
-        github.com|*.github.com|raw.githubusercontent.com|*.raw.githubusercontent.com|objects.githubusercontent.com|*.objects.githubusercontent.com|codeload.github.com|api.github.com|updates.mynonpublic.com|feeds2.mynonpublic.com|j00zek.github.io|openpli.org|*.openpli.org) return 0 ;;
+        github.com|*.github.com|raw.githubusercontent.com|*.raw.githubusercontent.com|objects.githubusercontent.com|*.objects.githubusercontent.com|codeload.github.com|api.github.com|zacne.one.pl|updates.mynonpublic.com|feeds2.mynonpublic.com|j00zek.github.io|openpli.org|*.openpli.org) return 0 ;;
     esac
     return 1
 }

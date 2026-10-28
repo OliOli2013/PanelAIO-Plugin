@@ -1,11 +1,19 @@
-# 📺 AIO Panel 17.0.2 – Enigma2
+# 📺 AIO Panel 17.0.3 – Enigma2
 
-**Aktualizacja: 23 października 2026 r.**
+**Aktualizacja: 28 października 2026 r.**
 **Autor: Paweł Pawełek | AIO Team**
 
 AIO Panel to rozbudowane centrum narzędzi dla odbiorników Enigma2, umożliwiające wygodne zarządzanie listami kanałów, wtyczkami, skórkami, piconami, emulatorami oraz ustawieniami systemowymi.
 
-Wersja **17.0.2** naprawia instalację E2iPlayer i walidację składni Pythona, zachowując funkcje wersji 17.0.1.
+Wersja **17.0.3** dodaje instalację JediMakerXtream i ChocholousekPicons z GitHub (IPK/DEB) oraz PHub w kategorii „Dla dorosłych 18+”. Zachowano funkcje wersji 17.0.2.
+
+## 🆕 Nowości w wersji 17.0.3
+
+**Źródła pakietów:** JediMakerXtream 6.37 i ChocholousekPicons 5.0.240904 są przechowywane w `third_party/` i pobierane dopiero podczas instalacji. Nie zwiększają rozmiaru AIO Panel IPK/DEB. Pakiety pochodzą z repozytoriów wydawców, a kopie są sprawdzane sumą SHA-256.
+
+- JediMakerXtream 6.37 z GitHub zamiast z feedu.
+- ChocholousekPicons 5.0.240904 z GitHub zamiast z feedu; uwaga na przestarzałe zestawy piconów.
+- PHub 18+ przez osobny instalator kontrolujący pobierany skrypt. Dostępności serwera PHub nie potwierdzono.
 
 ## 🔧 Naprawy w wersji 17.0.2
 
@@ -57,8 +65,8 @@ Dodano **Obsidian FHD** do sekcji „Skórki”, umożliwiając jej instalację 
 
 Można również pobrać i zainstalować odpowiedni pakiet:
 
-- **[AIO Panel 17.0.2 – IPK](release/enigma2-plugin-extensions-panelaio_17.0.2_all.ipk)**
-- **[AIO Panel 17.0.2 – DEB](release/enigma2-plugin-extensions-panelaio_17.0.2_all.deb)**
+- **[AIO Panel 17.0.3 – IPK](release/enigma2-plugin-extensions-panelaio_17.0.3_all.ipk)**
+- **[AIO Panel 17.0.3 – DEB](release/enigma2-plugin-extensions-panelaio_17.0.3_all.deb)**
 
 Wybierz pakiet zgodny z systemem i menedżerem pakietów odbiornika.
 
@@ -76,7 +84,7 @@ Zgodność działania na wszystkich odbiornikach i starszych systemach Python 2 
 
 ## 📌 Ważne
 
-Wersja 17.0.2 zmienia instalator E2iPlayer i mechanizm walidacji składni. Super Konfigurator i pozostałe funkcje nie były modyfikowane.
+Wersja 17.0.3 zmienia wyłącznie wskazane instalatory i menu. Zmiany z 17.0.2 pozostają zachowane.
 
 ---
 

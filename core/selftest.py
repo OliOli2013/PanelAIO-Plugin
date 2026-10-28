@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '17.0.2'
+VERSION = '17.0.3'
 
 
 def _read(path):
@@ -49,6 +49,8 @@ def run(root):
         'safe_ipk_install.sh', 'install_iptv_dream_safe.sh',
         'install_s4aupdater_safe.sh', 'install_picon_updater_safe.sh',
         'install_myupdater_safe.sh', 'aio_safe_common.sh',
+        'install_github_package_safe.sh', 'install_phub_safe.sh',
+        'core/third_party_package_validator.py',
     ]
     for rel in required:
         _require(root, rel, errors)
@@ -68,6 +70,7 @@ def run(root):
             'CMD:AIO_SEARCH', 'CMD:AIO_SOURCE_HEALTH', 'CMD:AIO_FAVORITES',
             'CMD:AIO_RECENT', 'CMD:INSTALL_S4AUPDATER',
             'CMD:INSTALL_PICON_UPDATER', 'CMD:INSTALL_MYUPDATER',
+            'CMD:INSTALL_JEDI_GITHUB', 'CMD:INSTALL_CHOCHO_GITHUB', 'CMD:INSTALL_PHUB',
         ):
             if marker not in runtime:
                 errors.append('runtime action missing: %s' % marker)

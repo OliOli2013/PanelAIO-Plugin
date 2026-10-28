@@ -1,3 +1,14 @@
+AIO Panel 17.0.3 — 2026-10-28
+- JediMakerXtream i ChocholousekPicons: sprawdzone pakiety IPK/DEB przechowywane w repozytorium AIO, pobierane tylko na żądanie.
+- JediMakerXtream: normalizacja nagłówka IPK bez zmiany control/data.
+- PHub: usunięto fałszywą blokadę polecenia instalacyjnego występującego wyłącznie w komentarzu.
+- JediMakerXtream 6.37: instalacja pakietu IPK/DEB z repozytorium biko-73 na GitHub zamiast z feedu.
+- ChocholousekPicons 5.0.240904: instalacja IPK/DEB z s3n0/e2plugins bez kasowania ustawień przez online-setup.
+- Dodano PHub w kategorii Dla dorosłych 18+ / Adults 18+. Instalator pobiera skrypt z oficjalnego adresu zacne.one.pl z parametrem czasu i sprawdza go przed wykonaniem.
+- Uwaga: źródło PHub nie było dostępne do zewnętrznej weryfikacji; walidacja na tunerze może zablokować niebezpieczny lub niedostępny skrypt.
+- Zestawy piconów Chocholousek mogą być nieaktualne według opiekuna repozytorium.
+- Zachowano dotychczasowe instalatory, Super Konfigurator i funkcje AIO 17.0.2.
+
 AIO Panel 17.0.2 — 2026-10-23
 - Dodano OpenCamView 2.0.1 do Wtyczek Online (PL/EN): instalacja z oficjalnego GitHuba z kontrolą skryptu i SHA-256 pakietu, wymaga Python 3.
 - Naprawiono instalację E2iPlayer przy niedostępnych feedach opkg.

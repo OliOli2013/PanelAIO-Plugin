@@ -1958,6 +1958,7 @@ def install_e2kodi(session):
 # === MENU PL/EN Z E2Kodi (GLOBALNE) ===
 SOFTCAM_AND_PLUGINS_PL = [
     ("🔞 Adult XXX - Instalator", "CMD:INSTALL_ADULT_XXX"),
+    ("🔞 PHub - Instalator (18+)", "CMD:INSTALL_PHUB"),
     (r"\c00FFD200--- Softcamy ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Kasuj hasło Oscam", "CMD:CLEAR_OSCAM_PASS"),
@@ -1986,12 +1987,12 @@ SOFTCAM_AND_PLUGINS_PL = [
     ("📻 NeoRadio Online - Instalator", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
     ("📺 Bouquet Maker Xtream - Instalator", "CMD:INSTALL_BMX_SAFE"),
     ("🔄 MyUpdater v5.1 - Instalator", "CMD:INSTALL_MYUPDATER"),
-    ("📺 JediMakerXtream - Instalator", "feed:jedimaker"),
+    ("📺 JediMakerXtream 6.37 (GitHub) - Instalator", "CMD:INSTALL_JEDI_GITHUB"),
     ("▶️ YouTube - Instalator", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Instalator (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Instalator (Picony)", "CMD:INSTALL_PICON_UPDATER"),
-    ("🖼️ ChocholousekPicons - Instalator", "feed:chocholousek"),
+    ("🖼️ ChocholousekPicons (GitHub) - Instalator", "CMD:INSTALL_CHOCHO_GITHUB"),
     ("🔑 CIEFP Oscam Editor - Instalator", "feed:ciefp"),
     ("📺 e-stralker - Instalator (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
         ("▶️ VAVOO - Instalator", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
@@ -2010,6 +2011,7 @@ SOFTCAM_AND_PLUGINS_PL = [
 
 SOFTCAM_AND_PLUGINS_EN = [
     ("🔞 Adult XXX - Installer", "CMD:INSTALL_ADULT_XXX"),
+    ("🔞 PHub - Installer (18+)", "CMD:INSTALL_PHUB"),
     (r"\c00FFD200--- Softcams ---\c00ffffff", "SEPARATOR"),
     ("🔄 Restart Oscam", "CMD:RESTART_OSCAM"),
     ("🧹 Clear Oscam Password", "CMD:CLEAR_OSCAM_PASS"),
@@ -2038,12 +2040,12 @@ SOFTCAM_AND_PLUGINS_EN = [
     ("📻 NeoRadio Online - Installer", "safe_ipk:https://github.com/OliOli2013/NeoRadio/releases/latest/download/enigma2-plugin-extensions-neoradio_all.ipk|^(enigma2-plugin-extensions-neoradio(?:online|-online)?|neoradio)$"),
     ("📺 Bouquet Maker Xtream - Installer", "CMD:INSTALL_BMX_SAFE"),
     ("🔄 MyUpdater v5.1 - Installer", "CMD:INSTALL_MYUPDATER"),
-    ("📺 JediMakerXtream - Installer", "feed:jedimaker"),
+    ("📺 JediMakerXtream 6.37 (GitHub) - Installer", "CMD:INSTALL_JEDI_GITHUB"),
     ("▶️ YouTube - Installer", "safe_ipk:https://github.com/Taapat/enigma2-plugin-youtube/releases/download/git1294/enigma2-plugin-extensions-youtube_py3-git1294-cbcf8b0-r0.0.ipk|^enigma2-plugin-extensions-youtube(?:_[A-Za-z0-9.+-]+)?$"),
     ("📦 J00zeks Feed (Repo Installer)", "CMD:INSTALL_J00ZEK_REPO"),
     ("📺 E2Kodi v2 - Installer (j00zek)", "CMD:INSTALL_E2KODI"),
     ("🖼️ Picon Updater - Installer (Picons)", "CMD:INSTALL_PICON_UPDATER"),
-    ("🖼️ ChocholousekPicons - Installer", "feed:chocholousek"),
+    ("🖼️ ChocholousekPicons (GitHub) - Installer", "CMD:INSTALL_CHOCHO_GITHUB"),
     ("🔑 CIEFP Oscam Editor - Installer", "feed:ciefp"),
     ("📺 e-stralker - Installer (feed)", "CMD:INSTALL_ESTALKER_SAFE"),
         ("▶️ VAVOO - Installer", "remote_script:https://raw.githubusercontent.com/Belfagor2005/vavoo/main/installer.sh"),
@@ -6045,6 +6047,11 @@ class PanelAIO(Screen):
                     show_message_compat(self.sess, 'Nieprawidłowe źródło instalatora.' if self.lang == 'PL' else 'Invalid installer source.', MessageBox.TYPE_ERROR)
                     return
                 run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
+            elif key in ('INSTALL_JEDI_GITHUB', 'INSTALL_CHOCHO_GITHUB', 'INSTALL_PHUB'):
+                script = 'install_phub_safe.sh' if key == 'INSTALL_PHUB' else 'install_github_package_safe.sh'
+                args = '' if key == 'INSTALL_PHUB' else (' jedi' if key == 'INSTALL_JEDI_GITHUB' else ' chocho')
+                command = '/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, script)) + args
+                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
             elif key == 'CHECK_FOR_UPDATES': self.check_for_updates_manual()
             elif key == 'SHOW_PENDING_AIO_UPDATE': self.show_detected_update_prompt()
             elif key == 'UPDATE_SATELLITES_XML': run_command_in_background(self.sess, title, ['/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'update_satellites_xml.sh'))], callback_on_finish=self.reload_settings_python)

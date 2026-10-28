@@ -557,7 +557,7 @@ def _redact_ip(value):
 def diagnostic_report(data):
     temp = 'brak' if data['temperature'] is None else '%.1f°C' % data['temperature']
     lines = [
-        'AIO Panel 17.0.1 — AIO Connect',
+        'AIO Panel 17.0.3 — AIO Connect',
         'Raport utworzony: %s' % data['time'],
         'Kod urządzenia: %s (anonimowy skrót)' % data['device_code'],
         '',
@@ -798,7 +798,7 @@ class AIOConnectQRScreen(Screen):
         path = None
         for source in sources:
             try:
-                request = Request(source, headers={'User-Agent': 'AIOPanel/17.0.1', 'Accept': 'image/png,image/*'})
+                request = Request(source, headers={'User-Agent': 'AIOPanel/17.0.3', 'Accept': 'image/png,image/*'})
                 response = urlopen(request, timeout=12)
                 raw = response.read()
                 try:
@@ -957,7 +957,7 @@ class AIOConnectUpdatesScreen(Screen):
     def _fetch_update(self, url):
         if not url:
             return {}
-        request = Request(url, headers={'User-Agent': 'AIOPanel/17.0.1', 'Cache-Control': 'no-cache'})
+        request = Request(url, headers={'User-Agent': 'AIOPanel/17.0.3', 'Cache-Control': 'no-cache'})
         response = urlopen(request, timeout=7)
         raw = response.read()
         try:
@@ -983,7 +983,7 @@ class AIOConnectUpdatesScreen(Screen):
             local = installed.get(package, '-') if package else 'Android / telefon'
             latest = _u(remote.get('version') or '?')
             if project['name'] == 'AIO Panel':
-                local = '17.0.1'
+                local = '17.0.3'
             status = 'APLIKACJA'
             if package:
                 if local == '-':
