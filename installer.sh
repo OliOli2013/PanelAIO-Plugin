@@ -175,9 +175,38 @@ else
         fail 'Installed package is newer. Downgrade was not performed.'
     fi
 fi
-FREE=$(aio_free_kb "$(dirname "$DST")")
+# Check the filesystem that actually stores the AIO plugin, not /tmp or the
+# staging directory. Use statvfs first: BusyBox df column layout varies by image.
+# This is a safety check: an actual shortage still blocks the update.
+FLASH_PATH=$(dirname "$DST")
+FREE_SOURCE='statvfs'
+FREE=$("$PY" - "$FLASH_PATH" 2>> "$LOG" <<'AIO_STATVFS'
+from __future__ import print_function
+import os, sys
+try:
+    st = os.statvfs(sys.argv[1])
+    size = st.f_frsize or st.f_bsize
+    if size <= 0 or st.f_bavail < 0:
+        raise ValueError('invalid filesystem counters')
+    print((int(st.f_bavail) * int(size)) // 1024)
+except Exception as exc:
+    print('statvfs failed: %s' % exc, file=sys.stderr)
+    sys.exit(1)
+AIO_STATVFS
+) || FREE=''
+case "$FREE" in
+    ''|*[!0-9]*)
+        FREE_SOURCE='df-Pk'
+        FREE=$(aio_free_kb "$FLASH_PATH")
+        ;;
+esac
 case "$FREE" in ''|*[!0-9]*) fail 'Cannot determine free flash space' ;; esac
-[ "$FREE" -ge 6144 ] || fail 'Insufficient flash space (6 MiB required)'
+printf '[AIO] Free flash at %s: %s KiB (source: %s; required: 6144 KiB)\n' \
+    "$FLASH_PATH" "$FREE" "$FREE_SOURCE" | tee -a "$LOG"
+if [ "$FREE" -lt 6144 ]; then
+    df -Pk "$FLASH_PATH" >> "$LOG" 2>&1 || true
+    fail "Insufficient flash space at $FLASH_PATH ($FREE KiB free, 6144 KiB required)"
+fi
 
 # Use the same operation lock as other AIO package installations.
 UPDATE_LOCK="$AIO_LOCK_DIR"
