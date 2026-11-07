@@ -554,10 +554,20 @@ def _redact_ip(value):
     return 'brak' if not text else 'ukryty'
 
 
+def _panel_current_version():
+    try:
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'version.txt')
+        with open(path, 'r') as handle:
+            version = handle.read().strip()
+        return version or '18.0.0'
+    except Exception:
+        return '18.0.0'
+
+
 def diagnostic_report(data):
     temp = 'brak' if data['temperature'] is None else '%.1f°C' % data['temperature']
     lines = [
-        'AIO Panel 17.0.3 — AIO Connect',
+        'AIO Panel %s — AIO Connect' % _panel_current_version(),
         'Raport utworzony: %s' % data['time'],
         'Kod urządzenia: %s (anonimowy skrót)' % data['device_code'],
         '',
@@ -798,7 +808,7 @@ class AIOConnectQRScreen(Screen):
         path = None
         for source in sources:
             try:
-                request = Request(source, headers={'User-Agent': 'AIOPanel/17.0.3', 'Accept': 'image/png,image/*'})
+                request = Request(source, headers={'User-Agent': 'AIOPanel/18.0.0', 'Accept': 'image/png,image/*'})
                 response = urlopen(request, timeout=12)
                 raw = response.read()
                 try:
@@ -957,7 +967,7 @@ class AIOConnectUpdatesScreen(Screen):
     def _fetch_update(self, url):
         if not url:
             return {}
-        request = Request(url, headers={'User-Agent': 'AIOPanel/17.0.3', 'Cache-Control': 'no-cache'})
+        request = Request(url, headers={'User-Agent': 'AIOPanel/18.0.0', 'Cache-Control': 'no-cache'})
         response = urlopen(request, timeout=7)
         raw = response.read()
         try:
@@ -983,7 +993,7 @@ class AIOConnectUpdatesScreen(Screen):
             local = installed.get(package, '-') if package else 'Android / telefon'
             latest = _u(remote.get('version') or '?')
             if project['name'] == 'AIO Panel':
-                local = '17.0.3'
+                local = _panel_current_version()
             status = 'APLIKACJA'
             if package:
                 if local == '-':

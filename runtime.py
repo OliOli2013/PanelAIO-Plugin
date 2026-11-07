@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 17.0.0
+Wersja 18.0.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -476,7 +476,7 @@ CUSTOM_UPDATES_MANIFEST_REMOTE = "https://raw.githubusercontent.com/OliOli2013/P
 
 DATE = str(datetime.date.today())
 # Stopka dynamiczna zależna od Pythona
-FOOT = "AIO {} | build r2 | {} | AIO Team • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
+FOOT = "AIO {} | stable | {} | AIO Team • Społeczność AIO • QR → | by Paweł Pawełek".format(VER, "Py3" if IS_PY3 else "Py2") 
 
 # Legenda dla przycisków kolorowych
 LEGEND_PL_COLOR = r"\c00ff0000●\c00ffffff PL \c0000ff00●\c00ffffff EN \c00ffff00●\c00ffffff Restart GUI \c000000ff●\c00ffffff Aktualizuj  CH±: Kategorie  INFO: QR"
@@ -1795,7 +1795,7 @@ command -v python3 >/dev/null 2>&1 && PYBIN=python3
 
 
 # === FUNKCJA install_archive (GLOBALNA) ===
-def install_archive(session, title, url, callback_on_finish=None, picon_path=None, action_type=None):
+def install_archive(session, title, url, callback_on_finish=None, picon_path=None, action_type=None, channel_install_mode=None):
     """Install a channel list, picon archive or IPK with verified completion."""
     requested_type = ensure_unicode(action_type or '').strip().lower()
     allow_s4a_data = requested_type == 'channels_s4a' and _s4a_archive_url_allowed(url)
@@ -1817,6 +1817,58 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
         show_message_compat(session, 'Nieobsługiwany format archiwum!', MessageBox.TYPE_ERROR)
         _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
         return
+
+    # Channel installer: ask explicitly. No silent full overwrite of FAVOURITES.
+    if archive_type in ('zip', 'tar.gz') and requested_type in ('channels', 'channels_s4a') and channel_install_mode is None:
+        lang = _operation_language(session)
+        if lang == 'PL':
+            options = [
+                (ensure_str('Aktualizuj SAT, zachowaj DVB-T/T2, IPTV i FAVOURITES'), 'preserve'),
+                (ensure_str('Pełna wymiana — usuń również własne DVB-T/T2 i bukiety'), 'replace'),
+                (ensure_str('Anuluj'), 'cancel')
+            ]
+            prompt = 'AIO Panel — wybierz tryb instalacji listy'
+        else:
+            options = [
+                (ensure_str('Update SAT only; keep DVB-T/T2, IPTV and FAVOURITES'), 'preserve'),
+                (ensure_str('Full replace — also removes local DVB-T/T2 and bouquets'), 'replace'),
+                (ensure_str('Cancel'), 'cancel')
+            ]
+            prompt = 'AIO Panel — choose channel list installation mode'
+        def chosen(selected):
+            if not selected or selected[1] == 'cancel':
+                return
+            install_archive(session, title, url, callback_on_finish=callback_on_finish,
+                            picon_path=picon_path, action_type=action_type,
+                            channel_install_mode=selected[1])
+        session.openWithCallback(chosen, ChoiceBox,
+                                 title=ensure_str(prompt), list=options)
+        return
+    if archive_type in ('zip', 'tar.gz') and requested_type in ('channels', 'channels_s4a'):
+        if channel_install_mode not in ('preserve', 'replace'):
+            show_message_compat(session, 'Nieprawidłowy tryb instalacji.', MessageBox.TYPE_ERROR)
+            return
+
+    # The live E2 service database can be newer than /etc/enigma2/lamedb.
+    # Persist it before the shell performs a selective merge. Otherwise a
+    # channel visibly named in FAVOURITES may exist only in Enigma2 RAM.
+    # This call runs in the GUI thread (never from the shell worker).
+    if archive_type in ('zip', 'tar.gz') and requested_type in ('channels', 'channels_s4a') and channel_install_mode == 'preserve':
+        try:
+            from enigma import eDVBDB
+            db = eDVBDB.getInstance()
+            saver = getattr(db, 'saveServicelist', None)
+            if not callable(saver):
+                saver = getattr(db, 'flush', None)
+            if not callable(saver):
+                raise RuntimeError('Enigma2 nie udostępnia zapisu bieżącej bazy usług')
+            result_save = saver()
+            if isinstance(result_save, int) and not isinstance(result_save, bool) and result_save != 0:
+                raise RuntimeError('Enigma2 nie zapisała bazy usług (kod %s)' % result_save)
+        except Exception as save_exc:
+            show_message_compat(session, 'Nie można zapisać aktualnej bazy DVB-T/T2 przed aktualizacją SAT.\n\nInstalacja została bezpiecznie przerwana: %s' % ensure_unicode(save_exc), MessageBox.TYPE_ERROR)
+            _invoke_safe_callback(callback_on_finish, {'success': False, 'type': 'channels', 'stderr': ensure_unicode(save_exc)}, noarg_only_on_success=True)
+            return
 
     prepare_tmp_dir()
     unique_id = '%s_%s' % (os.getpid(), int(time.time() * 1000))
@@ -1887,7 +1939,8 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
         download = _download_s4_archive_shell_command(url, archive_path, archive_type)
     else:
         download = _download_shell_command(url, archive_path, archive_type)
-    command = 'set -eu\n(\n%s\n)\n/bin/sh %s %s %s %s\n' % (download, _safe_shell_arg(script_path), _safe_shell_arg(archive_path), _safe_shell_arg(archive_type), _safe_shell_arg(status_path))
+    mode = channel_install_mode or 'preserve'
+    command = 'set -eu\n(\n%s\n)\n/bin/sh %s %s %s %s %s\n' % (download, _safe_shell_arg(script_path), _safe_shell_arg(archive_path), _safe_shell_arg(archive_type), _safe_shell_arg(status_path), _safe_shell_arg(mode))
 
     def channel_finished(command_result):
         status_value = _read_text_file(status_path, '').strip()
@@ -1898,10 +1951,28 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
         result = dict(command_result or {})
         result.update({'success': bool(command_result and command_result.get('success')) and (status_value.startswith('OK|') or status_value == 'OK'), 'status': status_value, 'type': 'channels'})
         if result['success']:
+            # Tell Enigma2 to pick up the newly merged disk service database.
+            # Without this, a later GUI shutdown may persist stale in-memory
+            # services and undo part of the update, yielding names <n/a>.
+            reloaded = True
+            reload_detail = ''
+            try:
+                from enigma import eDVBDB
+                live = eDVBDB.getInstance()
+                live.reloadServicelist()
+                live.reloadBouquets()
+            except Exception as reload_exc:
+                reloaded = False
+                reload_detail = ensure_unicode(reload_exc)
+            result['gui_reloaded'] = reloaded
             if callback_on_finish:
                 _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+            elif reloaded:
+                show_message_compat(session, 'Lista SAT została zaktualizowana. Zachowano lokalne DVB-T/T2/C, IPTV i FAVOURITES.', timeout=8)
             else:
-                show_message_compat(session, 'Lista kanałów została bezpiecznie zainstalowana.', timeout=6)
+                show_message_compat(session,
+                    'Pliki listy zostały zainstalowane, ale GUI nie przeładowało bazy usług.\nUruchom ponownie interfejs Enigma2 ręcznie.\n\n%s' % reload_detail,
+                    MessageBox.TYPE_ERROR, timeout=16)
         else:
             status_parts = status_value.split('|', 2)
             detail = status_parts[1] if status_value.startswith('ERROR|') and len(status_parts) > 1 else ensure_unicode(result.get('stderr') or 'Brak potwierdzenia poprawnej instalacji.')
@@ -2673,18 +2744,67 @@ def _get_s4aupdater_lists_dynamic_sync():
 
 
 def _get_best_oscam_version_info_sync():
+    """Show version offered by active receiver feed (not a hardcoded revision).
+
+    OSCam from receiver feeds may differ from Levi45 GitHub; distinct labels.
+    """
     try:
-        cmd = "opkg list | grep 'oscam' | grep 'ipv4only' | grep -E -m 1 'master|emu|stable'"
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, _ = process.communicate()
-        if process.returncode == 0 and stdout:
-            line = stdout.decode('utf-8').strip() if hasattr(stdout, 'decode') else stdout.strip()
-            parts = line.split(' - ')
-            if len(parts) > 1:
-                return parts[1].strip()
-        return "Auto"
+        commands = ('opkg list', 'apt-cache policy enigma2-plugin-softcams-oscam-emu')
+        for cmd in commands:
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, _ = process.communicate()
+            if not stdout:
+                continue
+            decoded = stdout.decode('utf-8', 'ignore') if hasattr(stdout, 'decode') else stdout
+            entries = []
+            if cmd.startswith('opkg'):
+                for line in decoded.splitlines():
+                    parts = line.split(' - ', 2)
+                    if len(parts) < 2:
+                        continue
+                    name = parts[0].lower()
+                    if 'oscam' not in name or any(k in name for k in ('-dev', '-dbg', '-src', 'config', 'editor')):
+                        continue
+                    priority = 0 if 'emu' in name else 1
+                    entries.append((priority, parts[1].strip()))
+                if entries:
+                    entries.sort(key=lambda p:p[0])
+                    return entries[0][1]
+            else:
+                match = re.search(r'^\s*Candidate:\s*(\S+)', decoded, re.M)
+                if match and match.group(1) != '(none)':
+                    return match.group(1)
+        return 'wersja online'  # not verified
     except Exception:
-        return "Error"
+        return 'wersja online'
+
+
+def _get_levi45_available_version_sync():
+    """Read the actual upstream Levi45 release revision, not a local old binary.
+
+    On network failure show the last source-verified 2026-11-07 revision.
+    This executes only in the existing background loader thread.
+    """
+    url = 'https://raw.githubusercontent.com/levi-45/Levi45Emulator/main/installer.sh'
+    try:
+        try:
+            from urllib.request import Request, urlopen
+        except ImportError:
+            from urllib2 import Request, urlopen
+        request = Request(url, headers={'User-Agent': 'AIO-Panel/18.0.0'})
+        response = urlopen(request, timeout=7)
+        content = response.read(16384)
+        response.close()
+        if not isinstance(content, str):
+            content = content.decode('utf-8', 'replace')
+        revision = re.search(r'^CURRENT_VERSION=[\"\']([0-9]{5,6})[\"\']', content, re.M)
+        subrev = re.search(r'\$\{CURRENT_VERSION\}-([0-9]{2,4})_all\.\$\{PACKAGE_EXT\}', content)
+        if revision and subrev:
+            return 'r%s / Emu r%s' % (revision.group(1), subrev.group(1))
+        return 'r11968 / Emu r803 (stan 07.11)'
+    except Exception as exc:
+        print('[AIO Panel] Levi45 version source unavailable:', exc)
+        return 'r11968 / Emu r803 (stan 07.11)'
 
 
 def _get_local_oscam_version_info_sync():
@@ -3025,7 +3145,7 @@ class AIOLoadingScreen(Screen):
         thread.start()
 
     def _background_data_loader(self):
-        repo_lists, s4a_lists_full, best_oscam_version, local_oscam_version = [], [], 'N/A', 'Online'
+        repo_lists, s4a_lists_full, best_oscam_version, local_oscam_version, levi45_version = [], [], 'N/A', 'Online', 'Online'
         try: repo_lists = _get_lists_from_repo_sync()
         except Exception as exc: print('[AIO Panel] repo list load:', exc)
         try: s4a_lists_full = _get_s4aupdater_lists_dynamic_sync()
@@ -3044,7 +3164,9 @@ class AIOLoadingScreen(Screen):
         except Exception as exc: print('[AIO Panel] OSCam version load:', exc)
         try: local_oscam_version = _get_local_oscam_version_info_sync()
         except Exception as exc: print('[AIO Panel] local OSCam version:', exc)
-        self.fetched_data_cache = {'repo_lists': repo_lists, 's4a_lists_full': s4a_lists_full, 'best_oscam_version': best_oscam_version, 'local_oscam_version': local_oscam_version, 'available_skins': available_skins}
+        try: levi45_version = _get_levi45_available_version_sync()
+        except Exception as exc: print('[AIO Panel] Levi45 GitHub version:', exc)
+        self.fetched_data_cache = {'repo_lists': repo_lists, 's4a_lists_full': s4a_lists_full, 'best_oscam_version': best_oscam_version, 'local_oscam_version': local_oscam_version, 'levi45_version': levi45_version, 'available_skins': available_skins}
         reactor.callFromThread(self._on_data_loaded)
 
     def _open_panel_safe(self, fetched_data=None):
@@ -4851,6 +4973,12 @@ class PanelAIO(Screen):
                 except Exception:
                     pass
 
+            if not description and len(item) > 1:
+                try:
+                    from Plugins.SystemPlugins.PanelAIO.data.owned_projects import project_description
+                    description = project_description(item[1], self.lang)
+                except Exception:
+                    pass
             self["function_description"].setText(description)
 
         except Exception as e:
@@ -4901,6 +5029,7 @@ class PanelAIO(Screen):
             s4a_lists_full = self.fetched_data_cache.get("s4a_lists_full", [])
             best_oscam_version = self.fetched_data_cache.get("best_oscam_version", "Error")
             local_oscam_version = self.fetched_data_cache.get("local_oscam_version", "Online")
+            levi45_version = self.fetched_data_cache.get("levi45_version", "Online")
 
             if not repo_lists:
                 repo_lists = [(TRANSLATIONS[lang]["loading_error_text"] + " (REPO)", "SEPARATOR")]
@@ -4951,11 +5080,15 @@ class PanelAIO(Screen):
             
             for i, (name, action) in enumerate(softcam_menu):
                 if action == "CMD:INSTALL_BEST_OSCAM":
-                    oscam_text = "📥 OSCam-Emu - {}" if lang == 'PL' else "📥 OSCam-Emu - {}"
-                    softcam_menu[i] = (oscam_text.format(best_oscam_version), action)
+                    # Feed version belongs to the receiver; do not label it as
+                    # the GitHub Levi45 release unless it is really that version.
+                    feed_ver = best_oscam_version or 'Auto'
+                    label = ('📥 OSCam-Emu (feed tunera) — %s' if lang == 'PL' else '📥 OSCam-Emu (receiver feed) — %s')
+                    softcam_menu[i] = (label % feed_ver, action)
                 elif action == "CMD:INSTALL_LEVI45_OSCAM":
-                    levi_ver = local_oscam_version or "Online"
-                    softcam_menu[i] = ("📥 Oscam Levi45 - {}".format(levi_ver), action)
+                    source_ver = levi45_version or 'Online'
+                    label = ('📥 OSCam Levi45 (GitHub) — %s' if lang == 'PL' else '📥 OSCam Levi45 (GitHub) — %s')
+                    softcam_menu[i] = (label % source_ver, action)
             
             for i, (name, action) in enumerate(tools_menu):
                 if action == "CMD:SUPER_SETUP_WIZARD":
@@ -6002,6 +6135,9 @@ class PanelAIO(Screen):
             command = 'opkg update && opkg install ' + ' '.join(_safe_shell_arg(item) for item in packages)
             run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: self._show_action_result(result))
         elif action.startswith('remote_script_bash:') or action.startswith('remote_script:'):
+            if IS_PY2 and ('OliOli2013/E2-Doctor-Plugin/' in action or 'OliOli2013/OpenCamView-Plugin/' in action):
+                show_message_compat(self.sess, ('Ta wtyczka wymaga Python 3.' if self.lang == 'PL' else 'This plugin requires Python 3.'), MessageBox.TYPE_ERROR)
+                return
             use_bash = action.startswith('remote_script_bash:')
             spec = action.split(':', 1)[1]
             parts = spec.split('|', 1)

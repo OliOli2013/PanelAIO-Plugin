@@ -1,88 +1,63 @@
 #!/bin/sh
-# Reproducible AIO Panel IPK builder for Linux Mint / GitHub Actions.
+# AIO Panel 18.0.0 — release builder for GitKraken/Linux.
+# Creates real OPKG-compatible .ipk and dpkg-compatible .deb packages.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 VERSION=$(tr -d '\r\n ' < "$ROOT/version.txt")
-PKG='enigma2-plugin-extensions-panelaio'
+[ "$VERSION" = 18.0.0 ] || { echo 'Expected AIO Panel 18.0.0' >&2; exit 1; }
+PKG=enigma2-plugin-extensions-panelaio
 OUTDIR="$ROOT/release"
-OUT="$OUTDIR/${PKG}_${VERSION}_all.ipk"
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/panelaio-build.XXXXXX")
-PLUGIN="$WORK/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO"
-CONTROL="$WORK/control"
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/panelaio18-build.XXXXXX")
 cleanup(){ rm -rf "$WORK"; }
 trap cleanup EXIT HUP INT TERM
-mkdir -p "$PLUGIN" "$CONTROL" "$OUTDIR"
-
-# Copy repository source, then remove files which are repository/build-only.
-(
-  cd "$ROOT"
-  tar -cf - \
-    --exclude='./.git' --exclude='./.github' --exclude='./release' --exclude='./releases' \
-    --exclude='./control' --exclude='./third_party' --exclude='./docs' --exclude='./tests' --exclude='./tools' \
-    --exclude='./build_ipk.sh' --exclude='./AUDYT_17.0.0.md' --exclude='./INSTRUKCJA_17.0.0.txt' --exclude='./TEST_RESULTS.txt' --exclude='./SOURCE_AUDIT.json' --exclude='./LIVE_LIST_CHECK.json' --exclude='./README.md' --exclude='./RELEASES.md' \
-    --exclude='./GITKRAKEN_16.0.0.txt' --exclude='./SHA256SUMS.txt' --exclude='./update.json' \
-    --exclude='./Picony.zip' --exclude='./Picony1.zip' --exclude='./Picony2.zip' --exclude='./__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
-    .
-) | tar -xf - -C "$PLUGIN"
-
-cp -a "$ROOT/control/." "$CONTROL/"
-
-# IPK should contain runtime assets, not repository metadata.
-find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-find "$PLUGIN" -type f -name '*.sh' -exec chmod 755 {} \;
-find "$PLUGIN" -type f -name '*.py' -exec chmod 644 {} \;
-find "$PLUGIN" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.json' -o -name '*.txt' -o -name 'LICENSE' \) -exec chmod 644 {} \; 2>/dev/null || true
-chmod 755 "$CONTROL"/preinst "$CONTROL"/postinst "$CONTROL"/postrm 2>/dev/null || true
-chmod 644 "$CONTROL"/control
-
-# Validate the staged payload before packaging.
-python3 -m compileall -q "$PLUGIN"
-find "$PLUGIN" -type f -name '*.sh' -print0 | xargs -0 -n1 /bin/sh -n
-python3 "$PLUGIN/core/selftest.py" "$PLUGIN"
-find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-
+DST="$WORK/ipk/data/usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO"
+mkdir -p "$DST" "$WORK/ipk/control" "$OUTDIR"
+for d in assets core data ui; do
+    [ -d "$ROOT/$d" ] || { echo "Missing $d" >&2; exit 1; }
+    cp -a "$ROOT/$d" "$DST/$d"
+done
+for F in "$ROOT"/*.py "$ROOT"/*.sh "$ROOT"/*.png "$ROOT"/*.jpg "$ROOT"/*.txt "$ROOT"/*.json "$ROOT"/LICENSE "$ROOT"/oscam.dvbapi.poland; do
+    [ -f "$F" ] || continue
+    N=$(basename "$F")
+    case "$N" in
+        SHA256SUMS.txt|TEST_*|AIO_18*|GITKRAKEN_*|build_ipk.sh|build_deb.sh) continue ;;
+    esac
+    cp -a "$F" "$DST/$N"
+done
+cp -a "$ROOT/control/." "$WORK/ipk/control/"
+find "$DST" -type d -name __pycache__ -prune -exec rm -rf {} \; 2>/dev/null || true
+find "$DST" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+find "$DST" -type f -name '*.sh' -exec chmod 755 {} \;
+find "$DST" -type f -name '*.py' -exec chmod 644 {} \;
+chmod 755 "$WORK/ipk/control"/preinst "$WORK/ipk/control"/postinst "$WORK/ipk/control"/postrm
+[ "$(sed -n 's/^Version: //p' "$WORK/ipk/control/control")" = "$VERSION" ] || { echo 'Control/version mismatch' >&2; exit 1; }
+python3 "$DST/core/python_syntax_check.py" "$DST"
+find "$DST" -type f -name '*.sh' -exec sh -n {} \;
+python3 "$DST/core/selftest.py" "$DST"
+if [ -f "$ROOT/tests/test_release_18.py" ]; then
+    python3 "$ROOT/tests/test_release_18.py" "$ROOT"
+fi
 if [ -n "${AIO_TEST_PYTHON2:-}" ]; then
-  "$AIO_TEST_PYTHON2" -m compileall -q "$PLUGIN"
-  "$AIO_TEST_PYTHON2" "$PLUGIN/core/selftest.py" "$PLUGIN"
+    "$AIO_TEST_PYTHON2" "$DST/core/python_syntax_check.py" "$DST"
+    "$AIO_TEST_PYTHON2" "$DST/core/selftest.py" "$DST"
 fi
-# Python 2 compileall writes .pyc beside sources; never ship host bytecode.
-find "$PLUGIN" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-find "$PLUGIN" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
-# Gzip control/data also work on Python 2 images without lzma support.
-printf '2.0\n' > "$WORK/debian-binary"
-(
-  cd "$CONTROL"
-  tar --owner=0 --group=0 -czf "$WORK/control.tar.gz" .
-)
-(
-  cd "$WORK/data"
-  tar --owner=0 --group=0 -czf "$WORK/data.tar.gz" .
-)
-rm -f "$OUT"
-(
-  cd "$WORK"
-  ar r "$OUT" debian-binary control.tar.gz data.tar.gz >/dev/null
-)
-
-[ -s "$OUT" ] || { echo 'Build failed: IPK is empty.' >&2; exit 1; }
-if command -v sha256sum >/dev/null 2>&1; then
-  HASH=$(sha256sum "$OUT" | awk '{print $1}')
-else
-  HASH=$(python3 - "$OUT" <<'PY'
-import hashlib, sys
-h=hashlib.sha256()
-with open(sys.argv[1],'rb') as f:
-    for chunk in iter(lambda:f.read(65536), b''):
-        h.update(chunk)
-print(h.hexdigest())
-PY
-)
-fi
-DEB="$OUTDIR/${PKG}_${VERSION}_all.deb"
-cp "$OUT" "$DEB"
-printf '%s  %s\n' "$HASH" "release/$(basename "$OUT")" > "$ROOT/SHA256SUMS.txt"
-printf '%s  %s\n' "$HASH" "release/$(basename "$DEB")" >> "$ROOT/SHA256SUMS.txt"
-echo "Built: $OUT"
-echo "SHA256: $HASH"
+printf '2.0\n' > "$WORK/ipk/debian-binary"
+( cd "$WORK/ipk/control"; tar --owner=0 --group=0 -czf "$WORK/ipk/control.tar.gz" . )
+( cd "$WORK/ipk/data"; tar --owner=0 --group=0 -czf "$WORK/ipk/data.tar.gz" . )
+OUT_IPK="$OUTDIR/${PKG}_${VERSION}_all.ipk"
+( cd "$WORK/ipk"; ar r "$OUT_IPK" debian-binary control.tar.gz data.tar.gz >/dev/null )
+# Build canonical dpkg DEB with the same installed payload and lifecycle scripts.
+[ -x "$(command -v dpkg-deb || true)" ] || { echo 'dpkg-deb is required to build .deb' >&2; exit 1; }
+mkdir -p "$WORK/deb/DEBIAN"
+chmod 755 "$WORK/deb/DEBIAN"
+cp -a "$WORK/ipk/data/." "$WORK/deb/"
+cp -a "$WORK/ipk/control/." "$WORK/deb/DEBIAN/"
+chmod g-s "$WORK/deb/DEBIAN"
+chmod 755 "$WORK/deb/DEBIAN"
+chmod 755 "$WORK/deb/DEBIAN"/preinst "$WORK/deb/DEBIAN"/postinst "$WORK/deb/DEBIAN"/postrm
+OUT_DEB="$OUTDIR/${PKG}_${VERSION}_all.deb"
+dpkg-deb --build "$WORK/deb" "$OUT_DEB" >/dev/null
+( cd "$ROOT"; sha256sum "release/$(basename "$OUT_IPK")" "release/$(basename "$OUT_DEB")" > SHA256SUMS.txt )
+echo "Built: $OUT_IPK"
+echo "Built: $OUT_DEB"
+cat "$ROOT/SHA256SUMS.txt"

@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 # are carried through unchanged, after receiver-specific compatibility filters.
 TITLES = [
     ('channels', 'Listy kanałów', 'Channel lists'),
+    ('projects', 'Moje projekty', 'My projects'),
     ('iptv', 'IPTV / Odtwarzacze', 'IPTV / Players'),
     ('epg', 'EPG / Picony', 'EPG / Picons'),
     ('skins', 'Skórki', 'Skins'),
@@ -52,11 +53,13 @@ def classify(action):
 
 
 def build_tabs(lang, channel_lists, softcam, tools, skins, diagnostics):
+    from Plugins.SystemPlugins.PanelAIO.data.owned_projects import PROJECT_ACTIONS, project_items
     groups = dict((key, []) for key, pl, en in TITLES)
     groups['channels'] = list(channel_lists)
-    groups['skins'] = [item for item in skins if item[1] != 'SEPARATOR']
+    groups['projects'] = project_items(lang)
+    groups['skins'] = [item for item in skins if item[1] != 'SEPARATOR' and item[1] not in PROJECT_ACTIONS]
     for items in (softcam, tools, diagnostics):
         for item in items:
-            if item[1] != 'SEPARATOR':
+            if item[1] != 'SEPARATOR' and item[1] not in PROJECT_ACTIONS:
                 groups[classify(item[1])].append(item)
     return [(pl if lang == 'PL' else en, groups[key]) for key, pl, en in TITLES if groups[key]]

@@ -1,3 +1,48 @@
+AIO Panel 18.0.0 — 07.11.2026
+- Finalized SAT-only channel updates from 17.0.4-r3: DVB-T/T2, DVB-C, FAVOURITES, IPTV and local bouquets preserved.
+- New second tab Moje projekty / My projects, immediately after Listy kanałów.
+- Ten owned AIO Team software projects in one place; their installer actions removed from other tabs.
+- OSCam Levi45: GitHub installer version now shown separately from the installed local binary. Source as of 07.11.2026: 11968 with Emu r803.
+- OSCam-Emu from receiver feed displays the feed-supplied version instead of a guessed revision.
+- AIO Connect uses current installed version, not outdated 17.0.3.
+- Py2/Py3-compatible menu definitions and runtime guard for Python3-only E2 Doctor.
+
+AIO Panel 17.0.4-r3 TEST — 07.11.2026
+- SAT-only: zapis rzeczywistej, aktualnej bazy usług z pamięci Enigma2 przed instalacją.
+- SAT-only: przeładowanie usług i bukietów po udanej instalacji.
+- Selektywne scalanie bez zmiany oryginalnych transponderów i usług DVB-T/T2/C/ATSC.
+- Mocniejsza tożsamość usług (SID + transponder + typ) bez utraty aliasów typu.
+- Obsługa starszych obrazów mających wyłącznie bazę lamedb /4/.
+- Dodatkowa walidacja wszystkich lokalnych rekordów, nazw i referencji przed zapisem.
+- Niezależna walidacja PO skopiowaniu; automatyczne wycofanie przy regresji.
+- FAVOURITES i własne bukiety IPTV zachowane bajt w bajt.
+- Raport ostatniej aktualizacji: /tmp/PanelAIO/last_sat_update_report.txt.
+- Tryb pełnej wymiany bez zmian; test na fizycznym tunerze nadal wymagany.
+
+AIO Panel 17.0.4-r2 TEST — 07.11.2026
+- Tryb zachowania danych aktualizuje tylko usługi i bukiety SAT.
+- Bez podmiany lokalnych rekordów DVB-T/T2/C/ATSC i IPTV.
+- Zachowanie FAVOURITES, separatorów, własnych bukietów i ich kolejności.
+- Bez podmiany satellites.xml, terrestrial.xml, cables.xml w trybie SAT-only.
+- Pełna wymiana pozostaje osobnym, jawnym wyborem użytkownika.
+- Nie naprawia rekordów, które już były uszkodzone lub oznaczone n/a.
+
+AIO Panel 17.0.4-r1 — 03.11.2026 — wersja testowa
+- Poprawiono zachowanie kanałów DVB-T/T2/C/ATSC przy zerach wiodących w identyfikatorach.
+- Zachowanie lokalnych nazw, nadawców, metadanych i parametrów multipleksów.
+- Nazwy kanałów zapisywane z zachowaniem oryginalnych bajtów (UTF-8).
+- Spójność baz lamedb i lamedb5 sprawdzana przed instalacją.
+- Nie przywraca informacji utraconych podczas wcześniejszej aktualizacji.
+
+AIO Panel 17.0.4-r1 — 02.11.2026
+- Smart Channel Update: podczas instalacji list chronione sa FAVOURITES oraz osobne bukiety uzytkownika.
+- Zachowane sa uslugi DVB-T/T2/C/ATSC, jezeli bazy lamedb i lamedb5 mozna bezpiecznie scalic.
+- Wybór trybu: zachowaj prywatne dane (domyslnie) lub pelna wymiana listy.
+- Scalenie odbywa sie w katalogu tymczasowym PRZED jakakolwiek zmiana aktywnej listy.
+- W przypadku niezgodnego formatu albo konfliktu baza nie jest zmieniana; dotychczasowa instalacja pozostaje.
+- Nie zmieniono zadnej innej funkcji AIO Panel 17.0.3.
+- Ograniczenie: uslugi SAT ze zmieniona referencja nie sa automatycznie mapowane, wymagaja ponownego wskazania w ulubionych.
+
 AIO Panel 17.0.3 — 2026-10-28
 - JediMakerXtream i ChocholousekPicons: sprawdzone pakiety IPK/DEB przechowywane w repozytorium AIO, pobierane tylko na żądanie.
 - JediMakerXtream: normalizacja nagłówka IPK bez zmiany control/data.

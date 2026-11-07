@@ -1,2 +1,2 @@
-f75c75e55c81fa65925c656d48c61df26b1bf3ed36bc745ba74f9e91b43f6660  release/enigma2-plugin-extensions-panelaio_17.0.3_all.ipk
-f75c75e55c81fa65925c656d48c61df26b1bf3ed36bc745ba74f9e91b43f6660  release/enigma2-plugin-extensions-panelaio_17.0.3_all.deb
+2df6a2df207c9f6fe1e891199b7810d004a30823f46fd0a9339505b3ea7c22c3  release/enigma2-plugin-extensions-panelaio_18.0.0_all.ipk
+9df6bed7b37500254b45b842d8825a0fc70b123a25aff071a8d202d00f1772b0  release/enigma2-plugin-extensions-panelaio_18.0.0_all.deb

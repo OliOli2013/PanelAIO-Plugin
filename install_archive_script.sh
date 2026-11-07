@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 14.0.1 - functional transactional channel-list installer.
+# AIO Panel 17.0.4 - transactional channel list installer + Smart Channel Update.
 # No fixed free-space threshold: the best writable workspace is selected and
 # every write is checked. Existing lists are restored automatically on error.
 
@@ -12,6 +12,7 @@ LOG_FILE="${AIO_INSTALL_LOG:-/tmp/aio_install.log}"
 ARCHIVE="${1:-}"
 ARCHIVE_TYPE="${2:-}"
 STATUS_FILE="${3:-/tmp/PanelAIO/channel_install.status}"
+INSTALL_MODE="${4:-preserve}"  # preserve (default) or replace (explicit choice)
 TARGET_E2="${AIO_TARGET_ENIGMA2_DIR:-/etc/enigma2}"
 TARGET_TUXBOX="${AIO_TARGET_TUXBOX_DIR:-/etc/tuxbox}"
 RUN_ID="$(date +%Y%m%d_%H%M%S)_$$"
@@ -208,6 +209,7 @@ trap 'fail "Instalacja została przerwana sygnałem." interrupted' HUP INT TERM
 
 aio_acquire_lock channel_lists || fail "Inna operacja list kanałów jest już wykonywana." lock
 [ -n "$ARCHIVE" ] && [ -s "$ARCHIVE" ] || fail "Archiwum nie istnieje albo jest puste." arguments
+case "$INSTALL_MODE" in preserve|replace) ;; *) fail "Nieznany tryb instalacji listy." arguments ;; esac
 case "$ARCHIVE_TYPE" in zip|tar.gz|tgz) ;; *) fail "Nieobsługiwany format: $ARCHIVE_TYPE" arguments ;; esac
 
 ROOT=$(choose_work_root) || fail "Brak zapisywalnego katalogu roboczego." space
@@ -216,7 +218,7 @@ WORK="$ROOT/aio_list_install_$RUN_ID"
 EXTRACT="$WORK/extract"; STAGE_E2="$WORK/stage/e2"; STAGE_TUXBOX="$WORK/stage/tuxbox"; BACKUP="$WORK/backup"
 mkdir -p "$EXTRACT" "$STAGE_E2" "$STAGE_TUXBOX" "$BACKUP" || fail "Nie można utworzyć katalogu roboczego." workdir
 
-log "=== AIO Panel 14.0.1: funkcjonalna instalacja listy ==="
+log "=== AIO Panel 17.0.4-r3 SAT-ONLY: instalacja listy ($INSTALL_MODE) ==="
 log "Archiwum: $ARCHIVE"
 log "Katalog roboczy: $WORK (wolne KB przed operacją: $FREE)"
 aio_validate_archive "$ARCHIVE" "$ARCHIVE_TYPE" 100000 2147483648 >> "$LOG_FILE" 2>&1 || fail "Archiwum jest uszkodzone albo zawiera niebezpieczne wpisy." validation
@@ -239,7 +241,9 @@ done < "$WORK/candidate_dirs"
 log "Źródło listy: $SOURCE (ocena kompletności: $BEST_SCORE)"
 
 copy_e2_set "$SOURCE" "$STAGE_E2" || fail "Nie można przygotować plików listy." staging
-copy_tuxbox_set "$SOURCE" "$STAGE_TUXBOX" || fail "Nie można przygotować XML tunerów." staging
+if [ "$INSTALL_MODE" = replace ]; then
+    copy_tuxbox_set "$SOURCE" "$STAGE_TUXBOX" || fail "Nie można przygotować XML tunerów." staging
+fi
 
 # Complete common files if archive creators put them in another nested folder.
 for N in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist; do
@@ -249,6 +253,7 @@ for N in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist; do
     fi
 done
 for N in satellites.xml cables.xml terrestrial.xml; do
+    [ "$INSTALL_MODE" = replace ] || continue
     if [ ! -f "$STAGE_TUXBOX/$N" ]; then
         F=$(find "$EXTRACT" -type f -name "$N" -print -quit 2>/dev/null)
         if [ -n "$F" ]; then cp -p "$F" "$STAGE_TUXBOX/$N" || fail "Nie można przygotować XML $N." staging; fi
@@ -257,6 +262,19 @@ done
 
 hydrate_index_references "$STAGE_E2/bouquets.tv" "$STAGE_E2" || fail "Nie można uzupełnić bukietów TV z archiwum." staging
 hydrate_index_references "$STAGE_E2/bouquets.radio" "$STAGE_E2" || fail "Nie można uzupełnić bukietów radiowych z archiwum." staging
+
+# Smart merge runs on staging files only. Failure leaves installed lists intact.
+if [ "$INSTALL_MODE" = preserve ]; then
+    MERGER="$PLUGIN_DIR/core/smart_channel_merge.py"
+    [ -s "$MERGER" ] || fail "Brak bezpiecznego modułu Smart Channel Update." merge
+    PY=$(aio_python 2>/dev/null || true)
+    [ -n "$PY" ] || fail "Brak Python 2/3 do scalenia list." merge
+    "$PY" "$MERGER" "$TARGET_E2" "$STAGE_E2" "$WORK/smart_merge_report.txt" >> "$LOG_FILE" 2>&1 \
+        || fail "Smart Channel Update nie mógł bezpiecznie zachować danych. Nic nie usunięto. Zobacz log." merge
+    log "Smart Channel Update SAT-ONLY zakończony. Raport: $WORK/smart_merge_report.txt"
+else
+    log "Pełna wymiana listy wybrana przez użytkownika."
+fi
 
 TV_FILES=$(find "$STAGE_E2" -maxdepth 1 -type f -name '*.tv' ! -name bouquets.tv 2>/dev/null | wc -l | tr -d ' ')
 RADIO_FILES=$(find "$STAGE_E2" -maxdepth 1 -type f -name '*.radio' ! -name bouquets.radio 2>/dev/null | wc -l | tr -d ' ')
@@ -288,9 +306,24 @@ if [ "$HAS_DB" -eq 1 ]; then rm -f "$TARGET_E2/lamedb" "$TARGET_E2/lamedb5" 2>/d
 [ "$HAS_RADIO" -eq 1 ] && remove_radio_set
 [ "$HAS_COMMON" -eq 1 ] && remove_common_set
 copy_e2_set "$STAGE_E2" "$TARGET_E2" || fail "Błąd kopiowania nowej listy. Sprawdź rzeczywiste wolne miejsce." apply
-copy_tuxbox_set "$STAGE_TUXBOX" "$TARGET_TUXBOX" || fail "Błąd kopiowania XML tunerów." apply
+if [ "$INSTALL_MODE" = replace ]; then
+    copy_tuxbox_set "$STAGE_TUXBOX" "$TARGET_TUXBOX" || fail "Błąd kopiowania XML tunerów." apply
+else
+    log "SAT-ONLY: satellites.xml, terrestrial.xml i cables.xml pozostają bez zmian."
+fi
 chmod 644 "$TARGET_E2"/lamedb "$TARGET_E2"/lamedb5 "$TARGET_E2"/bouquets.tv "$TARGET_E2"/bouquets.radio "$TARGET_E2"/*.tv "$TARGET_E2"/*.radio "$TARGET_TUXBOX"/*.xml 2>/dev/null || true
 sync 2>/dev/null || true
+
+# Independently confirm the committed files, while the transactional backup
+# still exists. Roll back on ANY local DVB-T/T2/C or favourites regression.
+if [ "$INSTALL_MODE" = preserve ]; then
+    "$PY" "$MERGER" --verify "$BACKUP/e2" "$TARGET_E2" >> "$LOG_FILE" 2>&1 \
+        || fail "Kontrola po zapisie wykryła zmianę DVB-T/T2/C lub FAVOURITES. Przywrócono poprzednie dane." verify
+    REPORT_DEST="/tmp/PanelAIO/last_sat_update_report.txt"
+    mkdir -p /tmp/PanelAIO 2>/dev/null || true
+    cp -p "$WORK/smart_merge_report.txt" "$REPORT_DEST" 2>/dev/null || true
+    log "SAT-ONLY: kontrola rekordów i referencji lokalnych OK; raport: $REPORT_DEST"
+fi
 
 [ "$HAS_DB" -eq 0 ] || { [ -s "$TARGET_E2/lamedb" ] || [ -s "$TARGET_E2/lamedb5" ]; } || fail "Brak bazy usług po instalacji." verify
 [ "$HAS_TV" -eq 0 ] || { [ -s "$TARGET_E2/bouquets.tv" ] && validate_bouquet_index "$TARGET_E2/bouquets.tv" "$TARGET_E2"; } || fail "Nieprawidłowy indeks TV po instalacji." verify

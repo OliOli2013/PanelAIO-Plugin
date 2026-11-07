@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '17.0.3'
+VERSION = '18.0.0'
 
 
 def _read(path):
@@ -44,7 +44,7 @@ def run(root):
         'core/logger.py', 'core/result.py', 'core/action_registry.py',
         'core/action_dispatcher.py', 'core/activity.py', 'core/source_registry.py',
         'core/plugin_state.py', 'core/selftest.py',
-        'data/navigation.py', 'data/requested_installers.py', 'core/oscam_data.py',
+        'data/navigation.py', 'data/owned_projects.py', 'data/requested_installers.py', 'core/oscam_data.py',
         'ui/modern.py', 'ui/screens/connect.py', 'installer.sh',
         'safe_ipk_install.sh', 'install_iptv_dream_safe.sh',
         'install_s4aupdater_safe.sh', 'install_picon_updater_safe.sh',
@@ -133,6 +133,23 @@ def run(root):
                     errors.append('%s marker missing: %s' % (rel, marker))
         except Exception as exc:
             errors.append('%s audit failed: %s' % (rel, exc))
+
+    try:
+        owned = _read(os.path.join(root, 'data/owned_projects.py'))
+        navigation = _read(os.path.join(root, 'data/navigation.py'))
+        if 'PROJECT_ACTIONS' not in navigation or "('projects', 'Moje projekty', 'My projects')" not in navigation:
+            errors.append('owned projects tab not registered directly after channels')
+        if "groups['projects'] = project_items(lang)" not in navigation:
+            errors.append('owned projects are not populated')
+        if 'item[1] not in PROJECT_ACTIONS' not in navigation:
+            errors.append('duplicate owned project actions may remain in other tabs')
+        for repo in ('IPTV-Dream-Plugin', 'MyUpdater-Plugin', 'PiconUpdater',
+                     'SimpleIPTV_EPG', 'NeoRadio', 'PPChannelSync-Plugin',
+                     'E2-Doctor-Plugin', 'AIOHD-NEXT-Skin', 'OpenCamView-Plugin'):
+            if repo not in owned:
+                errors.append('owned repository missing: %s' % repo)
+    except Exception as exc:
+        errors.append('owned projects audit failed: %s' % exc)
 
     return errors
 
