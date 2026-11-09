@@ -1,0 +1,14 @@
+Commit: AIO Panel: add HD Satelit feed build profile (no key downloads, no self-update)
+
+This commit adds an optional build-time profile for HD Satelit to the existing AIO Panel repository.
+
+- No changes to the standard AIO Panel package or regular UI.
+- HD build excludes SoftCam.Key and FuryBiss/BISS download/install routes.
+- HD build disables GitHub self-update entry points, including blue key, startup prompts and custom installer route.
+- Feed-managed OPKG updates remain possible; OSCam installation, SuperKonfigurator and normal utility features remain.
+- Author attribution: Paweł Pawełek | AIO Team; GPL-3.0 source license retained.
+- Source-only export option supports the HD Satelit OpenEmbedded/BitBake feed.
+- Standalone test IPK/DEB and security regression tests are provided independently of the standard release.
+
+QA: python3 tools/build_hdsatelit.py --edition hdsatelit --source . --out dist-hdsatelit
+    python3 tools/test_hdsatelit.py --out dist-hdsatelit
