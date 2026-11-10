@@ -1,14 +1,21 @@
-Commit: AIO Panel: add HD Satelit feed build profile (no key downloads, no self-update)
+Commit: AIO Panel HD Satelit hds2: remove external Softcam feed, Jihad and Adult XXX installers
 
-This commit adds an optional build-time profile for HD Satelit to the existing AIO Panel repository.
+This is an incremental update of the existing HD Satelit build profile hds1.
+The standard AIO Panel 18.0.0 source, UI, and releases are unchanged.
 
-- No changes to the standard AIO Panel package or regular UI.
-- HD build excludes SoftCam.Key and FuryBiss/BISS download/install routes.
-- HD build disables GitHub self-update entry points, including blue key, startup prompts and custom installer route.
-- Feed-managed OPKG updates remain possible; OSCam installation, SuperKonfigurator and normal utility features remain.
-- Author attribution: Paweł Pawełek | AIO Team; GPL-3.0 source license retained.
-- Source-only export option supports the HD Satelit OpenEmbedded/BitBake feed.
-- Standalone test IPK/DEB and security regression tests are provided independently of the standard release.
+Additional HD Satelit edition restrictions:
+- Disable install_softcam_feed_safe.sh with fail-closed exit code 77.
+- Remove the automatic third-party Softcam HTTP feed fallback from install_oscam_emu_script.sh.
+- Install OSCam only from already configured HD Satelit OPKG feeds and avoid --force-overwrite.
+- Remove the external feed step from SuperKonfigurator, including direct callback fallback.
+- Remove Jihad FHD and Adult XXX installers from dynamic/static menus, installer commands and trusted remote-source registry.
+- Remove the removed feed hosts from URL allowlists and disable its legacy validator profile.
+- Retain previously implemented no-key-download, no-FuryBiss and no-AIO-GitHub-self-update restrictions.
+- Retain author attribution Paweł Pawełek | AIO Team, GNU GPL-3.0 license, OSCam and other allowed features.
 
-QA: python3 tools/build_hdsatelit.py --edition hdsatelit --source . --out dist-hdsatelit
+Testing:
+    python3 tools/build_hdsatelit.py --edition hdsatelit --source . --out dist-hdsatelit
     python3 tools/test_hdsatelit.py --out dist-hdsatelit
+
+Publish a NEW tag 18.0.0-hds2 after tests. Do not modify 18.0.0-hds1.
+Receiver-level testing is still required before enabling the feed package.

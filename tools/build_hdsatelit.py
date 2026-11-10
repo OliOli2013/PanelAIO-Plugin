@@ -22,7 +22,7 @@ import tempfile
 import zipfile
 
 PKG = 'enigma2-plugin-extensions-panelaio'
-EDITION_REV = 'hds1'
+EDITION_REV = 'hds2'
 INSTALL_SUBDIR = 'usr/lib/enigma2/python/Plugins/SystemPlugins/PanelAIO'
 SKIP = {'build_ipk.sh', 'build_deb.sh', 'SHA256SUMS.txt'}
 SOURCE_DIRS = ('assets', 'core', 'data', 'ui')
@@ -42,6 +42,9 @@ BLOCKED = frozenset((
     'CMD:CHECK_FOR_UPDATES',
     'CMD:SHOW_PENDING_AIO_UPDATE',
     'CMD:AIO_UPDATE_CHANNEL',
+    'CMD:INSTALL_SOFTCAM_SCRIPT',
+    'CMD:INSTALL_JIHAD_SKIN',
+    'CMD:INSTALL_ADULT_XXX',
 ))
 
 def is_blocked_action(action):
@@ -50,6 +53,8 @@ def is_blocked_action(action):
         return True
     lowered = value.lower()
     if any(x in lowered for x in ('softcam.key', 'softcamkey', 'furybiss', 'biss')):
+        return True
+    if any(x in lowered for x in ('updates.mynonpublic.com', 'mynonpublic', 'ahmeds200917/a.shawky', 'jihad.ipk', 'jihad_fhd', 'jihad fhd', 'belfagor2005/xxxplugin', 'xxxplugin')):
         return True
     if 'panelaio-plugin/' in lowered and any(x in lowered for x in ('installer.sh', '.ipk', '.deb')):
         return True
@@ -235,6 +240,205 @@ esac
     # Explicit marker for recipient and package inspection.
     (root/'EDITION_HDSATELIT.txt').write_text('AIO Panel HD Satelit edition: no key downloads or BISS tools; self-update only via HD Satelit feed.\nOriginal author: Paweł Pawełek | AIO Team\n', encoding='utf-8')
 
+
+
+def harden_hds2(root):
+    """Additional feed-safety requirements requested by the HD Satelit maintainers.
+
+    Blocks the external HTTP Softcam bootstrap, its automatic fallback inside
+    OSCam installer, its Super Konfigurator step, and the Jihad/Adult XXX
+    installers. These edits run only in the temporary edition snapshot.
+    """
+    # Absolutely no network or package mutation through the legacy installer.
+    legacy = root / 'install_softcam_feed_safe.sh'
+    original = legacy.read_text(encoding='utf-8')
+    if 'http://updates.mynonpublic.com/oea/feed' not in original:
+        raise RuntimeError('Fail closed: Softcam HTTP feed source changed; audit required')
+    legacy.write_text('''#!/bin/sh
+# HD Satelit hds2: external Softcam feed installer permanently disabled.
+# Safe even when invoked directly, outside of the AIO Panel menu.
+echo 'HD Satelit: external Softcam feed installer is disabled' >&2
+exit 77
+''', encoding='utf-8')
+
+    # The OSCam installer must only use packages that already exist in the
+    # receiver's configured feed. Do not bootstrap another feed as a fallback.
+    fallback = '''    if [ -z "$SELECTED" ]; then
+        log "Brak OSCam w bieżących feedach. Próba opcjonalnego feedu Softcam..."
+        AIO_SOFTCAM_LOCK_HELD=1 /bin/sh "$PLUGIN_DIR/install_softcam_feed_safe.sh" "$FEED_STATUS" >> "$LOG" 2>&1 || true
+        FEED_RESULT=$(cat "$FEED_STATUS" 2>/dev/null || true)
+        log "Wynik feedu: ${FEED_RESULT:-brak statusu}"
+        opkg update >> "$LOG" 2>&1 || true
+        refresh_package_lists
+        SELECTED=$(select_available_package 2>/dev/null || true)
+        [ -n "$SELECTED" ] || SELECTED=$(select_fuzzy_package 2>/dev/null || true)
+    fi
+'''
+    replacement = '''    if [ -z "$SELECTED" ]; then
+        log "Nie znaleziono OSCam w skonfigurowanych feedach HD Satelit. Zewnętrzne repozytoria nie będą dodawane."
+    fi
+'''
+    change_once(root, 'install_oscam_emu_script.sh', fallback, replacement, 'OSCam HTTP feed fallback')
+    change_once(root, 'install_oscam_emu_script.sh',
+        'opkg install "$SELECTED" >> "$LOG" 2>&1 || opkg install --force-overwrite "$SELECTED" >> "$LOG" 2>&1 || fail',
+        'opkg install "$SELECTED" >> "$LOG" 2>&1 || fail', 'OSCam no force-overwrite')
+    change_once(root, 'install_oscam_emu_script.sh',
+        'FEED_STATUS="/tmp/PanelAIO/aio_oscam_feed_$$.status"\n', '', 'unused feed status')
+    change_once(root, 'install_oscam_emu_script.sh',
+        'rm -f "$STATUS" "$STATUS.tmp" "$AVAILABLE" "$INSTALLED" "$FEED_STATUS"', 'rm -f "$STATUS" "$STATUS.tmp" "$AVAILABLE" "$INSTALLED"', 'remove feed status from init')
+    change_once(root, 'install_oscam_emu_script.sh',
+        'rm -f "$AVAILABLE" "$INSTALLED" "$FEED_STATUS"',
+        'rm -f "$AVAILABLE" "$INSTALLED"', 'remove feed status from cleanup')
+
+    # Remove obsolete menu items from both static and dynamically built lists.
+    menus = root / 'data' / 'menus.py'
+    data = menus.read_text(encoding='utf-8')
+    for action in ('SKINS_PL.append(("Jihad FHD - Instalator", "CMD:INSTALL_JIHAD_SKIN"))',
+                   'SKINS_EN.append(("Jihad FHD - Installer", "CMD:INSTALL_JIHAD_SKIN"))'):
+        if data.count(action) != 1:
+            raise RuntimeError('Fail closed: Jihad menu changed; audit required: '+action)
+        data = data.replace(action+'\n', '', 1)
+    menus.write_text(data, encoding='utf-8')
+
+    runtime = root / 'runtime.py'
+    data = runtime.read_text(encoding='utf-8')
+    for action in ('CMD:INSTALL_JIHAD_SKIN', 'CMD:INSTALL_ADULT_XXX', 'CMD:INSTALL_SOFTCAM_SCRIPT'):
+        lines = data.splitlines(True)
+        hits = [ln for ln in lines if ln.lstrip().startswith('(') and action in ln and ln.lstrip().rstrip().endswith('),')]
+        if len(hits) != 2:
+            raise RuntimeError('Fail closed: expected exactly 2 runtime menu items for %s, found %d' % (action, len(hits)))
+        for ln in hits:
+            if data.count(ln) != 1:
+                raise RuntimeError('Fail closed: ambiguous runtime menu line for '+action)
+            data = data.replace(ln, '', 1)
+    runtime.write_text(data, encoding='utf-8')
+
+    # Direct method invocations must not bypass the action policy.
+    replace_method(root, 'install_softcam_script', [
+        "show_message_compat(self.sess, ('Zewnętrzny feed Softcam jest wyłączony w HD Satelit.' if self.lang == 'PL' else 'The external Softcam feed is disabled in HD Satelit.'), MessageBox.TYPE_INFO)",
+        'return',
+    ])
+    replace_method(root, '_wizard_step_install_softcam', [
+        "# If invoked by an old callback, continue without adding any feed.",
+        "self._step_done({'success': True, 'status': 'HD Satelit official feed only'})",
+    ])
+    # Even if old step lists are restored by configuration or a caller, omit it.
+    change_once(root, 'runtime.py', '        self.steps = list(steps or [])',
+        "        self.steps = [step for step in (steps or []) if step != 'install_softcam']", 'wizard step runtime filter')
+    # Do not generate external feed step in any of the start wizard variants.
+    data = runtime.read_text(encoding='utf-8')
+    old = "'channel_list', 'install_softcam', 'install_oscam'"
+    if data.count(old) != 2:
+        raise RuntimeError('Fail closed: Super Konfigurator steps changed')
+    runtime.write_text(data.replace(old, "'channel_list', 'install_oscam'"), encoding='utf-8')
+    change_once(root, 'runtime.py',
+        'feed Softcam i OSCam-Emu. Każdy krok',
+        'OSCam z repozytoriów HD Satelit. Każdy krok', 'PL wizard description')
+    change_once(root, 'runtime.py',
+        'the Softcam feed and OSCam-Emu. Every step',
+        'OSCam from configured HD Satelit feeds. Every step', 'EN wizard description')
+    change_once(root, 'runtime.py',
+        '\\n- instalację obsługi Softcam\\n',
+        '\\n- użycie dostępnego feedu OSCam HD Satelit\\n', 'PL wizard help')
+    change_once(root, 'runtime.py',
+        '\\n- install Softcam support\\n',
+        '\\n- use the configured OSCam feed\\n', 'EN wizard help')
+
+    # Strip banned installer sources from the HD edition payload. Entries do
+    # not survive as dormant install commands that a future caller could reuse.
+    installers = root / 'data' / 'requested_installers.py'
+    data = installers.read_text(encoding='utf-8')
+    for action in ('INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
+        matches = [ln for ln in data.splitlines(True) if "'"+action+"':" in ln]
+        if len(matches) != 1:
+            raise RuntimeError('Fail closed: requested installer source changed: '+action)
+        data = data.replace(matches[0], '', 1)
+    installers.write_text(data, encoding='utf-8')
+
+    # No dead command registrations in the build's navigation/metadata.
+    change_once(root, 'data/navigation.py', ' INSTALL_SOFTCAM_SCRIPT ', ' ', 'navigation Softcam feed action')
+    change_once(root, 'data/navigation.py', "'INSTALL_ADULT_XXX INSTALL_PHUB'", "'INSTALL_PHUB'", 'navigation Adult XXX')
+    change_once(root, 'core/action_registry.py', "    'CMD:INSTALL_SOFTCAM_SCRIPT', ", "    ", 'action registry Softcam feed')
+
+    # Remove old help entries that still describe executing an HTTP installer.
+    runtime = root / 'runtime.py'
+    data = runtime.read_text(encoding='utf-8')
+    for label in ('📥 Softcam - Instalator', '📥 Softcam - Installer'):
+        matches = [ln for ln in data.splitlines(True) if ln.lstrip().startswith('"'+label+'":')]
+        if len(matches) != 1:
+            raise RuntimeError('Fail closed: unsafe Softcam help remains: '+label)
+        data = data.replace(matches[0], '', 1)
+    runtime.write_text(data, encoding='utf-8')
+
+    # These remote scripts are no longer trusted as root in this edition.
+    source_registry = root / 'core' / 'source_registry.py'
+    data = source_registry.read_text(encoding='utf-8')
+    for needle_url in ('ahmeds200917/A.Shawky/', 'Belfagor2005/xxxplugin/'):
+        matches = [ln for ln in data.splitlines(True) if needle_url in ln]
+        if len(matches) != 1:
+            raise RuntimeError('Fail closed: trusted remote source changed: '+needle_url)
+        data = data.replace(matches[0], '', 1)
+    source_registry.write_text(data, encoding='utf-8')
+
+    # Retire the URL allowlist and legacy validator profile associated with
+    # that removed unverified third-party Softcam feed.
+    change_once(root, 'aio_safe_common.sh',
+        '|updates.mynonpublic.com|feeds2.mynonpublic.com', '', 'shell allowed hosts')
+    change_once(root, 'core/security.py', "    'updates.mynonpublic.com',\n", '', 'Python allowed hosts')
+    change_once(root, 'core/runtime_safety.py',
+        "    'updates.mynonpublic.com', ", '    ', 'runtime HTTPS hosts')
+    validator = root / 'core' / 'remote_script_validator.py'
+    data = validator.read_text(encoding='utf-8')
+    start = data.index('def _validate_mynonpublic_urls(text):\n')
+    end = data.index('def validate(path, profile=None):\n', start)
+    data = data[:start] + data[end:]
+    expected = "    if profile == 'mynonpublic-softcam':\n        _validate_mynonpublic_urls(text)\n        if 'softcam-feed-universal' not in low:\n            raise ValueError('Softcam feed package marker is missing')\n        if not re.search(r'\\bopkg\\b', low):\n            raise ValueError('opkg operation is missing')"
+    if data.count(expected) != 1:
+        raise RuntimeError('Fail closed: legacy Softcam validator profile changed')
+    data = data.replace(expected,
+        "    if profile == 'mynonpublic-softcam':\n        raise ValueError('HD Satelit: external Softcam feed profile is disabled')", 1)
+    validator.write_text(data, encoding='utf-8')
+
+    # Clear edition marker describes these additional restrictions.
+    change_once(root, 'EDITION_HDSATELIT.txt',
+        'no key downloads or BISS tools; self-update only via HD Satelit feed.',
+        'no key downloads, BISS tools, external Softcam HTTP feed, Jihad skin or Adult XXX; AIO updates only via HD Satelit feed.',
+        'edition marker')
+
+
+def assert_hds2_policy(root):
+    policy = {}
+    exec(compile((root/'core/edition_policy.py').read_bytes(), str(root/'core/edition_policy.py'), 'exec'), policy)
+    for action in ('CMD:INSTALL_SOFTCAM_SCRIPT', 'CMD:INSTALL_JIHAD_SKIN', 'CMD:INSTALL_ADULT_XXX',
+                   'remote_script:http://updates.mynonpublic.com/oea/feed',
+                   'https://raw.githubusercontent.com/ahmeds200917/A.Shawky/main/jihad.ipk',
+                   'https://raw.githubusercontent.com/Belfagor2005/xxxplugin/main/installer.sh'):
+        if not policy['is_blocked_action'](action):
+            raise RuntimeError('Missing HD Satelit installer guard: ' + action)
+    for permitted in ('CMD:SUPER_SETUP_WIZARD', 'CMD:INSTALL_BEST_OSCAM', 'CMD:INSTALL_LEVI45_OSCAM', 'CMD:INSTALL_PHUB'):
+        if policy['is_blocked_action'](permitted):
+            raise RuntimeError('Unexpected block of permitted feature: ' + permitted)
+    for forbidden in ('http://updates.mynonpublic.com/oea/feed',
+                      'raw.githubusercontent.com/ahmeds200917/A.Shawky',
+                      'raw.githubusercontent.com/Belfagor2005/xxxplugin'):
+        for file in root.rglob('*'):
+            if file.is_file() and (file.suffix in ('.py', '.sh') or file.name == 'EDITION_HDSATELIT.txt'):
+                if forbidden in file.read_text(encoding='utf-8', errors='replace'):
+                    raise RuntimeError('Forbidden installer source remains in HD package: '+str(file))
+    runtime = (root/'runtime.py').read_text(encoding='utf-8')
+    if "'install_softcam', 'install_oscam'" in runtime:
+        raise RuntimeError('Wizard continues to select the external feed')
+    if "self.steps = [step for step in (steps or []) if step != 'install_softcam']" not in runtime:
+        raise RuntimeError('Wizard missing external-feed step filter')
+    sh = root/'install_softcam_feed_safe.sh'
+    r = subprocess.run(['/bin/sh', str(sh)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if r.returncode != 77:
+        raise RuntimeError('Softcam installer is not fail closed')
+    osc = (root/'install_oscam_emu_script.sh').read_text(encoding='utf-8')
+    if 'install_softcam_feed_safe.sh' in osc or '--force-overwrite' in osc:
+        raise RuntimeError('Unsafe OSCam fallback is still active')
+    print('PASS: hds2 installer restrictions, wizard, official-feed-only OSCam')
+
 def syntax_and_selftest(root):
     for path in sorted(root.rglob('*.py')):
         if '__pycache__' in path.parts:
@@ -365,7 +569,9 @@ def main():
         stage.mkdir()
         version = stage_repo(source, stage)
         harden(stage)
+        harden_hds2(stage)
         syntax_and_selftest(stage)
+        assert_hds2_policy(stage)
         out.mkdir(parents=True, exist_ok=True)
         if args.source_only:
             for c in stage.rglob('__pycache__'):

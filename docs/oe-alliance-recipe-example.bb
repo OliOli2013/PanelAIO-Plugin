@@ -1,7 +1,7 @@
 # Reference only. Adapt MACHINE/DISTRO, SRCREV, and file ownership to HD Satelit
 # build practices before enabling in a production OpenEmbedded layer.
 SUMMARY = "AIO Panel 18.0.0 HD Satelit edition"
-DESCRIPTION = "AIO management tools built without key-download and GitHub self-update capabilities"
+DESCRIPTION = "AIO management tools built without key downloads, external Softcam feed, Jihad/Adult XXX installers or GitHub self-updates"
 LICENSE = "GPL-3.0-only"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=1ebbd3e34237af26da5dc08a4e440464"
 SRC_URI = "git://github.com/OliOli2013/PanelAIO-Plugin.git;branch=main;protocol=https"
