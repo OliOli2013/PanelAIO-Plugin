@@ -1,4 +1,4 @@
-AIO Panel 18.2.0 | visual previews release
-Nine appearance themes, modern icons and universal installation preview cards.
-Skin screenshots retained; receiver-installed skin previews supported.
-Transparent picon illustration picker and background switch.
+AIO Panel 18.2.1 | stable distribution
+Dashboard themes, PNG menu icons, skin previews and automatic wizard channel setup.
+Appearance editor startup fix for Enigma2 screen activation.
+Nine appearance themes with live preview, including a light palette.

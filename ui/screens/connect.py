@@ -559,9 +559,9 @@ def _panel_current_version():
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'version.txt')
         with open(path, 'r') as handle:
             version = handle.read().strip()
-        return version or '18.2.0'
+        return version or '18.2.1'
     except Exception:
-        return '18.2.0'
+        return '18.2.1'
 
 
 def diagnostic_report(data):
@@ -808,7 +808,7 @@ class AIOConnectQRScreen(Screen):
         path = None
         for source in sources:
             try:
-                request = Request(source, headers={'User-Agent': 'AIOPanel/18.2.0', 'Accept': 'image/png,image/*'})
+                request = Request(source, headers={'User-Agent': 'AIOPanel/18.2.1', 'Accept': 'image/png,image/*'})
                 response = urlopen(request, timeout=12)
                 raw = response.read()
                 try:
@@ -967,7 +967,7 @@ class AIOConnectUpdatesScreen(Screen):
     def _fetch_update(self, url):
         if not url:
             return {}
-        request = Request(url, headers={'User-Agent': 'AIOPanel/18.2.0', 'Cache-Control': 'no-cache'})
+        request = Request(url, headers={'User-Agent': 'AIOPanel/18.2.1', 'Cache-Control': 'no-cache'})
         response = urlopen(request, timeout=7)
         raw = response.read()
         try:

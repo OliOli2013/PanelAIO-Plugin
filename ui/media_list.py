@@ -10,10 +10,6 @@ from Plugins.SystemPlugins.PanelAIO.data.navigation import TITLES
 
 ASSETS = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons')
 CATEGORY_ICONS = dict((name, key) for key, pl, en in TITLES for name in (pl, en))
-try:
-    from enigma import BT_SCALE
-except ImportError:
-    BT_SCALE = 0
 
 
 class MediaMenu(MenuList):
@@ -31,24 +27,19 @@ class MediaMenu(MenuList):
             row = [label]
             inset = 6
             if icons:
-                small_path = os.path.join(ASSETS, icon + '.png')
+                if self.row_height >= 40:
+                    side, folder = 36, 'medium'
+                elif self.row_height >= 28:
+                    side, folder = 24, ''
+                else:
+                    side, folder = 18, 'compact'
                 if icon not in self.pixmaps:
-                    large_path = os.path.join(ASSETS, 'large', icon + '.png')
-                    path = large_path if BT_SCALE else small_path
+                    path = os.path.join(ASSETS, folder, icon + '.png')
                     self.pixmaps[icon] = LoadPixmap(path) if os.path.isfile(path) else None
                 pixmap = self.pixmaps[icon]
                 if pixmap is not None:
-                    side = min(self.row_height - 6, 36) if BT_SCALE else 24
-                    params = {'flags': BT_SCALE} if BT_SCALE else {}
-                    try:
-                        image = MultiContentEntryPixmapAlphaBlend(pos=(inset, (self.row_height-side)//2),
-                            size=(side, side), png=pixmap, **params)
-                    except TypeError:
-                        if small_path not in self.pixmaps:
-                            self.pixmaps[small_path] = LoadPixmap(small_path)
-                        image = MultiContentEntryPixmapAlphaBlend(pos=(inset, (self.row_height-24)//2),
-                            size=(24, 24), png=self.pixmaps[small_path])
-                        side = 24
+                    image = MultiContentEntryPixmapAlphaBlend(pos=(inset, (self.row_height-side)//2),
+                        size=(side, side), png=pixmap)
                     row.append(image)
                     inset += side + 7
             row.append(MultiContentEntryText(pos=(inset, 0), size=(self.row_width-inset-12, self.row_height),

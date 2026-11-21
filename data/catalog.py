@@ -43,12 +43,14 @@ def menu_items(lang, python_major, only_skins=False, exclude_skins=False, availa
         if group == 'skins':
             compatible = [p for p in packages if p in (available_skins or [])]
             if not compatible: continue
+            CATALOG[key]['preview_package'] = compatible[0]
             used.update(compatible)
         label = pl if lang == 'PL' else en
         result.append((label + (' [feed obrazu]' if lang == 'PL' else ' [image feed]'), 'feed:' + key))
     if only_skins:
+        from Plugins.SystemPlugins.PanelAIO.core.feed_inventory import is_skin_package
         for package in (available_skins or []):
-            if package in used: continue
+            if package in used or not is_skin_package(package): continue
             key = 'native-' + package
             CATALOG[key] = dict(group='skins', packages=[package])
             label = package.replace('enigma2-plugin-skins-', '').replace('enigma2-skin-', '')

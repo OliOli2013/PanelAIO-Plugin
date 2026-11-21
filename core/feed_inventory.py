@@ -16,6 +16,11 @@ def _read(command, timeout=8):
     if process.returncode: return ''
     return output[0][0].decode('utf-8', 'replace')
 
+def is_skin_package(name):
+    return (name.startswith(('enigma2-plugin-skins-', 'enigma2-skin-'))
+            and not name.endswith(('-dev', '-dbg', '-src', '-doc', '-staticdev', '-devsrc')))
+
+
 def skin_packages():
     """Only packages actually advertised by this receiver's own feed/cache."""
     try:
@@ -26,4 +31,4 @@ def skin_packages():
             text = _read(['apt-cache', 'dumpavail'])
             names = [line.split(':', 1)[1].strip() for line in text.splitlines() if line.startswith('Package:')]
         except OSError: return []
-    return sorted(set(name for name in names if name.startswith(('enigma2-plugin-skins-', 'enigma2-skin-'))))
+    return sorted(set(name for name in names if is_skin_package(name)))

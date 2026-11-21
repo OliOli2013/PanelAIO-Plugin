@@ -1,0 +1,182 @@
+AIO Panel 18.2.1 — publisher images and package previews. Individual marks belong to their authors. Images scaled for Enigma2. Sources of the original twelve images are in credits.txt.
+
+skin | algemeen-pd1loi-hd-full-hd | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-algemeen-pd1loi-hd-full-hd_3.0_all.ipk | usr/share/enigma2/PD1LOI-Full-HD/prev.png
+skin | anadol | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/Anadol/usr/share/enigma2/Anadol/prev.png
+skin | army-mod | publisher artwork | https://github.com/openhdf/army-mod-skin/blob/330af303e911fb7a841b7e10fdf6766a50d6c575/usr/share/enigma2/Army.HDF.Mod/prev.png
+skin | army-moodblue-hd | publisher artwork | https://github.com/Taykun345/skin-PLi-Army-MoodBlueHD-mod/blob/8716a829af735f8aa41bf94db039c595ee5d2691/usr/share/enigma2/Army_MoodBlue_mod/prev.png
+skin | artemis-mod-dragon | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-artemis-mod-dragon_8.7.poster.backdrop_all.ipk | ./usr/share/enigma2/Artemis_mod_dragon/prev.png
+skin | ax-blue-fhd-4atv | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/AX-Blue-FHD-4ATV/usr/share/enigma2/AX_Blue_FHD_4ATV/prev.png
+skin | ax-blue-fhd-4hdf | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/AX-Blue-FHD-4HDF/usr/share/enigma2/AX_Blue_FHD_4HDF/prev.png
+skin | basic-hd | publisher artwork | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/BASIC-HD/prev.png
+skin | blackalu | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-blackalu_Coolman_V6.0_mipsel.ipk | usr/share/enigma2/BlackAlu-Coolman-Mod/prev.png
+skin | blackshadowse-p | publisher preview | https://github.com/BlackHole/skins/blob/75c177624c6f75d44ce1eeabf910a0a677ffa742/BlackShadowSE_P/usr/share/enigma2/BlackShadowSE_P/prev.png
+skin | blackspirit.hd | publisher preview | https://github.com/DeadEyE-OpenATV/BlackSpirit.HD/blob/a1702c150d0c61c3824ddd7aee3e239551e50ac4/usr/share/enigma2/BlackSpirit.HD/prev.png
+skin | blue-hd | publisher artwork | https://github.com/oe-alliance/oe-alliance-skins/blob/600402d73b88f911f4a24aeff279672d3a86cb8c/Rossi/Blue-HD/prev.png
+skin | blue-line-oct-4hdf | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/Blue-Line-OCT-4HDF/usr/share/enigma2/Blue-Line-OCT-4HDF/prev.png
+skin | blue-line-oe-4atv | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/Blue-Line-OE-4ATV/usr/share/enigma2/Blue-Line-OE-4ATV/prev.png
+skin | blueaccents-fhd | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/BlueAccents-FHD/usr/share/enigma2/BlueAccents-FHD/prev.png
+skin | blueaccents-fhd-4atv | publisher preview | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-blueaccents-fhd-4atv_1.1+git1513+3ca5d510+3ca5d51a06-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/BlueAccents-FHD/prev.png
+skin | blueaccents-hd-4hdf | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/BlueAccents-HD-4HDF/usr/share/enigma2/BlueAccents-HD/prev.png
+skin | brushedalu-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/BrushedAlu-HD/meta/brushedalu-hd.jpg
+skin | bundesligafhd | publisher preview | https://feeds2.mynonpublic.com/8.0/sf8008/all/enigma2-plugin-skins-bundesligafhd_1.4+git1513+3ca5d510+3ca5d51a06-r0_all.ipk | ./usr/share/enigma2/BundesligaFHD/preview/channelselection/ChannelSelection_TV-Spielfilm.jpg
+skin | bundesligawqhd | publisher preview | https://feeds2.mynonpublic.com/8.0/sf8008/all/enigma2-plugin-skins-bundesligawqhd_1.4+git1513+3ca5d510+3ca5d51a06-r0_all.ipk | ./usr/share/enigma2/BundesligaWQHD/preview/channelselection/ChannelSelection_TV-Spielfilm.jpg
+skin | default-hd-brown | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-default-hd-brown_0.1_mips32el.ipk | usr/share/enigma2/Default-HD-brown/prev.png
+skin | default-hd-green | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-default-hd-green_0.1_mips32el.ipk | usr/share/enigma2/Default-HD-green/prev.png
+skin | default-hd-grey | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-default-hd-grey_0.1_mips32el.ipk | usr/share/enigma2/Default-HD-grey/prev.png
+skin | default-hd-red-dark | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-default-hd-red-dark_0.1_mips32el.ipk | usr/share/enigma2/Default-HD-red-dark/prev.png
+skin | dmcconcinnityhd | publisher preview | https://github.com/openatv/enigma2-plugin-skins-dmcconcinnityhd/blob/26e860c8b2f3507b7e4c3f86f8a9268ed12f51ea/usr/share/enigma2/DMConcinnity-HD/prev.png
+skin | dmconcinnity-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/DMConcinnity-HD/prev.png
+skin | dmm-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/dmm-HD/meta/dmm-hd.jpg
+skin | dreammm-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/DreamMM-HD/meta/dreammm-hd.jpg
+skin | dreamtv-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/dreamTV-HD/meta/dreamtv-hd.jpg
+skin | dtv-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/dTV-HD/meta/dtv-hd.jpg
+skin | dtv-hd-reloaded | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/dTV-HD-Reloaded/meta/dtv-hd-reloaded.jpg
+skin | e2-darkos | publisher preview | https://github.com/DimitarCC/E2-DarkOS-skin/blob/49a85a8a7e1977540832d30eb30c60e851e8e38b/usr/share/enigma2/E2-DarkOS/prev.png
+skin | e2darkos | publisher preview | https://downloads.openpli.org/feeds/openpli-9-release/all/enigma2-plugin-skins-e2darkos_1.0+git282+89e64d8-r0.0_all.ipk | ./usr/share/enigma2/E2-DarkOS/prev.png
+skin | elgato-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Elgato-HD/meta/elgato-hd.jpg
+skin | glamouraurafhd | publisher artwork | https://raw.githubusercontent.com/MCelliotG/GlamourAuraFHD-skin/0a7f781b0efc81a40eb3692ec4c7be606e74d3bc/usr/share/enigma2/GlamourAuraFHD/prev.png
+skin | glamouraurafhd-atv | publisher artwork | https://github.com/MCelliotG/GlamourAuraFHD-ATV-skin/blob/b4d1a33faff56b75e910594ea66efb143f41d2a4/usr/share/enigma2/GlamourAuraFHD-ATV/prev.png
+skin | glamouraurafhd-opd | publisher artwork | https://github.com/formiano/GlamourAuraSky-skin/blob/69d4d1349e476dc3cbc435d24e4ed9f8dbbc4039/usr/share/enigma2/GlamourAuraSky/prev.png
+skin | gradient-fhd-4atv | publisher artwork | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-gradient-fhd-4atv_1.5+git1513+3ca5d510+3ca5d51a06-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/GradientFHD/prev.png
+skin | gradientfhd | publisher artwork | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/GradientFHD/usr/share/enigma2/GradientFHD/prev.png
+skin | gradientwqhd | publisher artwork | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/GradientWQHD/usr/share/enigma2/GradientWQHD/prev.png
+skin | iflatfhd | publisher preview | https://github.com/openatv/iflat/blob/9f8076396cee7b3d5f644debae7a5bdf60be0457/usr/share/enigma2/iFlatFHD/prev.png
+skin | infinity-neo | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-infinity-neo_V.7.6-r5_all.ipk | usr/share/enigma2/Infinity-neo/prev.png
+skin | kerni-hd1 | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Kerni-HD1/meta/kerni-hd1.jpg
+skin | kerni-hd1r2 | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Kerni-HD1R2/meta/kerni-hd1r2.jpg
+skin | kiddac-1080-onyx | publisher artwork | https://github.com/kiddac/Slyk_Onyx_1080/blob/2db8ddb67b9b752b82618b8e2628952b9e1ae144/Slyk_Onyx_1080/usr/share/enigma2/slyk-onyx-1080/prev.png
+skin | kiddac-1080-slyk-q | publisher artwork | https://github.com/kiddac/Slyk_Q_1080/blob/582e8fab5698bbf8f9e4e446cf436ce7a4ee072a/Slyk_Q_1080/usr/share/enigma2/slyk-q-1080/prev.png
+skin | kiddac-1080-slyk-r19 | publisher artwork | https://github.com/kiddac/Slyk_R19_1080/blob/a008a34cc560e13bce5dc9719135c4d0e354484a/Slyk_1080_R19/usr/share/enigma2/slyk-1080-r19/prev.png
+skin | kitte888-fhd-all | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-kitte888-fhd-all_9.15_all.ipk | ./usr/share/enigma2/Kitte888/prev.png
+skin | kitte888lite-fhd-all | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-kitte888lite-fhd-all_1.2_all.ipk | ./usr/share/enigma2/Kitte888Lite/prev.png
+skin | kravenfhd | publisher artwork | https://github.com/atvcaptain/KravenFHD/blob/0b3e3321407117b0e287b61d4d772d5e4659f06e/usr/share/enigma2/KravenFHD/prev.png
+skin | kravenhd | publisher artwork | https://github.com/oerlgrey/KravenHD/blob/0eebbb68dfb14bc2b66c1f8bde4435f1dd6e16e2/usr/share/enigma2/KravenHD/prev.png
+skin | kravenvb | publisher artwork | https://github.com/atvcaptain/KravenVB/blob/8e846da067ef51ea0bfdb7a4431355f64ea37874/usr/share/enigma2/KravenVB/prev.png
+skin | lava-pmod | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-lava-pmod_0.5_mips32el.ipk | usr/share/enigma2/Lava/prev.png
+skin | madmax-impossible | publisher preview | https://github.com/m4dhouse/MadMax-Atv/blob/22d83905ac6b055e379beb097271daee50dafdce/MadMax-Impossible-Skin/usr/share/enigma2/MadMax/prev.png
+skin | magic | publisher preview | https://downloads.openpli.org/feeds/openpli-9-release/all/enigma2-plugin-skins-magic_1.2+git331+8b5fb84-r0.2_all.ipk | ./usr/share/enigma2/Magic/prev.png
+skin | metrix-atv-fhd-icons | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-metrix-atv-fhd-icons_7.6.0+git2880+89aac840+89aac840c2-r1_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/MetrixHD/FHD/icons/weather.png, ./usr/share/enigma2/MetrixHD/FHD/icons/google.png, ./usr/share/enigma2/MetrixHD/FHD/colors/00647687.png, ./usr/share/enigma2/MetrixHD/FHD/icons/timer_icetv.png, ./usr/share/enigma2/MetrixHD/FHD/icons/menu_setup_reset.png, ./usr/share/enigma2/MetrixHD/FHD/mymetrixlite/colors/1C1C1C.png, ./usr/share/enigma2/MetrixHD/FHD/skin_default/icons/input_info.png, ./usr/share/enigma2/MetrixHD/FHD/icons/menu_system_AutomaticVolumeAdjustment.png
+skin | metrix-atv-uhd-icons | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-metrix-atv-uhd-icons_7.6.0+git2880+89aac840+89aac840c2-r1_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/MetrixHD/UHD/icons/weather.png, ./usr/share/enigma2/MetrixHD/UHD/buttons/text.png, ./usr/share/enigma2/MetrixHD/UHD/colors/000F6EB2.png, ./usr/share/enigma2/MetrixHD/UHD/icons/no_coverArt.png, ./usr/share/enigma2/MetrixHD/UHD/icons/menu_setup_setup.png, ./usr/share/enigma2/MetrixHD/UHD/mymetrixlite/colors/0F0F0F.png, ./usr/share/enigma2/MetrixHD/UHD/skin_default/buttons/key_exit.png, ./usr/share/enigma2/MetrixHD/UHD/Plugins/SystemPlugins/SoftwareManager/upgradeable.png
+skin | metrix-atv-weather-icons | publisher artwork | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-metrix-atv-weather-icons_8.0.1+git3020+2c38cb50+2c38cb5907-r1_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/MetrixHD/animated_weather_icons/0/a0.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/6/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/13/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/20/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/27/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/34/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/41/a7.png, ./usr/share/enigma2/MetrixHD/animated_weather_icons/NA/a7.png
+skin | metrix-spa | publisher artwork | https://github.com/openspa/MetrixHD/blob/a1e9d1f65f2d60f9705981117eb07b55c7dc82dc/usr/share/enigma2/MetrixHD/prev.png
+skin | metrixconfluencexp-pro-atv-dragon-lululla | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-metrixconfluencexp-pro-atv-dragon-lululla_3.0_all.ipk | ./usr/share/enigma2/MetriXconfluencExp/prev.png
+skin | metrixfhd-neo | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-metrixfhd-neo_V.7.5.6_v6.1_all.ipk | usr/share/enigma2/Metrixfhd-neo/prev.png
+skin | multibox-fhd-skin-4hdf | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/Multibox-FHD-Skin-4HDF/usr/share/enigma2/Multibox/prev.png
+skin | multibox-fhd-skin-4opd | publisher preview | https://github.com/stein17/Skins-for-openOPD/blob/ac4fba4cf840a9c82098bd9045e1b4d4373934a7/Multibox-FHD-Skin-4OPD/usr/share/enigma2/Multibox/prev.png
+skin | mx-gravityair-dragon | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2_plugin_skins_mx_gravityair_dragon_1_1_Atv_xtraevent_all.ipk | ./usr/share/enigma2/MX-GravityAir-Atv/prev.png
+skin | mx-hq9w | publisher preview | https://github.com/BlackHole/skins/blob/75c177624c6f75d44ce1eeabf910a0a677ffa742/MX_HQ9W/usr/share/enigma2/MX_HQ9W/prev.png
+skin | mx-slim-line-np | publisher preview | https://github.com/BlackHole/skins/blob/75c177624c6f75d44ce1eeabf910a0a677ffa742/MX_Slim-Line_NP/usr/share/enigma2/MX_Slim-Line_NP/prev.png
+skin | mx-titanium-c | publisher preview | https://github.com/BlackHole/skins/blob/75c177624c6f75d44ce1eeabf910a0a677ffa742/MX_Titanium_C/usr/share/enigma2/MX_Titanium_C/prev.png
+skin | mynovum-hd | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/myNOVUM_HD/skin.xml | Nou/skin/NOVUM_HD_Common/images/myInfobarR1.png, Nou/skin/NOVUM_HD_Common/images/myInfobar.png
+skin | mynovum-hd-weather | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/myNOVUM_HD_Weather/skin.xml | Nou/skin/NOVUM_HD_Common/images/myInfobarR.png, Nou/skin/NOVUM_HD_Common/images/myInfobar.png
+skin | mynovum-hd2 | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/myNOVUM_HD2/skin.xml | Nashu/myNOVUM_HD2/images/myInfobar.png, Nashu/myNOVUM_HD2/images/iconbg3.png, Nashu/myNOVUM_HD2/images/iconbg2.png
+skin | mynovum-hd2-black | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/myNOVUM_HD2_Black/skin.xml | Nashu/myNOVUM_HD2_Black/images/myInfobar2.png, Nashu/myNOVUM_HD2_Black/images/iconbg3.png, Nashu/myNOVUM_HD2_Black/images/iconbg2.png
+skin | mynovumhd2 | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/myNOVUM_HD2/skin.xml | Nashu/myNOVUM_HD2/images/myInfobar.png, Nashu/myNOVUM_HD2/images/iconbg3.png, Nashu/myNOVUM_HD2/images/iconbg2.png
+skin | mynovumhd2black | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/myNOVUM_HD2_Black/skin.xml | Nashu/myNOVUM_HD2_Black/images/myInfobar2.png, Nashu/myNOVUM_HD2_Black/images/iconbg3.png, Nashu/myNOVUM_HD2_Black/images/iconbg2.png
+skin | nemesis.blackbox | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.BlackBox/meta/nemesis.blackbox.jpg
+skin | nemesis.blueline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Blueline/meta/nemesis.blueline.jpg
+skin | nemesis.blueline.extended | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Blueline.Extended/meta/nemesis.blueline.extended.jpg
+skin | nemesis.blueline.single | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Blueline.Single/meta/nemesis.blueline.single.jpg
+skin | nemesis.chromeline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.ChromeLine/meta/nemesis.chromeline.jpg
+skin | nemesis.chromeline.cobolt | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.ChromeLine.Cobolt/meta/nemesis.chromeline.cobolt.jpg
+skin | nemesis.flatline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Flatline/meta/nemesis.flatline.jpg
+skin | nemesis.flatline.blue | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Flatline.Blue/meta/nemesis.flatline.blue.jpg
+skin | nemesis.flatline.picon.blue | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Flatline.Picon.Blue/prev.png
+skin | nemesis.flatline.picon.lava | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Flatline.Picon.Lava/prev.png
+skin | nemesis.glassline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.GlassLine/meta/nemesis.glassline.jpg
+skin | nemesis.greenline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greenline/meta/nemesis.greenline.jpg
+skin | nemesis.greenline.extended | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greenline.Extended/meta/nemesis.greenline.extended.jpg
+skin | nemesis.greenline.single | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greenline.Single/meta/nemesis.greenline.single.jpg
+skin | nemesis.greyline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greyline/meta/nemesis.greyline.jpg
+skin | nemesis.greyline.extended | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greyline.Extended/meta/nemesis.greyline.extended.jpg
+skin | nemesis.greyline.single | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.Greyline.Single/meta/nemesis.greyline.single.jpg
+skin | nemesis.shadowline | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Nemesis.ShadowLine/meta/nemesis.shadowline.jpg
+skin | neonovum-hd | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/NeoNOVUM_HD/skin.xml | Nou/skin/NOVUM_HD_Common/images/neoinfobar.png, Nou/skin/NOVUM_HD_Common/images/infobar_top.png
+skin | neonovum-hd-weather | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/NeoNOVUM_HD_Weather/skin.xml | Nou/skin/NOVUM_HD_Common/images/infobarRw.png, Nou/skin/NOVUM_HD_Common/images/neoinfobar.png, Nou/skin/NOVUM_HD_Common/images/infobar_top.png
+skin | nou-hd | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/Nou_HD/skin.xml | Nou/skin/NOVUM_HD_Common/images/nouinfobar.png
+skin | nou-hd-weather | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nou/skin/Nou_HD_Weather/skin.xml | Nou/skin/NOVUM_HD_Common/images/infobarRw.png, Nou/skin/NOVUM_HD_Common/images/nouinfobar.png, Nou/skin/NOVUM_HD_Common/images/infobar_top.png
+skin | novaler-s-fhd-green | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-novaler-s-fhd-green_4.0_all.ipk | ./usr/share/enigma2/Novaler-S-FHD-Green/prev.png
+skin | novum-fhd-light | publisher artwork | https://github.com/oe-alliance/oe-alliance-skins/blob/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/NOVUM_FHD_Light/prev.png
+skin | novum-hd-slim | layout (sample data) | https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/Nashu/NOVUM_HD_Slim/skin.xml | Nashu/NOVUM_HD_Slim/images/Infobar_bg.png
+skin | octetfhd | publisher artwork | https://github.com/openspa/OctEtFHD-skin/blob/3dd39ab1b9289f1c1fa0d0c21541f30b1fecb131/usr/share/enigma2/OctEtFHD/prev.png
+skin | octethd | publisher artwork | https://github.com/openspa/OctEtHD-skin/blob/e9ab595bee12061653a93a05b4837cfc5266b405/usr/share/enigma2/OctEtHD/prev.png
+skin | om-black | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-om-black_1.4_mips32el.ipk | ./usr/share/enigma2/om-black/prev.png
+skin | opd-blue-line | publisher preview | https://github.com/stein17/Skins-for-openOPD/blob/ac4fba4cf840a9c82098bd9045e1b4d4373934a7/OPD-Blue-Line/usr/share/enigma2/OPD-Blue-Line/prev.png
+skin | overlayhd | publisher preview | https://github.com/IanSav/OverlayHD/blob/89873823662a68d19a6304caf10ecc552069de73/usr/share/enigma2/OverlayHD/prev.png
+skin | ozeta-atv | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-ozeta-atv_3.4_all.ipk | ./usr/share/enigma2/oZeta-FHD/prev.png
+skin | pax | publisher artwork | https://github.com/teamblue-e2/skin/blob/c8fecbb6ebb2c71119779e00fab32be54bade9dd/usr/share/enigma2/GigabluePax/prev.png
+skin | pax-v2 | publisher artwork | https://github.com/teamblue-e2/skin/blob/c8fecbb6ebb2c71119779e00fab32be54bade9dd/usr/share/enigma2/GigabluePax/prev.png
+skin | pd1loi-hd-full-hd | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-pd1loi-hd-full-hd_2.5_all.ipk | usr/share/enigma2/PD1LOI-HD/prev.png
+skin | pd1loi-hd-night | publisher preview | https://downloads.openpli.org/feeds/openpli-9-release/all/enigma2-plugin-skins-pd1loi-hd-night_2.6.1+git605+0f06f71-r0.11_all.ipk | ./usr/share/enigma2/Pd1loi-HD-night/prev.png
+skin | pdreamy-fhd | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-pdreamy-fhd_2.1-r4_all.ipk | ./usr/share/enigma2/pDreamy-FHD/prev.png
+skin | pli-fullnight-fhd-stein17-mod | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/PLi-FullNight-FHD-stein17-Mod/usr/share/enigma2/PLi-FullNight-FHD-stein17-Mod/prev.png
+skin | pli-hd-fullnight-4atv | publisher preview | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-skins-pli-hd-fullnight-4atv_1.1+git1513+3ca5d510+3ca5d51a06-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/share/enigma2/PLi-HD-FullNight_stein17_Mod/prev.png
+skin | pli-hd-fullnight-stein17-mod | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/PLi-HD-FullNight_stein17_Mod/usr/share/enigma2/PLi-HD-FullNight_stein17_Mod/prev.png
+skin | pmodhd | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-pmodhd_1.02_all.ipk | usr/share/enigma2/pmodHD/prev.png
+skin | premium-fhd-black | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-premium-fhd-black_3.1_all.ipk | ./usr/share/enigma2/Premium-FHD-Black/prev.png
+skin | premium-fhd-blue | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-premium-fhd-blue_3.1_all.ipk | ./usr/share/enigma2/Premium-FHD-Blue/prev.png
+skin | premium-fhd-magenta | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-premium-fhd-magenta_3.1_all.ipk | ./usr/share/enigma2/Premium-FHD-Magenta/prev.png
+skin | red-hd | publisher artwork | https://github.com/oe-alliance/oe-alliance-skins/blob/600402d73b88f911f4a24aeff279672d3a86cb8c/Rossi/Red-HD/prev.png
+skin | revolution-pro | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-revolution-pro_full.7.1.dragon_all.ipk | ./usr/share/enigma2/skin_revolution_pro/prev.png
+skin | ruinfinityhd | publisher preview | https://github.com/openmips/ru_infinity_hd/blob/da2c7a0b6275d3b032e2b66e6b694b4a38e669a2/usr/share/enigma2/ru_infinity_hd/prev.png
+skin | sevenhd | publisher preview | https://github.com/openatv/SevenHD/blob/b4a206c73029393014a74b9c031b978f3c6fc280/data/usr/lib/enigma2/python/Plugins/Extensions/SevenHD/images/Preview.jpg
+skin | simple | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/simple/meta/simple.jpg
+skin | simple-gray | publisher preview | https://github.com/Huevos/skin-SimpleGray/blob/3bf476a4585af8ba9f64ee4a9dbd439688c6b1c5/usr/share/enigma2/SimpleGray-HD/prev.png
+skin | skallihd-wuesty-mod-edition1 | publisher preview | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-skallihd-wuesty-mod-edition1_3.0_all.ipk | usr/share/enigma2/SkalliHD-Edition-1/prev.png
+skin | spa24hd | publisher artwork | https://github.com/OpenSPA/openspa-enigma2-skins/blob/336768e2bc9333ea4d5e1fd010bf81d537d71190/Spa24HD/prev.png
+skin | steampunk | publisher artwork | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/Steampunk/usr/share/enigma2/Steampunk/prev.png
+skin | steampunk-hd-skin-4hdf | publisher artwork | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/Steampunk-HD-Skin-4HDF/usr/share/enigma2/Steampunk/prev.png
+skin | steampunk-hd-skin-4opd | publisher artwork | https://github.com/stein17/Skins-for-openOPD/blob/ac4fba4cf840a9c82098bd9045e1b4d4373934a7/Steampunk-HD-Skin-4OPD/usr/share/enigma2/Steampunk/prev.png
+skin | swain | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/SWAIN/meta/swain.jpg
+skin | swain-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/SWAIN-HD/meta/swain-hd.jpg
+skin | teambluehd | publisher preview | https://github.com/oerlgrey/TeamBlueHD/blob/7456bc41bb2088f7b58e5368dff7b641e4e01db0/usr/share/enigma2/TeamBlueHD/prev.png
+skin | ultimate-hd-skin-4atv | publisher preview | https://github.com/stein17/Skins-for-openATV/blob/3ca5d51a068120e8b0dd160841979728d2ed5b61/Ultimate-HD-Skin-4ATV/usr/share/enigma2/Ultimate/prev.png
+skin | ultimate-hd-skin-4hdf | publisher preview | https://github.com/stein17/Skins-for-openHDF/blob/1dac89fbf743f866c97809e3fbf4c7365dfa0831/Ultimate-HD-Skin-4HDF/usr/share/enigma2/Ultimate/prev.png
+skin | ultimate-hd-skin-4opd | publisher preview | https://github.com/stein17/Skins-for-openOPD/blob/ac4fba4cf840a9c82098bd9045e1b4d4373934a7/Ultimate-HD-Skin-4OPD/usr/share/enigma2/Ultimate/prev.png
+skin | ultraviolet | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/UltraViolet/meta/ultraviolet.jpg
+skin | vali-xd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Vali-XD/meta/vali-xd.jpg
+skin | vali.hd.atlantis | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Vali.HD.atlantis/meta/vali.hd.atlantis.jpg
+skin | vali.hd.nano | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Vali.HD.nano/meta/vali.hd.nano.jpg
+skin | vali.hd.warp | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/Vali.HD.warp/meta/vali.hd.warp.jpg
+skin | valihdflex | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-valihdflex_3.9-r7_all.ipk | usr/share/enigma2/Vali.HD.flex/prev.png
+skin | vix-turquoise-hd | publisher artwork | https://github.com/norhap/Turquoise-HD/blob/eeb6c810fb080ff639a39c66f760e98db2567e06/usr/share/enigma2/ViX-Turquoise-HD/prev.png
+skin | xionhdf | publisher preview | https://github.com/openhdf/XionHDF/blob/493003e8938a4961bb4548fde81532d6eb0df12f/usr/share/enigma2/XionHDF/prev.png
+skin | xmas-meets-skallihd-mod | publisher artwork | https://feeds2.mynonpublic.com/7.6/sf8008/all/enigma2-plugin-skins-xmas-meets-skallihd-mod_1.01_all.ipk | usr/share/enigma2/SkalliHD-Christmas/prev.png
+skin | yads-hd | publisher preview | https://github.com/opendreambox/enigma2-skins/blob/472e9d9257dbef16205b00b3dc748eeddc10e3aa/skins/YADS-HD/meta/yads-hd.jpg
+skin | zombi.fullhd | publisher preview | https://www.enigma2.net/wp-content/uploads/2019/10/zombi-fhd-1-1024x576.jpg
+plugin | ajpanel | art | https://github.com/AMAJamry/AJPanel/blob/d38af503a359dd9e1b6b4e0b7a8f9af9577b86c5/help/Screenshot_Hotkeys.jpg
+plugin | autotimer | screen | https://raw.githubusercontent.com/openatv/enigma2-doku/7ef1e139a5b12fdd4a80d70a09a9ee89f6df1964/src/assets/captures/en/autotimer-overview.png
+plugin | bmx | logo | https://github.com/kiddac/Bouquet_Maker_Xtream/blob/cad9baaaf6ded5efbcef43fe7b3e92c47eda2e55/BouquetMakerXtream/usr/lib/enigma2/python/Plugins/Extensions/BouquetMakerXtream/skin/fhd/common/logo.png
+plugin | chocho | logo | https://github.com/OliOli2013/PanelAIO-Plugin/blob/e0db3b161de7e8198af6116df81d892312b9d3e9/third_party/enigma2-plugin-extensions-chocholousek-picons_5.0.240904_all.ipk | /images/plugin.png
+plugin | ciefp | screen | https://github.com/ciefp/CiefpOscamEditor/blob/5bfcfca48733f841b1042934bc26c48de4c48ea4/screenshot1.jpg
+plugin | dreamexplorer | screen | https://github.com/OpenPLi/enigma2-plugins/blob/f67cf485cfcb9035dacdeaea62493f72d8e17b9e/dreamexplorer/meta/dreamexplorer.jpg
+plugin | e2doctor | screen | https://github.com/OliOli2013/E2-Doctor-Plugin/blob/432f4e2cac5f48c897c7ecc6e8eb6c140849fbdb/docs/dashboard-preview-2.4.1.png
+plugin | e2iplayer | logo | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-extensions-e2iplayer_2026.11.20.01-git6410+68552500+6855250e3b-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/icons/FHD/iptvlogo.png
+plugin | emc | screen | https://raw.githubusercontent.com/openatv/enigma2-doku/7ef1e139a5b12fdd4a80d70a09a9ee89f6df1964/src/assets/captures/en/emc-library.png
+plugin | epgimport | screen | https://raw.githubusercontent.com/Belfagor2005/EPGImport-99/8d604b74b65c3fd927d5924df5bc2b6975c5f44a/screen/1.jpg
+plugin | epgrefresh | screen | https://github.com/OpenPLi/enigma2-plugins/blob/f67cf485cfcb9035dacdeaea62493f72d8e17b9e/epgrefresh/meta/epgrefresh_en.jpg
+plugin | epgsearch | screen | https://github.com/OpenPLi/enigma2-plugins/blob/f67cf485cfcb9035dacdeaea62493f72d8e17b9e/epgsearch/meta/epgsearch_en.jpg
+plugin | filecommander | screen | https://raw.githubusercontent.com/openatv/enigma2-doku/7ef1e139a5b12fdd4a80d70a09a9ee89f6df1964/src/assets/captures/en/file-commander.png
+plugin | footonsat | logo | https://raw.githubusercontent.com/fairbird/FootOnsat/ef5276ff00774e97e7f2f2a75aca583fa2145ce1/usr/lib/enigma2/python/Plugins/Extensions/FootOnSat/logo/logo1.png
+plugin | iptvdream | screen | https://github.com/OliOli2013/IPTV-Dream-Plugin/blob/27067fec53143042487372c6ba95c79d3476b9c5/pliki/iptv-dream-8.0.1.png
+plugin | jedi | logo | https://github.com/OliOli2013/PanelAIO-Plugin/blob/e0db3b161de7e8198af6116df81d892312b9d3e9/third_party/enigma2-plugin-extensions-jedimakerxtream_6.37_all.ipk | /icons/JediMakerXtream.png
+plugin | jediepg | logo | https://feeds2.mynonpublic.com/8.0/sf8008/all/enigma2-plugin-extensions-jediepgxtream_2.13-20240805-git25+7cf0d7d0+7cf0d7db6c-r3_all.ipk | ./usr/lib/enigma2/python/Plugins/Extensions/JediEPGXtream/icons/logo.png
+plugin | movieretitle | screen | https://github.com/OpenPLi/enigma2-plugins/blob/f67cf485cfcb9035dacdeaea62493f72d8e17b9e/movieretitle/meta/movieretitle.jpg
+plugin | myupdater | logo | https://raw.githubusercontent.com/OliOli2013/MyUpdater-Plugin/eaa4c3b920d122bde3b7616bc4629ba650ab56f6/usr/lib/enigma2/python/Plugins/Extensions/MyUpdater/logo.png
+plugin | neoradio | screen | https://github.com/OliOli2013/NeoRadio/blob/1291c5a96968cc2671efa7deb55f363b3b0d620e/docs/images/neoradio-main.jpg
+plugin | opencamview | logo | https://github.com/OliOli2013/OpenCamView-Plugin/blob/7715406d02f6ddc7dd39e0a3b7195c249a7d983d/OpenCamView/plugin.png
+plugin | openwebif | screen | https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/blob/e46534fb6696cb33eb36ed9982d9e5db1bd8a31e/screenshots/base-main.jpg
+plugin | panelaio | logo | https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/e0db3b161de7e8198af6116df81d892312b9d3e9/logo_original_14.png
+plugin | piconupdater | screen | https://github.com/OliOli2013/PiconUpdater/blob/001814a80f5f23aa0e504b2c88c0a5f9cc5b33e1/screenshot.png
+plugin | ppchannelsync | logo | https://github.com/OliOli2013/PPChannelSync-Plugin/blob/fbee8624fdf7136fab96e994d3bdc5661b56f903/assets/plugin.png
+plugin | serviceapp | screen | https://raw.githubusercontent.com/openatv/enigma2-doku/7ef1e139a5b12fdd4a80d70a09a9ee89f6df1964/src/assets/captures/en/serviceapp-replacement.png
+plugin | simpleiptvepg | logo | https://github.com/OliOli2013/SimpleIPTV_EPG/blob/eef74c2396531272d1b53237ce7d8e3e5f9ee2bf/plugin.png
+plugin | subssupport | logo | https://raw.githubusercontent.com/mx3L/subssupport/48dc1b63c53663b052cd1c98ba5c4f32f7494156/plugin/ss_set_FHD.png
+plugin | transcoding | logo | https://raw.githubusercontent.com/oe-alliance/oe-alliance-plugins/be3fdf917b663f7df54fc8b68aabbb611694c214/TransCodingSetup/src/plugin.png
+plugin | tvgarden | screen | https://github.com/Belfagor2005/TVGarden/blob/f70fff514d3cdd9f7b882bc4083bb7c5b994b856/screen/screen1.png
+plugin | vavoo | screen | https://github.com/Belfagor2005/vavoo/blob/09e26c3b9ea0035de70373549d21f42bf0abcf19/screen/screen1.png
+plugin | virtualzap | screen | https://github.com/OpenPLi/enigma2-plugins/blob/f67cf485cfcb9035dacdeaea62493f72d8e17b9e/virtualzap/meta/virtualzap.jpg
+plugin | weather | logo | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-extensions-weatherplugin_V1.0-git131+cb2a2ea0+cb2a2eafd4-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/lib/enigma2/python/Plugins/Extensions/WeatherPlugin/weather.png
+plugin | xstreamity | logo | https://github.com/kiddac/XStreamity/blob/8353ba3c1507c8a90aa3330ed18a4a70a8dc1a8c/XStreamity/usr/lib/enigma2/python/Plugins/Extensions/XStreamity/skins/fhd/common/logo.png
+plugin | youtube | logo | https://feeds2.mynonpublic.com/8.0/sf8008/cortexa15hf-neon-vfpv4/enigma2-plugin-extensions-youtube_git1296+15a7fba0+15a7fba89b-r0_cortexa15hf-neon-vfpv4.ipk | ./usr/lib/enigma2/python/Plugins/Extensions/YouTube/icons/icon.png
+plugin | zoompanel | logo | https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/dbe4fcab4cb6e7f55c851e122d073806384c29d8/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/plugin.png

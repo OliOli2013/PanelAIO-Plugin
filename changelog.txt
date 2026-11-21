@@ -1,3 +1,10 @@
+AIO Panel 18.2.1
+• Nowe okno pod klawiszem INFO. EXIT wraca do tej samej pozycji. Obsługa błędów dekodowania i niedostępnych zdjęć.
+• Galeria offline obejmuje skórki z dalszych stron feedu. INFO powiększa zdjęcie. Przy skórce bez znanej grafiki można poszukać podglądu w pakiecie odbiornika.
+• Picony 13°E, 19,2°E i zestaw łączony mają odrębne próbki z oryginalnych archiwów. Żółty przycisk zmienia tło pod przezroczystymi logotypami.
+• Instalowane wtyczki pokazują zrzut lub logo autora. Pozostałe instalatory mają karty z opisem i źródłem. Wybrane listy kanałów pokazują przykładowe bukiety.
+• Kolorowe ikony przy nazwach są dopasowane do wysokości wiersza. Podglądy i ikony można włączać niezależnie w MENU → Wygląd panelu.
+
 AIO Panel 18.2.0
 - Nowe kolorowe ikony kategorii i narzędzi w wyższej rozdzielczości.
 - Podgląd wszystkich kategorii funkcji instalacyjnych: grafiki opisowe, bez udawania zdjęć interfejsów wtyczek.

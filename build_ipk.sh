@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIO Panel 18.2.0 — release builder for GitKraken/Linux.
+# AIO Panel 18.2.1 — release builder for GitKraken/Linux.
 # Creates real OPKG-compatible .ipk and dpkg-compatible .deb packages.
 set -eu
 export PYTHONDONTWRITEBYTECODE=1
@@ -7,7 +7,7 @@ export LC_ALL=C
 export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-1795132800}
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 VERSION=$(tr -d '\r\n ' < "$ROOT/version.txt")
-[ "$VERSION" = 18.2.0 ] || { echo 'Expected AIO Panel 18.2.0' >&2; exit 1; }
+[ "$VERSION" = 18.2.1 ] || { echo 'Expected AIO Panel 18.2.1' >&2; exit 1; }
 PKG=enigma2-plugin-extensions-panelaio
 OUTDIR="$ROOT/release"
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/panelaio18-build.XXXXXX")
@@ -41,9 +41,11 @@ if [ -f "$ROOT/tests/test_release_18.py" ]; then
     python3 "$ROOT/tests/test_release_18.py" "$ROOT"
 fi
 python3 "$ROOT/tests/test_dashboard.py"
+python3 "$ROOT/tests/test_skin_feed.py"
 python3 "$ROOT/tests/test_visual_18_2.py" "$DST"
 if [ -n "${AIO_TEST_PYTHON2:-}" ]; then
     "$AIO_TEST_PYTHON2" "$ROOT/tests/test_dashboard.py"
+    "$AIO_TEST_PYTHON2" "$ROOT/tests/test_skin_feed.py"
     "$AIO_TEST_PYTHON2" "$DST/core/python_syntax_check.py" "$DST"
     "$AIO_TEST_PYTHON2" "$DST/core/selftest.py" "$DST"
 fi

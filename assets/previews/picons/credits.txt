@@ -1,0 +1,15 @@
+Transparent channel marks sampled from the indicated AIO Panel archive. Marks belong to their respective broadcasters.
+https://github.com/OliOli2013/PanelAIO-Plugin
+
+13e.png  Picony.zip  picon/tvp1hd.png
+13e.png  Picony.zip  picon/polsathd.png
+13e.png  Picony.zip  picon/tvnhd.png
+13e.png  Picony.zip  picon/tvpsporthd.png
+19e.png  Picony1.zip  1_0_19_283D_3FB_1_C00000_0_0_0.png
+19e.png  Picony1.zip  1_0_19_2B66_3F3_1_C00000_0_0_0.png
+19e.png  Picony1.zip  1_0_19_283E_3FB_1_C00000_0_0_0.png
+19e.png  Picony1.zip  1_0_19_2B8E_3F2_1_C00000_0_0_0.png
+both.png  Picony2.zip  1_0_1_3ABD_514_13E_820000_0_0_0.png
+both.png  Picony2.zip  1_0_19_2B66_3F3_1_C00000_0_0_0.png
+both.png  Picony2.zip  1_0_19_3DCD_640_13E_820000_0_0_0.png
+both.png  Picony2.zip  1_0_19_283E_3FB_1_C00000_0_0_0.png

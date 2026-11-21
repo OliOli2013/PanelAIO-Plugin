@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 18.2.0
+Wersja 18.2.1
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -465,7 +465,7 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("18.2.0")
+VER = _read_local_version("18.2.1")
 # The interactive picon menu uses remote archives; never bundle them in IPK.
 # Full Super Configurator preserves its original picon URL and workflow.
 BASE_DEPENDENCIES_COMMAND = """set -e
@@ -2818,7 +2818,7 @@ def _get_levi45_available_version_sync():
             from urllib.request import Request, urlopen
         except ImportError:
             from urllib2 import Request, urlopen
-        request = Request(url, headers={'User-Agent': 'AIO-Panel/18.2.0'})
+        request = Request(url, headers={'User-Agent': 'AIO-Panel/18.2.1'})
         response = urlopen(request, timeout=7)
         content = response.read(16384)
         response.close()
@@ -5994,10 +5994,13 @@ class PanelAIO(Screen):
             (('Picony 13E + 19.2E' if self.lang == 'PL' else 'Picons 13E + 19.2E'), PICON_SET_COMBINED),
         ]
         label = 'Wybierz zestaw piconów' if self.lang == 'PL' else 'Choose picon package'
-        from Plugins.SystemPlugins.PanelAIO.ui.picon_picker import PiconPreviewPicker
-        self.sess.openWithCallback(
-            lambda choice: self._on_picon_pack_selected(title, choice),
-            PiconPreviewPicker, choices, self.lang)
+        callback = lambda choice: self._on_picon_pack_selected(title, choice)
+        from Plugins.SystemPlugins.PanelAIO.ui.appearance import preferences
+        if preferences()[2]:
+            from Plugins.SystemPlugins.PanelAIO.ui.media_details import PiconPackScreen
+            self.sess.openWithCallback(callback, PiconPackScreen, label, choices, self.lang)
+        else:
+            self.sess.openWithCallback(callback, ChoiceBox, title=label, list=choices)
 
     def _on_picon_pack_selected(self, title, choice):
         if not choice:

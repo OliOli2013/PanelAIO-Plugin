@@ -1,5 +1,24 @@
-# 📺 AIO Panel 18.2.0 — centrum zarządzania Enigma2
+# 📺 AIO Panel 18.2.1 — centrum zarządzania Enigma2
 
+## Nowości 18.2.1
+
+**141 obrazów skórek, 36 podglądów wtyczek i 39 kolorowych ikon.** Pod klawiszem **INFO** panel otwiera własne okno podglądu. **EXIT** wraca do zaznaczonej pozycji. Zestaw zawiera po cztery oryginalne logotypy z każdego z trzech archiwów piconów.
+
+Zaznacz skórkę lub wtyczkę na dowolnej stronie i naciśnij **INFO**, aby powiększyć jej obraz. Katalog zawiera zrzuty, grafiki autorów i oznaczone wizualizacje z oryginalnych plików skórki. Podglądy dołączone do wtyczki działają offline. Dla nowej skórki z feedu panel sprawdza też pliki odbiornika. Jeśli nadal brakuje zdjęcia, otwórz **INFO** i naciśnij **zielony**. Panel wyszuka plik podglądu w pakiecie z feedu tego odbiornika.
+
+W **EPG / Picony** otwórz **Pobierz picony**. Przesuwaj zaznaczenie między zestawami 13°E, 19,2°E i łączonym. **Żółty** przełącza tło pod przezroczystymi logotypami. **INFO** powiększa próbkę, a **OK** otwiera wybór miejsca instalacji.
+
+Wtyczki mają etykiety zrzutu, loga lub grafiki autora. Dla instalatorów bez obrazu **INFO** otwiera opis funkcji i źródło. Wybrane listy SAT pokazują przykładowe bukiety. W **MENU → Wygląd panelu** możesz osobno przełączyć kolorowe ikony i podglądy multimediów.
+
+[Pochodzenie zdjęć](assets/previews/gallery-credits.txt) · [Próbki piconów](assets/previews/picons/credits.txt) · [Licencja ikon](assets/icons/LICENSE-Fluent.txt)
+
+**Wydanie 18.2.1** · wersja standardowa AIO Team
+
+**Autor:** Paweł Pawełek | AIO Team  
+**Repozytorium:** [OliOli2013/PanelAIO-Plugin](https://github.com/OliOli2013/PanelAIO-Plugin)  
+**Języki interfejsu:** polski i angielski
+
+AIO Panel to rozbudowane centrum narzędzi dla odbiorników **Enigma2**. Pozwala zarządzać listami kanałów, piconami, wtyczkami, skórkami, emulatorami OSCam, kopiami zapasowymi i narzędziami systemowymi — z poziomu pilota.
 
 ## Nowości 18.2.0
 
@@ -7,13 +26,6 @@ Nowe kolorowe ikony kategorii i instalatorów, podglądy funkcji (oznaczone ilus
 dokładniejsze znajdowanie rzeczywistych zrzutów skórek oraz czytelna grafika zastępcza,
 gdy autor nie udostępnia zdjęcia. Wybór piconów ma osobne okno z przełączanym jasnym i ciemnym tłem
 dla **ilustracji przezroczystości**; nie jest to zdjęcie z archiwum piconów.
-**Wydanie 18.2.0** · wersja standardowa AIO Team
-
-**Autor:** Paweł Pawełek | AIO Team  
-**Repozytorium:** [OliOli2013/PanelAIO-Plugin](https://github.com/OliOli2013/PanelAIO-Plugin)  
-**Języki interfejsu:** polski i angielski
-
-AIO Panel to rozbudowane centrum narzędzi dla odbiorników **Enigma2**. Pozwala zarządzać listami kanałów, piconami, wtyczkami, skórkami, emulatorami OSCam, kopiami zapasowymi i narzędziami systemowymi — z poziomu pilota.
 
 ## Motywy w 18.1.2
 
@@ -112,8 +124,8 @@ Dostępność poszczególnych pakietów zewnętrznych zależy od ich źródeł, 
 
 ### Pobieranie pakietów
 
-- **[AIO Panel 18.2.0 — IPK](release/enigma2-plugin-extensions-panelaio_18.2.0_all.ipk)** — systemy z **OPKG**, np. wiele obrazów OpenATV i OpenPLi;
-- **[AIO Panel 18.2.0 — DEB](release/enigma2-plugin-extensions-panelaio_18.2.0_all.deb)** — systemy z **DPKG**, np. wybrane obrazy DreamOS.
+- **[AIO Panel 18.2.1 — IPK](release/enigma2-plugin-extensions-panelaio_18.2.1_all.ipk)** — systemy z **OPKG**, np. wiele obrazów OpenATV i OpenPLi;
+- **[AIO Panel 18.2.1 — DEB](release/enigma2-plugin-extensions-panelaio_18.2.1_all.deb)** — systemy z **DPKG**, np. wybrane obrazy DreamOS.
 
 Wybierz pakiet odpowiedni dla menedżera pakietów zainstalowanego na tunerze.
 
@@ -122,13 +134,13 @@ Przykładowa instalacja po przesłaniu pliku do katalogu `/tmp`:
 **OPKG (IPK):**
 
 ```sh
-opkg install /tmp/enigma2-plugin-extensions-panelaio_18.2.0_all.ipk
+opkg install /tmp/enigma2-plugin-extensions-panelaio_18.2.1_all.ipk
 ```
 
 **DPKG (DEB):**
 
 ```sh
-dpkg -i /tmp/enigma2-plugin-extensions-panelaio_18.2.0_all.deb
+dpkg -i /tmp/enigma2-plugin-extensions-panelaio_18.2.1_all.deb
 ```
 
 Po instalacji uruchom ponownie interfejs Enigma2, jeżeli jest to wymagane.

@@ -15,8 +15,8 @@ if [ -d "$DST" ]; then
 fi
 FREE=$(df -Pk /usr/lib/enigma2/python/Plugins 2>/dev/null | awk 'NR==2 {print $4; exit}')
 case "$FREE" in ''|*[!0-9]*) FREE=0 ;; esac
-if [ "$FREE" -gt 0 ] && [ "$FREE" -lt 6144 ]; then
-    echo "AIO Panel: insufficient free flash space (minimum 6 MiB)." >&2
+if [ "$FREE" -gt 0 ] && [ "$FREE" -lt 14336 ]; then
+    echo "AIO Panel: insufficient free flash space (minimum 14 MiB)." >&2
     exit 1
 fi
 exit 0

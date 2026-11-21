@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AIO 18.2.0 static release/ordering/dedup checks without Enigma2 runtime."""
+"""AIO 18.2.1 static release/ordering/dedup checks without Enigma2 runtime."""
 import sys, ast, re, os, pathlib, subprocess
 from collections import Counter
 src=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else '.').resolve()
@@ -26,7 +26,7 @@ for lang, ch, pr in [('PL','Listy kanałów','Moje projekty'),('EN','Channel lis
     for action in PROJECT_ACTIONS:
         assert counter[action]==1,(lang,action,counter[action])
         assert project_description(action,lang)
-assert (src/'version.txt').read_text().strip()=='18.2.0'
+assert (src/'version.txt').read_text().strip()=='18.2.1'
 for state, expected in (
     ('install ok installed', True),
     ('install user installed', True),
@@ -51,4 +51,4 @@ assert 'r11968 / Emu r803 (stan 07.11)' in runtime
 assert 'AIO {} | stable' in runtime
 for file in ('plugin.py','runtime.py','ui/screens/connect.py','data/navigation.py','data/owned_projects.py'):
     ast.parse((src/file).read_text(),filename=file)
-print('OK: 18.2.0 — 10 projects, no duplication, exact tab order, PL/EN, versions, core retained')
+print('OK: 18.2.1 — 10 projects, no duplication, exact tab order, PL/EN, versions, core retained')

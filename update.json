@@ -1,10 +1,10 @@
 {
   "name": "AIO Panel",
-  "version": "18.2.0",
+  "version": "18.2.1",
   "package": "enigma2-plugin-extensions-panelaio",
   "channel": "stable",
-  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_18.2.0_all.ipk",
+  "ipk": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_18.2.1_all.ipk",
   "installer": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/installer.sh",
-  "changelog": "Kolorowe ikony HD, podglądy instalowanych funkcji, lepsze wyszukiwanie zdjęć skórek i wybór piconów z podglądem przezroczystości.",
-  "deb": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_18.2.0_all.deb"
+  "changelog": "Poprawiony podgląd pod INFO. 141 obrazów skórek offline, 36 podglądów wtyczek, przezroczyste picony z trzech archiwów i nowe ikony menu.",
+  "deb": "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/release/enigma2-plugin-extensions-panelaio_18.2.1_all.deb"
 }

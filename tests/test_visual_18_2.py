@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AIO Panel 18.2.0: offline tests for graphical preview assets and package selection."""
+"""AIO Panel 18.2.1: offline tests for graphical preview assets and package selection."""
 import importlib.util
 import sys
 import tempfile
@@ -34,7 +34,7 @@ assert Path(vp.local_image('skin:unknown-feed-skin')).name=='skins-missing.png'
 for name in ('13e','19e','combo'):
     if Image is not None:
         image=Image.open(pp.sample_path(name)).convert('RGBA')
-        assert image.size==(480,245)
+        assert image.size==(536,282)
         assert image.getchannel('A').getextrema()==(0,255),name
     else:
         with open(pp.sample_path(name),'rb') as handle:
@@ -45,15 +45,15 @@ for name in ('13e','19e','combo'):
 for path in (root/'assets/icons/large').glob('*.png'):
     assert sp.png_size(str(path))[0]==128,path
 assert len(list((root/'assets/cards').glob('*.png')))>=18
-assert sp.skin_id('CMD:INSTALL_FURY_SKIN')=='fury'
+assert sp.skin_id('CMD:INSTALL_FURY_SKIN') is None  # FuryBiss is a softcam tool.
 # Real installed skin screenshot wins over any generic placeholder.
 with tempfile.TemporaryDirectory() as tmp:
-    x=Path(tmp)/'Blue-HD';x.mkdir()
+    x=Path(tmp)/'Custom-Local';x.mkdir()
     if Image is not None:
         Image.new('RGBA',(300,150),(100,150,200,255)).save(x/'prev.png')
     else:
         import shutil
         shutil.copyfile(pp.sample_path('13e'),str(x/'prev.png'))
-    assert sp.local_image('blue-hd', tmp)==str(x/'prev.png')
-assert 'PiconPreviewPicker' in (root/'runtime.py').read_text(encoding='utf8')
-print('OK: AIO Panel 18.2.0 - preview lookup, categories, assets, PNG alpha, picker integration')
+    assert sp.local_image('custom-local', tmp)==str(x/'prev.png')
+assert 'PiconPackScreen' in (root/'runtime.py').read_text(encoding='utf8')
+print('OK: AIO Panel 18.2.1 - preview lookup, categories, assets, PNG alpha, picker integration')

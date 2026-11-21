@@ -7,6 +7,7 @@ from Components.ActionMap import ActionMap
 from Components.Label import Label
 from Components.MenuList import MenuList
 from Components.Pixmap import Pixmap
+from Tools.LoadPixmap import LoadPixmap
 from Components.config import config, ConfigSelection, ConfigYesNo, configfile
 from Screens.Screen import Screen
 from Screens.MessageBox import MessageBox
@@ -148,8 +149,8 @@ class AppearanceScreen(Screen):
     def refresh(self):
         theme, icons, previews = self._pending_settings
         title = NAMES[self.lang][theme]
-        labels = ('Motyw', 'Ikony w menu', 'Podglądy skórek', 'Tak', 'Nie') if self.lang == 'PL' else (
-            'Theme', 'Menu icons', 'Skin previews', 'On', 'Off')
+        labels = ('Motyw', 'Ikony w menu', 'Podglądy multimediów', 'Tak', 'Nie') if self.lang == 'PL' else (
+            'Theme', 'Menu icons', 'Media previews', 'On', 'Off')
         index = max(0, self['items'].getSelectionIndex() or 0)
         self['items'].setList([ensure_str('%s    %s' % (k, v)) for k, v in zip(labels[:3],
             (title, labels[3 if icons else 4], labels[3 if previews else 4]))])
@@ -182,29 +183,85 @@ class AppearanceScreen(Screen):
         self.close(True)
 
 
-def place_preview(widget, path, rect):
-    from Plugins.SystemPlugins.PanelAIO.core.skin_previews import png_size
-    dimensions = png_size(path)
-    if not dimensions:
-        return
+def _picture_rect(dimensions, rect):
     x, y, width, height = rect
     iw, ih = dimensions
-    scale = min(float(width) / iw, float(height) / ih)
-    w, h = max(1, int(iw * scale)), max(1, int(ih * scale))
-    widget.instance.move(ePoint(x + (width-w)//2, y + (height-h)//2))
-    widget.instance.resize(eSize(w, h))
-    widget.instance.setPixmapFromFile(path)
+    ratio = min(float(width) / iw, float(height) / ih)
+    w, h = max(1, int(iw * ratio)), max(1, int(ih * ratio))
+    return x + (width - w) // 2, y + (height - h) // 2, w, h
 
 
-class PreviewScreen(Screen):
-    def __init__(self, session, title, path):
+def _load_picture(widget, path):
+    instance = getattr(widget, 'instance', None)
+    if instance is None or not path:
+        return False
+    try:
+        pixmap = LoadPixmap(ensure_str(path))
+        if pixmap is None:
+            return False
+        instance.setPixmap(pixmap)
+        return True
+    except (TypeError, ValueError, RuntimeError, IOError, OSError):
+        return False
+
+
+def place_preview(widget, path, rect):
+    from Plugins.SystemPlugins.PanelAIO.core.skin_previews import png_size
+    dimensions = png_size(path) if path else None
+    instance = getattr(widget, 'instance', None)
+    if not dimensions or instance is None:
+        return False
+    x, y, width, height = _picture_rect(dimensions, rect)
+    instance.move(ePoint(x, y))
+    instance.resize(eSize(width, height))
+    return _load_picture(widget, path)
+
+
+class AIOPanelMediaPreview(Screen):
+    def __init__(self, session, title, path, background=None, lang=None):
+        from Plugins.SystemPlugins.PanelAIO.core.skin_previews import png_size
         Screen.__init__(self, session)
+        self.skinName = 'AIOPanelMediaPreview'
+        self._picture_path = path
+        self._sample_background = background if background in ('#E7EBEE', '#182633') else None
         self.setTitle(ensure_str(title))
         dw, dh = desktop_size()
-        width = min(dw - 48, (dh - 92) * 16 // 9)
-        height = width * 9 // 16
-        self.skin = '<screen position="center,center" size="%d,%d" backgroundColor="#080D13"><widget name="shot" position="0,0" size="%d,%d" scale="1" /></screen>' % (width, height, width, height)
+        width, height = max(80, int(dw) - 48), max(64, int(dh) - 90)
+        dims = png_size(path) if path else None
+        x, y, w, h = _picture_rect(dims or (16, 9), (0, 0, width, height))
+        self.skin = (
+            '<screen name="AIOPanelMediaPreview" position="center,center" size="%d,%d" backgroundColor="%s">'
+            '<widget name="shot" position="%d,%d" size="%d,%d" scale="1" alphatest="blend" zPosition="1" />'
+            '<widget name="message" position="0,0" size="%d,%d" font="Regular;%d" foregroundColor="#E7EDF3" '
+            'backgroundColor="#101B28" halign="center" valign="center" zPosition="2" /></screen>'
+            % (width, height, self._sample_background or '#080D13', x, y, w, h,
+               width, height, min(30, max(16, width // 42))))
         self['shot'] = Pixmap()
-        self['actions'] = ActionMap(['OkCancelActions', 'InfoActions'], {
-            'ok': self.close, 'cancel': self.close, 'info': self.close}, -1)
-        self.onLayoutFinish.append(lambda: place_preview(self['shot'], path, (0, 0, width, height)))
+        self['message'] = Label(ensure_str(
+            'Nie można wyświetlić zdjęcia.  EXIT  ·  Wróć' if lang != 'EN' else
+            'This picture could not be displayed.  EXIT  ·  Back'))
+        self['actions'] = ActionMap(['OkCancelActions', 'InfoActions', 'InfobarEPGActions', 'HelpActions'], {
+            'ok': self.close, 'cancel': self.close, 'info': self.close, 'displayHelp': self.close,
+            'showEventInfo': self.close}, -1)
+        if self._sample_background:
+            self['background_actions'] = ActionMap(['ColorActions'], {'yellow': self.toggle_background}, -1)
+        # Screen.applySkin on OpenATV and OpenPLi calls bound methods directly.
+        # It passes other entries to exec(), which does not accept a lambda.
+        self.onLayoutFinish.append(self.show_picture)
+
+    def show_picture(self):
+        if _load_picture(self['shot'], self._picture_path):
+            self['message'].hide()
+            self['shot'].show()
+        else:
+            self['shot'].hide()
+            self['message'].show()
+
+    def toggle_background(self):
+        self._sample_background = '#182633' if self._sample_background == '#E7EBEE' else '#E7EBEE'
+        if self.instance is not None:
+            self.instance.setBackgroundColor(parseColor(self._sample_background))
+
+
+# Keep the import used by other AIO screens and older callers.
+PreviewScreen = AIOPanelMediaPreview

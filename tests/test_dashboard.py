@@ -81,6 +81,10 @@ class Widget(Component):
         self.visible = True
     def hide(self):
         self.visible = False
+    def setPixmap(self, pixmap):
+        assert pixmap is not None
+        self.path = pixmap
+
     def setPixmapFromFile(self, path):
         assert os.path.isfile(path), path
         self.path = path
@@ -160,7 +164,11 @@ class Session(object):
         screen, args, kwargs = self.last
         dialog = screen(self, *args, **kwargs)
         for callback in dialog.onLayoutFinish:
-            callback()
+            # Enigma2 treats non-method callbacks as code to exec() during applySkin.
+            if isinstance(callback, type(dialog.close)):
+                callback()
+            else:
+                eval(compile(callback, '<layout>', 'exec'), {})
         dialog.execBegin()
         return dialog
 
@@ -255,7 +263,8 @@ def exercise():
     config = setup()
     from Plugins.SystemPlugins.PanelAIO import runtime
     from Plugins.SystemPlugins.PanelAIO.ui import main, modern, appearance
-    from Plugins.SystemPlugins.PanelAIO.core import action_dispatcher, skin_previews, visual_previews
+    from Plugins.SystemPlugins.PanelAIO.core import action_dispatcher, skin_previews, media_catalog
+    from Plugins.SystemPlugins.PanelAIO.ui.media_details import PiconPackScreen, FeatureCardScreen
     from Plugins.SystemPlugins.PanelAIO.data.catalog import CATALOG, ROWS
     from Plugins.SystemPlugins.PanelAIO.ui.media_list import CATEGORY_ICONS
     from Plugins.SystemPlugins.PanelAIO.core.compatibility import ensure_unicode
@@ -263,6 +272,10 @@ def exercise():
     runtime._get_show_in_menu_setting = lambda *args: True
     skins = [p for row in ROWS if row[3]=='skins' for p in row[4]]
     skins.extend(['enigma2-plugin-skins-blue-hd', 'enigma2-skin-aio-unknown-test'])
+    # An installed feed can be many screens long. Include keys from across the catalog.
+    sampled = sorted(skin_previews.GALLERY['skins'])[::6]
+    skins.extend('enigma2-plugin-skins-' + n for n in sampled if 'enigma2-plugin-skins-' + n not in skins)
+    skins.append('enigma2-plugin-skins-blue-hd-dbg')
     data = {'repo_lists':[('Polska 13E AIO Panel', 'archive:'+runtime.WIZARD_CHANNEL_URL)],
             's4a_lists_full':[], 'available_skins':skins}
     main.open_main(session)
@@ -364,11 +377,18 @@ def exercise():
                     assert action[4:] in commands,(label,action)
                 elif prefix=='feed:':
                     assert action[5:] in CATALOG, action
-                visual_key = visual_previews.preview_id(action)
-                if visual_key:
+                if skin_previews.skin_id(action) and not action.startswith('feed:native-'):
                     assert panel._preview_path and panel['skin_preview'].visible,action
                 else:
-                    assert panel._preview_path is None
+                    media = media_catalog.lookup(action, CATEGORY_ICONS[category])
+                    if media_catalog.has_preview(action, media):
+                        assert panel['skin_preview'].visible, action
+                        assert panel._preview_path == media_catalog.picture(media), (action, media)
+                        assert panel._preview_path or media.kind in ('skin', 'card'), action
+                    else:
+                        assert not panel['skin_preview'].visible, action
+                    if action.endswith('-dbg'):
+                        raise AssertionError(action)
         assert len(actions)==len(set(actions)),[k for k,n in Counter(actions).items() if n>1]
         observations.append(set(actions))
     for name, original in saved.items():
@@ -424,15 +444,73 @@ def exercise():
     assert session.last[0] is appearance.PreviewScreen
     view = session.activate_last_dialog()
     assert view['shot'].path.endswith('aiohd.png')
+    assert view['shot'].visible and not view['message'].visible
+    assert view.skinName == 'AIOPanelMediaPreview'
+    session.open(appearance.PreviewScreen, 'Missing', '/missing-aio-picture.png', lang='EN')
+    missing = session.activate_last_dialog()
+    assert missing['message'].visible and not missing['shot'].visible
+    missing['actions'].actions['cancel']()
+    missing.execEnd()
     view.execEnd()
     # A late network reply may populate the cache but must never change the
     # picture or the details of the next selection.
     panel._preview_finished('blue-hd', None)
     assert panel._preview_path.endswith('aiohd.png')
     panel.switch_tab(0)
-    expected = bool(visual_previews.preview_id(panel._current_item()[1]))
-    assert bool(panel._preview_path) == expected
-    assert panel['skin_preview'].visible == expected
+    assert panel['skin_preview'].visible and not panel['flash_value'].visible
+    panel.open_support()
+    assert session.last[0] is FeatureCardScreen
+    card = session.activate_last_dialog()
+    assert 'Polska_13E_AIO_Panel.zip' in ensure_unicode(card['source'].getText())
+    assert 'bukiety' in ensure_unicode(card['body'].getText()).lower()
+    card.execEnd()
+    for ti, (_, items) in enumerate(panel.tabs):
+        unknown = [ri for ri, (_, a) in enumerate(items) if a == 'feed:native-enigma2-skin-aio-unknown-test']
+        if unknown:
+            panel.switch_tab(ti)
+            panel['menu'].moveToIndex(unknown[0])
+            panel.open_support()
+            assert session.last[0] is FeatureCardScreen
+            card = session.activate_last_dialog()
+            assert card.package == 'enigma2-skin-aio-unknown-test'
+            assert 'pakiecie' in ensure_unicode(card['keys'].getText())
+            card.execEnd()
+            break
+    for lang in ('PL','EN'):
+        panel.set_language(lang)
+        panel._prompt_picon_pack('Picon')
+        assert session.last[0] is PiconPackScreen
+        callback = session.callback
+        chooser = session.activate_last_dialog()
+        for i, (slug, url) in enumerate(zip(media_catalog.PICON_FILES,
+                (runtime.PICON_SET_13E, runtime.PICON_SET_19E, runtime.PICON_SET_COMBINED))):
+            chooser['rows'].moveToIndex(i)
+            assert chooser['sample'].path.endswith('/picons/' + slug + '.png')
+            chooser['actions'].actions['info']()
+            assert session.last[0] is appearance.PreviewScreen and session.last[1][1] == chooser['sample'].path
+            chooser.select()
+            assert chooser.result[0][1] == url
+        chooser['actions'].actions['yellow']()
+        assert chooser['backdrop'].background == '#E7EBEE'
+        chooser.enlarge()
+        enlarged = session.activate_last_dialog()
+        assert enlarged._sample_background == '#E7EBEE'
+        enlarged['background_actions'].actions['yellow']()
+        assert enlarged.instance.background == '#182633'
+        enlarged.execEnd()
+        chooser['actions'].actions['yellow']()
+        assert chooser['backdrop'].background == '#182633'
+        callback(chooser.result[0])
+        assert session.last[0] is runtime.ChoiceBox
+        assert session.last[2]['list'][0][1] == '/usr/share/enigma2/picon'
+        chooser['actions'].actions['cancel']()
+        assert chooser.result == (None,)
+        chooser.execEnd()
+    appearance.settings()[2].value=False
+    panel._prompt_picon_pack('Picon')
+    assert session.last[0] is runtime.ChoiceBox
+    appearance.settings()[2].value=True
+    panel.set_language('PL')
     panel['appearance_actions'].actions['menu']()
     assert session.last[0] is appearance.AppearanceScreen
     assert len(os.listdir(skin_previews.BUNDLED)) >= 12

@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
 """Find an image for a skin without running a package or touching receiver settings."""
 from __future__ import absolute_import
+import json
 import os
 import re
 import struct
 import tempfile
+from threading import Lock
 try:
     from urllib.request import urlopen
 except ImportError:
     from urllib2 import urlopen
 
 BUNDLED = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'previews')
+try:
+    with open(os.path.join(BUNDLED, 'catalog.json'), 'rb') as catalog_file:
+        GALLERY = json.load(catalog_file)
+except (IOError, OSError, ValueError):
+    GALLERY = {}
 CACHE = '/tmp/PanelAIO/previews'
 PROJECT = 'https://raw.githubusercontent.com/OliOli2013/PanelAIO-Plugin/main/assets/previews/'
 MAX_BYTES = 1536 * 1024
+_CACHE_LOCK = Lock()
 IDS = {
     'CMD:INSTALL_AIOHD_NEXT': 'aiohd', 'CMD:INSTALL_JIHAD_SKIN': 'jihad',
-    'CMD:INSTALL_FURY_SKIN': 'fury',
     'feed:skin-metrix': 'metrix', 'feed:skin-pli': 'pli', 'feed:skin-pli-full': 'fullnight',
     'feed:skin-simple': 'umbra', 'feed:skin-hdglass': 'glass17',
     'remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh': 'aglare',
@@ -25,9 +32,8 @@ IDS = {
 }
 PACKAGES = {'aiohd-next': 'aiohd', 'jihad': 'jihad', 'aglare-fhd-pli': 'aglare',
             'luka-fhd-pli': 'luka', 'maxy-fhd': 'maxy', 'obsidian-fhd': 'obsidian',
-            'metrix-atv': 'metrix', 'metrix-spa': 'metrix', 'pli-hd': 'pli', 'pli-hd-fullnight': 'fullnight',
-            'pli-hd-fullnight-4atv': 'fullnight', 'fullhdglass17': 'glass17',
-            'umbra': 'umbra', 'hdglass': 'glass17'}
+            'metrix-atv': 'metrix', 'pli-hd': 'pli', 'pli-hd-fullnight': 'fullnight',
+            'pli-hd-fullnight-4atv': 'fullnight', 'fullhdglass17': 'glass17', 'hdglass': 'glass17', 'metrix-spa': 'metrix'}
 OE = 'https://raw.githubusercontent.com/oe-alliance/oe-alliance-skins/600402d73b88f911f4a24aeff279672d3a86cb8c/'
 UPSTREAM = {'blue-hd': OE + 'Rossi/Blue-HD/prev.png', 'red-hd': OE + 'Rossi/Red-HD/prev.png',
             'novum-fhd-light': OE + 'Nashu/NOVUM_FHD_Light/prev.png',
@@ -47,7 +53,8 @@ def skin_id(action):
         if action.startswith(prefix):
             slug = action[len(prefix):].lower()
             if re.match(r'^[a-z0-9][a-z0-9+._-]{0,79}\Z', slug):
-                return PACKAGES.get(slug, slug)
+                aliases = GALLERY.get('skins', {})
+                return aliases.get(slug) or aliases.get(re.sub(r'[^a-z0-9]', '', slug)) or PACKAGES.get(slug, slug)
     return IDS.get(action)
 
 
@@ -71,24 +78,18 @@ def local_image(key, skin_root='/usr/share/enigma2'):
         path = os.path.join(base, key + '.png')
         if png_size(path):
             return path
-    normalize = lambda value: re.sub(r'[^a-z0-9]', '', value.lower())
-    target = normalize(key)
+    normal = lambda value: re.sub(r'[^a-z0-9]', '', value.lower())
     try:
         folders = os.listdir(skin_root)
     except OSError:
         folders = []
-    # Only look within one folder matching the selected skin. Never substitute
-    # another skin's preview, even when package names are similar.
     for folder in sorted(folders):
-        if normalize(folder) != target:
-            continue
-        base = os.path.join(skin_root, folder)
-        for name in ('prev.png', 'preview.png', 'screenshot.png', 'skin_preview.png',
-                     'screenshots/prev.png', 'screenshots/preview.png',
-                     'screens/preview.png'):
-            path = os.path.join(base, name)
-            if png_size(path):
-                return path
+        if normal(folder) == normal(key):
+            for filename in ('prev.png', 'preview.png', 'screenshot.png', 'skin_preview.png',
+                             'screenshots/prev.png', 'screenshots/preview.png', 'screens/preview.png'):
+                path = os.path.join(skin_root, folder, filename)
+                if png_size(path):
+                    return path
     return None
 
 
@@ -98,7 +99,6 @@ def fetch_image(key):
         return None
     name = key + '.png'
     url = UPSTREAM.get(key, PROJECT + name)
-    tmp = None
     try:
         source = urlopen(url, timeout=5)
         try:
@@ -107,6 +107,23 @@ def fetch_image(key):
             data = source.read(MAX_BYTES + 1)
         finally:
             source.close()
+        return cache_png(key, data)
+    except (IOError, OSError, ValueError):
+        return None
+
+
+def feed_package(action):
+    if action and action.startswith('feed:native-'):
+        return action[len('feed:native-'):]
+    return None
+
+
+def cache_png(key, data):
+    if not key or not re.match(r'^[a-z0-9][a-z0-9+._-]{0,79}\Z', key):
+        return None
+    name = key + '.png'
+    tmp = None
+    try:
         if len(data) > MAX_BYTES or not data.endswith(b'\x00\x00\x00\x00IEND\xaeB\x60\x82'):
             return None
         if not os.path.isdir(CACHE):
@@ -121,11 +138,12 @@ def fetch_image(key):
         if not png_size(tmp):
             return None
         path = os.path.join(CACHE, name)
-        os.rename(tmp, path)
-        tmp = None
-        old = [os.path.join(CACHE, n) for n in os.listdir(CACHE) if n.endswith('.png') and n != name]
-        for item in sorted(old, key=os.path.getmtime, reverse=True)[63:]:
-            os.unlink(item)
+        with _CACHE_LOCK:
+            os.rename(tmp, path)
+            tmp = None
+            old = [os.path.join(CACHE, n) for n in os.listdir(CACHE) if n.endswith('.png') and n != name]
+            for item in sorted(old, key=os.path.getmtime, reverse=True)[63:]:
+                os.unlink(item)
         return path
     except (IOError, OSError, ValueError):
         return None

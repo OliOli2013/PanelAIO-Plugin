@@ -24,10 +24,10 @@ for ROOT in /tmp /media/hdd /media/usb; do
     fi
     FREE=$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')
     case "$FREE" in ''|*[!0-9]*) continue ;; esac
-    [ "$FREE" -ge 8192 ] || continue
+    [ "$FREE" -ge 12288 ] || continue
     WORK=$(mktemp -d "$ROOT/aio-self-update.XXXXXX") && break
 done
-[ -n "$WORK" ] || { echo 'No writable staging space (8 MiB required)'; exit 1; }
+[ -n "$WORK" ] || { echo 'No writable staging space (12 MiB required)'; exit 1; }
 LOG='/tmp/aio_github_update.log'
 AIO_LOCK_DIR=''
 
@@ -177,7 +177,7 @@ else
 fi
 FREE=$(aio_free_kb "$(dirname "$DST")")
 case "$FREE" in ''|*[!0-9]*) fail 'Cannot determine free flash space' ;; esac
-[ "$FREE" -ge 6144 ] || fail 'Insufficient flash space (6 MiB required)'
+[ "$FREE" -ge 14336 ] || fail 'Insufficient flash space (14 MiB required)'
 
 # Use the same operation lock as other AIO package installations.
 UPDATE_LOCK="$AIO_LOCK_DIR"

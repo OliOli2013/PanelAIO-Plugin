@@ -25,9 +25,10 @@ except Exception:
     config = None
 
 from Plugins.SystemPlugins.PanelAIO import runtime as legacy
-from Plugins.SystemPlugins.PanelAIO.core import skin_previews, visual_previews
+from Plugins.SystemPlugins.PanelAIO.core import media_catalog, skin_previews
 from Plugins.SystemPlugins.PanelAIO.ui.appearance import (
     AppearanceScreen, PreviewScreen, PALETTES, apply_colors, fit_skin, preferences, themed_skin, place_preview)
+from Plugins.SystemPlugins.PanelAIO.ui.media_details import FeatureCardScreen
 from Plugins.SystemPlugins.PanelAIO.ui.media_list import CATEGORY_ICONS, MediaMenu
 from Plugins.SystemPlugins.PanelAIO.core.plugin_state import status_text as _plugin_status_text
 
@@ -187,7 +188,7 @@ def _modern_skin(theme='ocean'):
     geometry = {'small': ('692,350', '186,104'), 'hd': ('896,430', '252,142'),
                 'fhd': ('1154,586', '352,198')}
     pos, size = geometry[mode]
-    ET.SubElement(root, 'widget', name='skin_preview', position=pos, size=size, scale='1')
+    ET.SubElement(root, 'widget', name='skin_preview', position=pos, size=size, scale='1', alphatest='blend')
     root.set('name', 'PanelAIODashboard181')
     for name in ('sidebar', 'menu'):
         node = root.find("widget[@name='%s']" % name)
@@ -262,6 +263,8 @@ class ModernPanelAIO(legacy.PanelAIO):
         self._media_ready = False
         self._preview_key = None
         self._preview_path = None
+        self._media = None
+        self._detail_text = u''
         self._preview_timer = None
         self._fetching_key = None
         self._miss_until = {}
@@ -366,7 +369,7 @@ class ModernPanelAIO(legacy.PanelAIO):
             widget = self[widget_name]
             if widget.instance is not None and os.path.exists(path):
                 if self._pixel_paths.get(widget_name) != path:
-                    widget.instance.setPixmapFromFile(path)
+                    widget.instance.setPixmapFromFile(legacy.ensure_str(path))
                     self._pixel_paths[widget_name] = path
                 widget.show()
                 return True
@@ -454,66 +457,8 @@ class ModernPanelAIO(legacy.PanelAIO):
             return (None, None, 0, 0)
 
     def _row_icon(self, action, category):
-        if action == 'CMD:AIO_APPEARANCE':
-            return 'appearance'
-        preview = visual_previews.preview_id(action)
-        if preview and preview.startswith('skin:'):
-            return 'skins'
-        if preview and preview.startswith('card:'):
-            name = preview[5:]
-            return name if name in ('picons', 'softcam', 'video', 'camera', 'radio',
-                                     'channels', 'epg', 'iptv', 'backup', 'repair',
-                                     'update', 'network', 'plugins', 'install', 'browser') else 'install'
-        return category if category in ('channels', 'epg', 'softcam', 'backup',
-                                        'iptv', 'adult', 'projects', 'system',
-                                        'diagnostics') else 'system'
-
-    def _item_icon_name(self, action):
-        if action == 'CMD:AIO_APPEARANCE':
-            return 'appearance.png'
-        preview = visual_previews.preview_id(action)
-        if preview:
-            key = 'skins' if preview.startswith('skin:') else preview[5:]
-            if os.path.isfile(_asset(key + '.png')):
-                return key + '.png'
-        value = legacy.ensure_unicode(action or '').lower()
-        if 'aio_search' in value:
-            return 'diagnostics.png'
-        if 'aio_favorites' in value:
-            return 'star.png'
-        if 'aio_recent' in value:
-            return 'info.png'
-        if 'aio_source_health' in value:
-            return 'network.png'
-        if 'aio_update_channel' in value:
-            return 'update.png'
-        if 'aio_connect' in value or 'connect' in value:
-            if 'report' in value or 'qr' in value:
-                return 'info.png'
-            if 'updates' in value:
-                return 'update.png'
-            if 'tools' in value:
-                return 'cleanup.png'
-            return 'network.png'
-        if 'network' in value:
-            return 'network.png'
-        if 'backup' in value:
-            return 'backup.png'
-        if 'restore' in value:
-            return 'restore.png'
-        if 'uninstall' in value or 'clear_' in value or 'cleanup' in value or 'delete' in value:
-            return 'delete.png'
-        if 'restart' in value or 'reboot' in value:
-            return 'power.png'
-        if 'update' in value or 'satellites' in value or 'srvid' in value:
-            return 'update.png'
-        if value.startswith('archive:') or value.startswith('bash_raw:') or 'install' in value:
-            return 'install.png'
-        if 'info' in value or 'changelog' in value or 'tip' in value:
-            return 'info.png'
-        if 'oscam' in value or 'dvbapi' in value or 'softcam' in value:
-            return 'softcam.png'
-        return 'toolbox.png'
+        media = media_catalog.lookup(action, category)
+        return media.icon if media else category
 
     def _fallback_description(self, action):
         value = legacy.ensure_unicode(action or '')
@@ -550,8 +495,9 @@ class ModernPanelAIO(legacy.PanelAIO):
             self._set_pixmap('category_icon', os.path.join(PLUGIN_PATH, 'assets', 'icons', 'large', category_icon + '.png'))
             name, action, index, total = self._current_item()
             self['item_counter'].setText('%d/%d' % ((index + 1) if total else 0, total))
-            key = visual_previews.preview_id(action) if self.show_previews else None
-            self._select_preview(key)
+            media = media_catalog.lookup(action, category_icon)
+            self._media = media if self.show_previews and media_catalog.has_preview(action, media) else None
+            self._select_preview(action, self._media)
             if name:
                 clean_name = _strip_leading_symbol(name)
                 self['detail_title'].setText(legacy.ensure_str(_truncate(clean_name, 44)))
@@ -566,27 +512,29 @@ class ModernPanelAIO(legacy.PanelAIO):
                     state = _plugin_status_text(action, self.lang)
                 except Exception:
                     state = ''
+                description = legacy.ensure_unicode(description)
                 if state:
-                    description = (description.rstrip() + '\n\n' + state).strip()
+                    description = (description.rstrip() + u'\\n\\n' + legacy.ensure_unicode(state)).strip()
                 if action == 'CMD:AIO_APPEARANCE':
-                    description = ('Wybierz motyw, ikony menu i podglądy skórek.' if self.lang == 'PL'
-                                   else 'Choose a theme, menu icons and skin previews.')
-                if key and self._preview_path:
-                    if key.startswith('skin:'):
-                        if visual_previews.actual_photo(key):
-                            note = 'INFO  •  Zdjęcie skina' if self.lang == 'PL' else 'INFO  •  Skin screenshot'
-                        else:
-                            note = ('Brak zdjęcia skina – grafika informacyjna' if self.lang == 'PL'
-                                    else 'No skin screenshot – informational card')
-                    else:
-                        note = ('INFO  •  Ilustracja funkcji' if self.lang == 'PL' else 'INFO  •  Feature illustration')
-                    description = note + '\n' + legacy.ensure_str(description)
+                    description = (u'Wybierz motyw, ikony menu i podglądy multimediów.' if self.lang == 'PL'
+                                   else u'Choose a theme, menu icons and media previews.')
+                if action and action.startswith('archive:'):
+                    groups = media_catalog.CHANNEL_SAMPLES.get(media_catalog.archive_key(legacy.ensure_unicode(action).partition(':')[2]))
+                    if groups:
+                        label = u'Przykładowe bukiety: ' if self.lang == 'PL' else u'Sample bouquets: '
+                        description = label + u', '.join(groups) + u'\n' + description
+                self._detail_text = description
+                if self._media:
+                    kind = self._media_label()
+                    hint = u'INFO  ·  ' + kind
+                    description = hint + u'\\n' + description
                 self['detail_body'].setText(legacy.ensure_str(_truncate(description, 310)))
-                self._set_pixmap('item_icon', _asset(self._item_icon_name(action)))
+                icon = media.icon if media else category_icon
+                self._set_pixmap('item_icon', media_catalog.icon_path(icon))
             else:
                 self['detail_title'].setText('')
                 self['detail_body'].setText('')
-                self._set_pixmap('item_icon', _asset('toolbox.png'))
+                self._set_pixmap('item_icon', media_catalog.icon_path(category_icon))
         except Exception as error:
             print('[AIO Panel] modern UI refresh error:', error)
 
@@ -598,30 +546,48 @@ class ModernPanelAIO(legacy.PanelAIO):
     def _display_preview(self, path):
         self._preview_path = path
         widget = self['skin_preview']
-        if path:
+        illustration = path
+        if not illustration and self._media:
+            old_key = media_catalog.visual_previews.preview_id(self._current_item()[1])
+            if old_key and old_key.startswith('card:'):
+                illustration = media_catalog.visual_previews.local_image(old_key)
+            illustration = illustration or media_catalog.icon_path(self._media.icon)
+        if illustration:
             node = self._dashboard_xml.find("widget[@name='skin_preview']")
             rect = [int(n) for n in (node.get('position') + ',' + node.get('size')).split(',')]
-            place_preview(widget, path, rect)
-            widget.show()
+            if place_preview(widget, illustration, rect):
+                widget.show()
+            else:
+                widget.hide()
+                illustration = None
         else:
             widget.hide()
         for name in ('image_value', 'python_value', 'flash_value', 'cpu_value', 'ram_value', 'net_value'):
-            if path:
+            if illustration:
                 self[name].hide()
             else:
                 self[name].show()
 
-    def _select_preview(self, key):
+    def _media_label(self):
+        media = self._media
+        if media.kind == 'skin':
+            if not self._preview_path:
+                return media_catalog.phrase('skin-card', self.lang)
+            if media.key in skin_previews.GALLERY.get('skin_layout', []):
+                return media_catalog.phrase('layout', self.lang)
+            if media.key in skin_previews.GALLERY.get('skin_art', []):
+                return media_catalog.phrase('art', self.lang)
+        return media_catalog.phrase(media.kind, self.lang)
+
+    def _select_preview(self, action, media):
+        key = (media.key if media.kind == 'skin' else action) if media else None
         if key == self._preview_key:
             return
         self._preview_key = key
         self._cancel_preview_timer()
-        path = visual_previews.local_image(key)
+        path = media_catalog.picture(media)
         self._display_preview(path)
-        # The informational fallback is intentionally shown while a real screenshot
-        # is sought in the background. Generic cards are never downloaded.
-        if (key and key.startswith('skin:') and not visual_previews.actual_photo(key)
-                and self._fetching_key != key
+        if (media and media.kind == 'skin' and not path and not self._fetching_key
                 and time.time() >= self._miss_until.get(key, 0)):
             self._preview_timer = legacy.reactor.callLater(0.45, self._fetch_preview, key)
 
@@ -630,7 +596,7 @@ class ModernPanelAIO(legacy.PanelAIO):
         self._fetching_key = key
         def worker():
             try:
-                path = visual_previews.fetch_image(key)
+                path = skin_previews.fetch_image(key)
             except Exception:
                 path = None
             legacy.reactor.callFromThread(self._preview_finished, key, path)
@@ -646,14 +612,28 @@ class ModernPanelAIO(legacy.PanelAIO):
             self._miss_until[key] = time.time() + 600
         current = self._preview_key
         if key == current:
-            self._display_preview(path or visual_previews.local_image(key))
+            self._display_preview(path)
+        elif current and self._media and self._media.kind == 'skin' and not self._preview_path:
+            self._preview_key = None
         self._refresh_modern_ui()
 
     def open_support(self):
-        if self._focus == 'menu' and self._preview_path:
-            self.sess.open(PreviewScreen, _strip_leading_symbol(self._current_item()[0]), self._preview_path)
-            return
-        legacy.PanelAIO.open_support(self)
+        if self._focus != 'menu' or not self._media:
+            return legacy.PanelAIO.open_support(self)
+        name, action = self._current_item()[:2]
+        title = _strip_leading_symbol(name)
+        if self._preview_path:
+            self.sess.open(PreviewScreen, title, self._preview_path, lang=self.lang)
+        else:
+            package = self._media.source if self._media.kind == 'skin' else None
+            self.sess.openWithCallback(self._card_closed, FeatureCardScreen, title, self._media_label(), self._detail_text,
+                           media_catalog.source_label(action, self._media, self.lang),
+                           media_catalog.icon_path(self._media.icon), self.lang, package)
+
+    def _card_closed(self, *unused):
+        if not getattr(self, '_closed', True) and self._media and self._media.kind == 'skin':
+            self._preview_key = None
+            self._refresh_modern_ui()
 
     def _flash_percent(self):
         try:
