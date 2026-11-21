@@ -1,15 +1,41 @@
-# 📺 AIO Panel 18.0.0 — centrum zarządzania Enigma2
+# 📺 AIO Panel 18.2.0 — centrum zarządzania Enigma2
 
-**Wydanie:** 7 listopada 2026 r.  
+
+## Nowości 18.2.0
+
+Nowe kolorowe ikony kategorii i instalatorów, podglądy funkcji (oznaczone ilustracje),
+dokładniejsze znajdowanie rzeczywistych zrzutów skórek oraz czytelna grafika zastępcza,
+gdy autor nie udostępnia zdjęcia. Wybór piconów ma osobne okno z przełączanym jasnym i ciemnym tłem
+dla **ilustracji przezroczystości**; nie jest to zdjęcie z archiwum piconów.
+**Wydanie 18.2.0** · wersja standardowa AIO Team
+
 **Autor:** Paweł Pawełek | AIO Team  
 **Repozytorium:** [OliOli2013/PanelAIO-Plugin](https://github.com/OliOli2013/PanelAIO-Plugin)  
 **Języki interfejsu:** polski i angielski
 
 AIO Panel to rozbudowane centrum narzędzi dla odbiorników **Enigma2**. Pozwala zarządzać listami kanałów, piconami, wtyczkami, skórkami, emulatorami OSCam, kopiami zapasowymi i narzędziami systemowymi — z poziomu pilota.
 
-Wersja **18.0.0** rozwija trzy obszary: bezpieczniejszą aktualizację list satelitarnych, wydzieloną zakładkę **„Moje projekty”** oraz aktualniejsze informacje o wersjach OSCam.
+## Motywy w 18.1.2
 
-## 🆕 Co nowego w 18.0.0?
+W otwartym panelu naciśnij **MENU**, zaznacz **Motyw** i użyj strzałek **◀ / ▶**. Okno od razu pokazuje wybrane kolory. **Zielony** zapisuje wygląd panelu, **EXIT** anuluje podgląd. Ustawienie znajdziesz również w **System / Konserwacja → Wygląd panelu**.
+
+Do wyboru jest dziewięć motywów. **Ocean**, **Bursztyn** i **Wysoki kontrast** zachowują dotychczasowe identyfikatory. Nowe warianty to **Szmaragd**, **Ametyst**, **Rubin**, **Turkus**, **Grafit** i **Perła (jasny)**. Perła ma jasne tło i ciemne opisy klawiszy pilota. Ikony menu oraz zdjęcia skórek można włączać niezależnie od wybranego motywu.
+
+Paczki 18.1.2 zawierają poprawiony edytor z 18.1.1 i dają się zainstalować bezpośrednio na 18.0.0.
+
+## Poprawka w 18.1.1
+
+Na odbiorniku SF8008 z OpenATV 8.1.0 beta naciśnięcie **MENU** w panelu powodowało restart Enigma2. Poprawiono otwieranie ekranu **Wygląd panelu** i dodano test uruchamiania jego elementów. Po aktualizacji uruchom ponownie interfejs Enigma2, otwórz **MENU**, wybierz motyw i zapisz zielonym przyciskiem.
+
+## Funkcje dodane w 18.1.0
+
+- Naciśnij **MENU** w otwartym panelu albo wybierz **System / Konserwacja → Wygląd panelu**. Możesz osobno przełączać ikony menu i podglądy skórek. Strzałki zmieniają wartość, zielony przycisk zapisuje ustawienia, a EXIT anuluje edycję.
+- Zaznacz skórkę, aby zobaczyć jej zdjęcie. **INFO** powiększa podgląd, **OK** otwiera instalację. AIOHD NEXT ma podgląd również w **Moje projekty**. Pakiet zawiera 12 zdjęć. Dodatkowe skórki z feedu mogą pokazać plik z tunera lub pobrać zdjęcie w tle. Źródła zdjęć zebrano w [wykazie autorów](assets/previews/credits.txt).
+- Superkonfigurator w wariantach **START** i **pełnym z piconami** zapisuje kopię dotychczasowej listy i automatycznie zastępuje ją listą **Polska 13E AIO Panel**. Poprzednie bukiety, własne IPTV i lokalne usługi można odzyskać przez **Kopie / Przywracanie → Restore Listy Kanałów**. Wariant samych zależności pomija listy. W zakładce **Listy kanałów** nadal można ręcznie wybrać aktualizację SAT z zachowaniem danych lub pełną wymianę.
+- Panel zapamiętuje ręczny wybór języka. Aglare, Luka i Maxy korzystają z pakietu odpowiedniego dla wykrytego OpenATV lub OpenPLi. W Pythonie 2 panel filtruje również wpisy prowadzące do wydań wymagających Pythona 3.
+- Jihad FHD może korzystać z pakietu udostępnionego przez feed obrazu. Podczas weryfikacji 18.1.0 zewnętrzny IPK autora miał niestandardowy nagłówek i wadliwie zakończony plik control. Gdy feed nie oferuje tej skórki, walidator odrzuca tę wersję pobraną od wydawcy. Podgląd jest dostępny.
+
+## Funkcje wprowadzone w 18.0.0
 
 ### 🛰️ Aktualizacja tylko części satelitarnej
 
@@ -86,8 +112,8 @@ Dostępność poszczególnych pakietów zewnętrznych zależy od ich źródeł, 
 
 ### Pobieranie pakietów
 
-- **[AIO Panel 18.0.0 — IPK](release/enigma2-plugin-extensions-panelaio_18.0.0_all.ipk)** — systemy z **OPKG**, np. wiele obrazów OpenATV i OpenPLi;
-- **[AIO Panel 18.0.0 — DEB](release/enigma2-plugin-extensions-panelaio_18.0.0_all.deb)** — systemy z **DPKG**, np. wybrane obrazy DreamOS.
+- **[AIO Panel 18.2.0 — IPK](release/enigma2-plugin-extensions-panelaio_18.2.0_all.ipk)** — systemy z **OPKG**, np. wiele obrazów OpenATV i OpenPLi;
+- **[AIO Panel 18.2.0 — DEB](release/enigma2-plugin-extensions-panelaio_18.2.0_all.deb)** — systemy z **DPKG**, np. wybrane obrazy DreamOS.
 
 Wybierz pakiet odpowiedni dla menedżera pakietów zainstalowanego na tunerze.
 
@@ -96,13 +122,13 @@ Przykładowa instalacja po przesłaniu pliku do katalogu `/tmp`:
 **OPKG (IPK):**
 
 ```sh
-opkg install /tmp/enigma2-plugin-extensions-panelaio_18.0.0_all.ipk
+opkg install /tmp/enigma2-plugin-extensions-panelaio_18.2.0_all.ipk
 ```
 
 **DPKG (DEB):**
 
 ```sh
-dpkg -i /tmp/enigma2-plugin-extensions-panelaio_18.0.0_all.deb
+dpkg -i /tmp/enigma2-plugin-extensions-panelaio_18.2.0_all.deb
 ```
 
 Po instalacji uruchom ponownie interfejs Enigma2, jeżeli jest to wymagane.
@@ -113,18 +139,17 @@ W AIO Panel można skorzystać z funkcji sprawdzania aktualizacji (niebieski prz
 
 ## ✅ Testy i ważne ograniczenia
 
-W procesie przygotowania 18.0.0 sprawdzono:
+Test interfejsu przechodzi przez wszystkie pozycje 13 kategorii w polskiej i angielskiej wersji na testowym zestawie danych. Sprawdza nawigację pilotem, uruchomienie właściwej funkcji, dobór wariantu skórki, zapis ustawień, powiększenie obrazu i oba sposoby instalacji listy. Sprawdzone środowiska to Python 3.12 i Python 2.7 (PyPy). Wywołania instalujące pakiety są w tym teście przechwytywane. W osobnej próbie instalator i przywracanie pracowały na rzeczywistym archiwum Polska 13E oraz katalogach testowych.
 
-- składnię **46 plików Python** bez tworzenia bytecode na odbiorniku;
-- wewnętrzny test AIO Panel;
-- pozycję nowej zakładki, tłumaczenia PL/EN, **10 unikatowych projektów** i brak powielania ich instalatorów;
-- budowanie pakietów **IPK/DEB**, metadane wersji i skrypty instalacyjne.
+Działanie edytora 18.1.1 potwierdzono na SF8008 z OpenATV. Nowe palety 18.1.2 sprawdzono programowo, a ich odbiór na telewizorze zależy również od ustawień obrazu. Dostępność wtyczek zewnętrznych zależy od pakietów dla danego obrazu i wersji Pythona.
 
-Dodatkowo tester potwierdził na Ustym 4K Pro zachowanie konfiguracji FAVOURITES podczas aktualizacji opartej na r3.
+~~~sh
+python3 tests/test_dashboard.py
+./build_ipk.sh
+sha256sum -c SHA256SUMS.txt
+~~~
 
-**Nie wykonano jeszcze pełnych testów wydania 18.0.0 na wszystkich fizycznych odbiornikach ani wykonawczego testu środowiska Python 2.** Przed wdrożeniem na wiele urządzeń sprawdź aktualizację na jednym tunerze i zachowaj kopię konfiguracji.
-
-Szczegółowe informacje: [RELEASE_NOTES_18.0.0.md](RELEASE_NOTES_18.0.0.md) oraz [changelog.txt](changelog.txt).
+Historia wersji znajduje się w [changelog.txt](changelog.txt).
 
 ## 📬 Projekt i zgłoszenia
 

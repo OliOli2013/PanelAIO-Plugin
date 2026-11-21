@@ -12,7 +12,9 @@ LOG_FILE="${AIO_INSTALL_LOG:-/tmp/aio_install.log}"
 ARCHIVE="${1:-}"
 ARCHIVE_TYPE="${2:-}"
 STATUS_FILE="${3:-/tmp/PanelAIO/channel_install.status}"
-INSTALL_MODE="${4:-preserve}"  # preserve (default) or replace (explicit choice)
+INSTALL_MODE="${4:-preserve}"
+SAVE_BACKUP_DIR="${5:-}"
+SAVED_TMP=""
 TARGET_E2="${AIO_TARGET_ENIGMA2_DIR:-/etc/enigma2}"
 TARGET_TUXBOX="${AIO_TARGET_TUXBOX_DIR:-/etc/tuxbox}"
 RUN_ID="$(date +%Y%m%d_%H%M%S)_$$"
@@ -41,6 +43,7 @@ cleanup() {
         log "Rollback nie powiódł się. Zachowano kopię: $BACKUP"
     fi
     [ -n "$ARCHIVE" ] && rm -f "$ARCHIVE" 2>/dev/null || true
+    [ -z "$SAVED_TMP" ] || rm -f "$SAVED_TMP" "$SAVED_TMP.latest"
     aio_release_lock
 }
 
@@ -71,8 +74,8 @@ remove_radio_set() { rm -f "$TARGET_E2/bouquets.radio" "$TARGET_E2"/*.radio 2>/d
 remove_common_set() { rm -f "$TARGET_E2/blacklist" "$TARGET_E2/whitelist" "$TARGET_E2"/*.del 2>/dev/null || true; }
 
 snapshot_current() {
-    mkdir -p "$BACKUP/e2" "$BACKUP/tuxbox" || return 1
-    copy_e2_set "$TARGET_E2" "$BACKUP/e2" || return 1
+    mkdir -p "$BACKUP/enigma2" "$BACKUP/tuxbox" || return 1
+    copy_e2_set "$TARGET_E2" "$BACKUP/enigma2" || return 1
     copy_tuxbox_set "$TARGET_TUXBOX" "$BACKUP/tuxbox" || return 1
     SRC_COUNT=0
     for F in "$TARGET_E2"/lamedb "$TARGET_E2"/lamedb5 "$TARGET_E2"/bouquets.tv "$TARGET_E2"/bouquets.radio "$TARGET_E2"/blacklist "$TARGET_E2"/whitelist; do
@@ -94,11 +97,11 @@ snapshot_current() {
 }
 
 restore_snapshot() {
-    [ -d "$BACKUP/e2" ] || return 1
+    [ -d "$BACKUP/enigma2" ] || return 1
     log "--> Przywracanie poprzedniej listy z kopii transakcyjnej..."
     rm -f "$TARGET_E2/lamedb" "$TARGET_E2/lamedb5" "$TARGET_E2/bouquets.tv" "$TARGET_E2/bouquets.radio" \
           "$TARGET_E2/blacklist" "$TARGET_E2/whitelist" "$TARGET_E2"/*.tv "$TARGET_E2"/*.radio "$TARGET_E2"/*.del 2>/dev/null || true
-    copy_e2_set "$BACKUP/e2" "$TARGET_E2" || return 1
+    copy_e2_set "$BACKUP/enigma2" "$TARGET_E2" || return 1
     rm -f "$TARGET_TUXBOX/satellites.xml" "$TARGET_TUXBOX/cables.xml" "$TARGET_TUXBOX/terrestrial.xml" 2>/dev/null || true
     copy_tuxbox_set "$BACKUP/tuxbox" "$TARGET_TUXBOX" || return 1
     EXPECTED=$(cat "$BACKUP/file_count" 2>/dev/null || echo 0)
@@ -300,6 +303,21 @@ mkdir -p "$TARGET_E2" "$TARGET_TUXBOX" || fail "Nie można utworzyć katalogów 
 snapshot_current || fail "Nie udało się utworzyć i zweryfikować pełnej kopii transakcyjnej. Sprawdź rzeczywiste wolne miejsce." backup
 log "Kopia transakcyjna została zweryfikowana."
 
+# Keep a restorable snapshot for the automatic replacement, under the same
+# channel-list lock as the installation. A fresh receiver has nothing to back up.
+if [ -n "$SAVE_BACKUP_DIR" ] && [ "$(count_files "$BACKUP/enigma2")" -gt 0 ]; then
+    case "$SAVE_BACKUP_DIR" in /*) ;; *) fail "Nieprawidłowy katalog kopii." backup ;; esac
+    mkdir -p "$SAVE_BACKUP_DIR" || fail "Nie można utworzyć katalogu kopii listy." backup
+    SAVED_NAME="aio_channels_backup_${RUN_ID}.tar.gz"
+    SAVED_TMP=$(mktemp "$SAVE_BACKUP_DIR/.aio_wizard_XXXXXX") || fail "Nie można zapisać kopii listy." backup
+    tar -czf "$SAVED_TMP" -C "$BACKUP" enigma2 tuxbox || fail "Nie można zapisać kopii listy." backup
+    aio_validate_archive "$SAVED_TMP" tar.gz 100000 1073741824 >> "$LOG_FILE" 2>&1 || fail "Weryfikacja kopii listy nie powiodła się." backup
+    mv "$SAVED_TMP" "$SAVE_BACKUP_DIR/$SAVED_NAME" || fail "Nie można zachować kopii listy." backup
+    printf '%s\n' "$SAVED_NAME" > "$SAVED_TMP.latest" &&
+        mv "$SAVED_TMP.latest" "$SAVE_BACKUP_DIR/aio_channels_backup.latest" || fail "Nie można wskazać kopii do przywrócenia." backup
+    log "Zapisano kopię: $SAVE_BACKUP_DIR/$SAVED_NAME"
+fi
+
 APPLY_STARTED=1
 if [ "$HAS_DB" -eq 1 ]; then rm -f "$TARGET_E2/lamedb" "$TARGET_E2/lamedb5" 2>/dev/null || true; fi
 [ "$HAS_TV" -eq 1 ] && remove_tv_set
@@ -317,7 +335,7 @@ sync 2>/dev/null || true
 # Independently confirm the committed files, while the transactional backup
 # still exists. Roll back on ANY local DVB-T/T2/C or favourites regression.
 if [ "$INSTALL_MODE" = preserve ]; then
-    "$PY" "$MERGER" --verify "$BACKUP/e2" "$TARGET_E2" >> "$LOG_FILE" 2>&1 \
+    "$PY" "$MERGER" --verify "$BACKUP/enigma2" "$TARGET_E2" >> "$LOG_FILE" 2>&1 \
         || fail "Kontrola po zapisie wykryła zmianę DVB-T/T2/C lub FAVOURITES. Przywrócono poprzednie dane." verify
     REPORT_DEST="/tmp/PanelAIO/last_sat_update_report.txt"
     mkdir -p /tmp/PanelAIO 2>/dev/null || true

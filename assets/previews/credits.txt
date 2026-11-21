@@ -1,0 +1,42 @@
+AIO Panel: skin preview image credits
+Publisher images, scaled proportionally and converted to indexed PNG for Enigma2.
+
+aiohd.png — AIO Team / Paweł Pawełek
+https://github.com/OliOli2013/AIOHD-NEXT-Skin/blob/ae3d2330454185c39eaa4edd5c0918882d08747e/root/usr/share/enigma2/AIOHD/preview.png
+
+obsidian.png — dali44G, CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/)
+https://github.com/dali44g/Obsidian-FHD/blob/50f2ec5fd73dacdf628f7382a133172b1f4b68f0/docs/screenshots/channel-list-floating.jpg
+
+aglare.png — MNASR / popking159
+https://github.com/popking159/skins/blob/c49279acc57ca1a171bb73684f247304ff1e0c39/aglarepli/aglarepli.ipk  [./usr/lib/enigma2/python/Plugins/Extensions/Aglare/screens/channellist_1_poster_EX.jpg]
+
+luka.png — MNASR / popking159
+https://github.com/popking159/skins/blob/c49279acc57ca1a171bb73684f247304ff1e0c39/lukapli/lukapli.ipk  [./usr/lib/enigma2/python/Plugins/Extensions/Luka/screens/channellist_1_poster_PX.jpg]
+
+maxy.png — MNASR / popking159
+https://github.com/popking159/skins/blob/c49279acc57ca1a171bb73684f247304ff1e0c39/maxyatv/maxyatv.ipk  [./usr/lib/enigma2/python/Plugins/Extensions/Maxy/screens/channellist_1_posters_minitv.png]
+
+xdreamy.png — Insprion80
+https://github.com/Insprion80/Skins/blob/585249ec4ad27451c7d59caade8651232f2c7e13/xDreamy/XDREAMY/usr/share/enigma2/xDreamy/screens/C01-MTV-1P.png
+
+jihad.png — Ahmed Shawky
+https://github.com/ahmeds200917/A.Shawky/blob/ff108d107b7115ae9ea865749941cc36cfc7cbb7/jihad.ipk  [./usr/lib/enigma2/python/Plugins/Extensions/Jihad/screens/channellist_1_pigposters_3backdrops.jpg]
+
+metrix.png — OpenATV / MetrixHD
+https://github.com/openatv/MetrixHD/blob/06a065e8351b2f74191a6fa5dddb001775c57586/MetrixHD-INFO/channelselection_variant_1.png
+
+pli.png — littlesat / PLi-HD
+https://github.com/littlesat/skin-PLiHD/blob/220a1dca09308037dd11b6d1092e2d54261ee924/usr/share/enigma2/PLi-HD/prev.png
+
+fullnight.png — littlesat / PLi-FullNightHD
+https://github.com/littlesat/PLi-FullNightHD/blob/485a24377e9885ba13339a8a0d185e2868a7c885/usr/share/PLi-FullNightHD/prev.png
+
+umbra.png — OpenATV Handbook
+https://openatv.github.io/enigma2-doku/_astro/umbra-channels.BVW0j2lb.png
+
+glass17.png — shamann / Enigma2.net, Full HD Glass 17 v5.19
+https://www.enigma2.net/wp-content/uploads/2021/05/HDGLASS-01-1024x576-1.jpg
+
+Additional receiver feed previews (downloaded on demand)
+OE-Alliance and the individual skin authors, including Rossi and Nashu.
+https://github.com/oe-alliance/oe-alliance-skins

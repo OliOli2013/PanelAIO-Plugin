@@ -14,7 +14,7 @@ except Exception:
     except Exception:
         TRUSTED_REMOTE_SCRIPTS = set()
 
-VERSION = '18.0.0'
+VERSION = '18.2.0'
 
 
 def _read(path):
@@ -45,7 +45,10 @@ def run(root):
         'core/action_dispatcher.py', 'core/activity.py', 'core/source_registry.py',
         'core/plugin_state.py', 'core/selftest.py',
         'data/navigation.py', 'data/owned_projects.py', 'data/requested_installers.py', 'core/oscam_data.py',
-        'ui/modern.py', 'ui/screens/connect.py', 'installer.sh',
+        'ui/modern.py', 'ui/appearance.py', 'ui/media_list.py', 'ui/picon_picker.py',
+        'core/skin_previews.py', 'core/visual_previews.py', 'core/picon_previews.py',
+        'assets/cards/skins-missing.png', 'assets/picon_samples/picon_13e.png',
+        'assets/previews/credits.txt', 'ui/screens/connect.py', 'installer.sh',
         'safe_ipk_install.sh', 'install_iptv_dream_safe.sh',
         'install_s4aupdater_safe.sh', 'install_picon_updater_safe.sh',
         'install_myupdater_safe.sh', 'aio_safe_common.sh',

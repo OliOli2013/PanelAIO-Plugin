@@ -69,7 +69,7 @@ else
   STATE=$(dpkg-query -W -f='${Status}' "$PACKAGE" 2>/dev/null || true)
 fi
 log "Package manager rc=$RC; installed version=$INSTALLED; state=$STATE"
-[ "$INSTALLED" = "$PV" ] && [ "$STATE" = "install ok installed" ] || fail "installation not verified; see $LOG"
+[ "$INSTALLED" = "$PV" ] && aio_package_is_configured "$STATE" || fail "installation not verified; see $LOG"
 if [ "$RC" -ne 0 ]; then log "WARNING: package manager returned $RC, but package is installed and verified"; fi
 log "SUCCESS: $PACKAGE $PV; restart Enigma2 GUI manually if required"
 exit 0

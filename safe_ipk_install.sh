@@ -12,7 +12,12 @@ aio_acquire_lock opkg || fail "Inna operacja OPKG jest już wykonywana." lock
 aio_secure_download "$URL" "$FILE" 600 3 || fail "Nie udało się pobrać IPK przez HTTPS." download
 aio_not_html "$FILE" || fail "Pobrano HTML zamiast IPK." validation
 PY=$(aio_python 2>/dev/null || true); [ -n "$PY" ] || fail "Brak Pythona do walidacji IPK." dependency
-META=$("$PY" "$PLUGIN_DIR/core/ipk_validator.py" "$FILE" "$EXPECTED" 2>> "$LOG") || fail "IPK jest uszkodzony albo ma nieoczekiwaną nazwę pakietu." validation
+META=$("$PY" "$PLUGIN_DIR/core/ipk_validator.py" "$FILE" "$EXPECTED" 2>> "$LOG") || {
+    case "$URL" in
+        */jihad.ipk) fail "Pakiet Jihad wydawcy nie przeszedł weryfikacji. Sprawdź dostępność enigma2-plugin-skins-jihad w feedzie obrazu. /tmp/aio_ipk_install.log" validation ;;
+        *) fail "IPK jest uszkodzony albo ma nieoczekiwaną nazwę pakietu. /tmp/aio_ipk_install.log" validation ;;
+    esac
+}
 if [ -n "$SHA" ]; then GOT=$(aio_sha256 "$FILE" 2>/dev/null || true); [ "$GOT" = "$SHA" ] || fail "Suma SHA-256 IPK nie pasuje." checksum; fi
 PACKAGE=$(printf '%s' "$META" | awk -F'|' '{print $2}')
 log "Instalacja pakietu: $PACKAGE"
@@ -29,6 +34,6 @@ elif command -v dpkg >/dev/null 2>&1; then
 else
     fail "Brak opkg/dpkg." dependency
 fi
-[ "$INSTALLED" = "$VERSION" ] && [ "$STATE" = 'install ok installed' ] || fail "Nie potwierdzono wersji/statusu pakietu (rc=$RC)." verify
+[ "$INSTALLED" = "$VERSION" ] && aio_package_is_configured "$STATE" || fail "Nie potwierdzono wersji/statusu pakietu (rc=$RC)." verify
 [ "$RC" -eq 0 ] || log "Menedżer pakietów zwrócił $RC, ale pakiet $PACKAGE $VERSION jest zainstalowany. Sprawdź log."
 status "OK|$PACKAGE|log=$LOG"; log "OK: $PACKAGE"; cleanup; trap - EXIT HUP INT TERM; exit 0

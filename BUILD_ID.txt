@@ -1,4 +1,4 @@
-AIO Panel 18.0.0 | stable distribution | 2026-11-07
-SAT-only update based on field-tested 17.0.4-r3.
-My projects tab; single placement of 10 GitHub projects.
-OSCam Levi45 revision fetched from original GitHub installer; feed version shown separately.
+AIO Panel 18.2.0 | visual previews release
+Nine appearance themes, modern icons and universal installation preview cards.
+Skin screenshots retained; receiver-installed skin previews supported.
+Transparent picon illustration picker and background switch.

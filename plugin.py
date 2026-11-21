@@ -32,7 +32,7 @@ except Exception:
     eTimer = None
 
 PLUGIN_NAME = 'AIO Panel'
-DEFAULT_VERSION = '18.0.0'
+DEFAULT_VERSION = '18.2.0'
 MENU_VISIBILITY_FALLBACK_FILE = '/etc/enigma2/.panelaio_show_in_menu'
 
 _auto_ram_timer = None

@@ -9,6 +9,7 @@ routing no longer needs to grow one giant conditional chain for every new featur
 """
 
 _METHODS = {
+    'AIO_APPEARANCE': 'open_appearance',
     'INSTALL_IPTV_DREAM': 'install_iptv_dream_simplified',
     'INSTALL_S4AUPDATER': 'install_s4aupdater_safe',
     'INSTALL_PICON_UPDATER': 'install_picon_updater_safe',

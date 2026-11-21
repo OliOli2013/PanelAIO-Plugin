@@ -130,6 +130,14 @@ aio_not_html() {
     return 0
 }
 
+aio_package_is_configured() {
+    # OPKG marks explicitly installed packages as "user". DPKG reports "ok".
+    case "$1" in
+        'install ok installed'|'install user installed') return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 aio_sha256() {
     if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; return; fi
     PY=$(aio_python 2>/dev/null || true)

@@ -3,11 +3,14 @@ from __future__ import absolute_import, print_function
 
 """Public entry point for the modern AIO Panel interface."""
 
-from Plugins.SystemPlugins.PanelAIO.ui.modern import ModernLoadingScreen
+from Plugins.SystemPlugins.PanelAIO.ui.modern import ModernLoadingScreen, ModernPanelAIO
 
 
 def open_main(session, lang=None, **kwargs):
-    return session.open(ModernLoadingScreen)
+    def loaded(data=None):
+        if isinstance(data, dict):
+            session.open(ModernPanelAIO, data)
+    return session.openWithCallback(loaded, ModernLoadingScreen)
 
 
 def menu_entries(menuid, **kwargs):

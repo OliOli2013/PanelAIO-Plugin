@@ -1,10 +1,13 @@
 #!/bin/sh
-# AIO Panel 18.0.0 — release builder for GitKraken/Linux.
+# AIO Panel 18.2.0 — release builder for GitKraken/Linux.
 # Creates real OPKG-compatible .ipk and dpkg-compatible .deb packages.
 set -eu
+export PYTHONDONTWRITEBYTECODE=1
+export LC_ALL=C
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-1795132800}
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 VERSION=$(tr -d '\r\n ' < "$ROOT/version.txt")
-[ "$VERSION" = 18.0.0 ] || { echo 'Expected AIO Panel 18.0.0' >&2; exit 1; }
+[ "$VERSION" = 18.2.0 ] || { echo 'Expected AIO Panel 18.2.0' >&2; exit 1; }
 PKG=enigma2-plugin-extensions-panelaio
 OUTDIR="$ROOT/release"
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/panelaio18-build.XXXXXX")
@@ -32,20 +35,24 @@ find "$DST" -type f -name '*.py' -exec chmod 644 {} \;
 chmod 755 "$WORK/ipk/control"/preinst "$WORK/ipk/control"/postinst "$WORK/ipk/control"/postrm
 [ "$(sed -n 's/^Version: //p' "$WORK/ipk/control/control")" = "$VERSION" ] || { echo 'Control/version mismatch' >&2; exit 1; }
 python3 "$DST/core/python_syntax_check.py" "$DST"
-find "$DST" -type f -name '*.sh' -exec sh -n {} \;
+find "$DST" -type f -name '*.sh' -exec sh -c 'for script do sh -n "$script" || exit 1; done' sh {} +
 python3 "$DST/core/selftest.py" "$DST"
 if [ -f "$ROOT/tests/test_release_18.py" ]; then
     python3 "$ROOT/tests/test_release_18.py" "$ROOT"
 fi
+python3 "$ROOT/tests/test_dashboard.py"
+python3 "$ROOT/tests/test_visual_18_2.py" "$DST"
 if [ -n "${AIO_TEST_PYTHON2:-}" ]; then
+    "$AIO_TEST_PYTHON2" "$ROOT/tests/test_dashboard.py"
     "$AIO_TEST_PYTHON2" "$DST/core/python_syntax_check.py" "$DST"
     "$AIO_TEST_PYTHON2" "$DST/core/selftest.py" "$DST"
 fi
 printf '2.0\n' > "$WORK/ipk/debian-binary"
-( cd "$WORK/ipk/control"; tar --owner=0 --group=0 -czf "$WORK/ipk/control.tar.gz" . )
-( cd "$WORK/ipk/data"; tar --owner=0 --group=0 -czf "$WORK/ipk/data.tar.gz" . )
+( cd "$WORK/ipk/control"; tar --format=gnu --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 -czf "$WORK/ipk/control.tar.gz" . )
+( cd "$WORK/ipk/data"; tar --format=gnu --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 -czf "$WORK/ipk/data.tar.gz" . )
 OUT_IPK="$OUTDIR/${PKG}_${VERSION}_all.ipk"
-( cd "$WORK/ipk"; ar r "$OUT_IPK" debian-binary control.tar.gz data.tar.gz >/dev/null )
+( cd "$WORK/ipk"; ar rcD "$WORK/package.ipk" debian-binary control.tar.gz data.tar.gz >/dev/null )
+mv "$WORK/package.ipk" "$OUT_IPK"
 # Build canonical dpkg DEB with the same installed payload and lifecycle scripts.
 [ -x "$(command -v dpkg-deb || true)" ] || { echo 'dpkg-deb is required to build .deb' >&2; exit 1; }
 mkdir -p "$WORK/deb/DEBIAN"
@@ -56,7 +63,11 @@ chmod g-s "$WORK/deb/DEBIAN"
 chmod 755 "$WORK/deb/DEBIAN"
 chmod 755 "$WORK/deb/DEBIAN"/preinst "$WORK/deb/DEBIAN"/postinst "$WORK/deb/DEBIAN"/postrm
 OUT_DEB="$OUTDIR/${PKG}_${VERSION}_all.deb"
-dpkg-deb --build "$WORK/deb" "$OUT_DEB" >/dev/null
+find "$WORK/deb" -exec touch -d "@$SOURCE_DATE_EPOCH" {} +
+dpkg-deb --root-owner-group -Zgzip --build "$WORK/deb" "$OUT_DEB" >/dev/null
+for package in "$OUT_IPK" "$OUT_DEB"; do
+    python3 "$DST/core/ipk_validator.py" "$package" "^$PKG$"
+done
 ( cd "$ROOT"; sha256sum "release/$(basename "$OUT_IPK")" "release/$(basename "$OUT_DEB")" > SHA256SUMS.txt )
 echo "Built: $OUT_IPK"
 echo "Built: $OUT_DEB"

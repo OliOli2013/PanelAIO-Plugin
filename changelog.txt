@@ -1,3 +1,31 @@
+AIO Panel 18.2.0
+- Nowe kolorowe ikony kategorii i narzędzi w wyższej rozdzielczości.
+- Podgląd wszystkich kategorii funkcji instalacyjnych: grafiki opisowe, bez udawania zdjęć interfejsów wtyczek.
+- Ulepszone wyszukiwanie prawdziwych podglądów skórek na tunerze; brakujące obrazy wyraźnie oznaczone.
+- Oddzielny wybór zestawu piconów z przezroczystą ilustracją i żółtym klawiszem do zmiany tła.
+- Usprawniono obsługę opóźnionych podglądów i lokalny cache.
+- EN: Colorful icons, functional preview illustrations, improved skin image lookup and picon transparency preview.
+
+AIO Panel 18.1.2
+- Dziewięć motywów panelu. Do Oceanu, Bursztynu i Wysokiego kontrastu dołączają Szmaragd, Ametyst, Rubin, Turkus, Grafit i jasna Perła.
+- Podczas wybierania motywu zmieniają się kolory całego okna ustawień. Zielony przycisk zapisuje wybór, a EXIT przywraca poprzedni wygląd.
+- Edytor zawiera poprawkę uruchamiania na OpenATV z 18.1.1. Zachowano identyfikatory zapisanych motywów. Aktualizacja jest możliwa bezpośrednio z 18.0.0.
+- Instalatory rozpoznają także status `install user installed` raportowany przez OPKG po instalacji wskazanego pakietu.
+- EN: Six new themes, including a light palette, with live preview in the appearance editor. Existing theme selections are kept.
+
+AIO Panel 18.1.1
+- Naprawiono restart Enigma2 po wejściu w MENU → Wygląd panelu oraz z zakładki System / Konserwacja. Zgłoszenie z SF8008 i OpenATV 8.1.0 beta.
+- Testy uruchamiają komponenty okna przy otwieraniu ustawień i sprawdzają zapis, anulowanie i ponowne wejście.
+- EN: Fix the appearance editor crashing on open. The editor no longer shadows the Enigma2 Screen.values() method.
+
+AIO Panel 18.1.0
+- MENU / Wygląd panelu: Ocean, Bursztyn, Wysoki kontrast, ikony menu i podglądy.
+- 12 lokalnych zdjęć skórek, pobieranie kolejnych dla feedu, powiększenie klawiszem INFO.
+- Superkonfigurator wczytuje domyślną listę Polska 13E AIO Panel po zapisaniu kopii. Ręczna instalacja zachowuje wybór trybu.
+- Poprawiono zapamiętywanie języka, nawigację na OpenPLi, anulowanie kreatora oraz dobór pakietów skórek dla OpenATV/OpenPLi.
+- Poprawiono manifest aktualizacji i kontrole IPK/DEB. Wybór opcji wymagających Py3 jest blokowany na Py2 także z historii.
+- EN: Dashboard themes, menu icons and real skin previews. The setup wizard backs up and replaces the channel list with Polska 13E. Manual installation retains both modes.
+
 AIO Panel 18.0.0 — 07.11.2026
 - Finalized SAT-only channel updates from 17.0.4-r3: DVB-T/T2, DVB-C, FAVOURITES, IPTV and local bouquets preserved.
 - New second tab Moje projekty / My projects, immediately after Listy kanałów.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel AIO
 by Paweł Pawełek | aio-iptv@wp.pl
-Wersja 18.0.0
+Wersja 18.2.0
 UNIVERSAL VERSION (Python 2 & Python 3 Compatible)
 
 Kompletna wersja repozytoryjna przygotowana do publikacji na GitHubie
@@ -465,9 +465,29 @@ def _read_local_version(default="0.0"):
     except Exception:
         return default
 
-VER = _read_local_version("17.0.0")
+VER = _read_local_version("18.2.0")
 # The interactive picon menu uses remote archives; never bundle them in IPK.
 # Full Super Configurator preserves its original picon URL and workflow.
+BASE_DEPENDENCIES_COMMAND = """set -e
+set --
+for tool in wget tar unzip; do
+    command -v "$tool" >/dev/null 2>&1 || set -- "$@" "$tool"
+done
+certs=0
+for bundle in /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.pem; do
+    if [ -s "$bundle" ]; then certs=1; break; fi
+done
+[ "$certs" = 1 ] || set -- "$@" ca-certificates
+[ "$#" -gt 0 ] || exit 0
+if command -v opkg >/dev/null 2>&1; then
+    opkg update && opkg install "$@"
+elif command -v apt-get >/dev/null 2>&1; then
+    apt-get update && apt-get install -y "$@"
+else
+    echo 'Missing package manager (opkg/apt-get)' >&2
+    exit 1
+fi"""
+WIZARD_CHANNEL_URL = "https://raw.githubusercontent.com/OliOli2013/PanelAIO-Lists/main/archives/Polska_13E_AIO_Panel.zip"
 PICON_SET_13E = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip"
 PICON_SET_19E = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony1.zip"
 PICON_SET_COMBINED = "https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony2.zip"
@@ -834,6 +854,9 @@ def _operation_language(session):
         value = config.plugins.panelaio.language.value
         if value in ('PL', 'EN'):
             return value
+        osd_lang = getattr(getattr(config.osd, 'language', None), 'value', '')
+        if osd_lang:
+            return 'PL' if osd_lang.lower().startswith('pl') else 'EN'
         from Components.Language import language
         return 'PL' if language.getLanguage().lower().startswith('pl') else 'EN'
     except Exception:
@@ -1795,7 +1818,7 @@ command -v python3 >/dev/null 2>&1 && PYBIN=python3
 
 
 # === FUNKCJA install_archive (GLOBALNA) ===
-def install_archive(session, title, url, callback_on_finish=None, picon_path=None, action_type=None, channel_install_mode=None):
+def install_archive(session, title, url, callback_on_finish=None, picon_path=None, action_type=None, channel_install_mode=None, backup_dir=None):
     """Install a channel list, picon archive or IPK with verified completion."""
     requested_type = ensure_unicode(action_type or '').strip().lower()
     allow_s4a_data = requested_type == 'channels_s4a' and _s4a_archive_url_allowed(url)
@@ -1941,6 +1964,8 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
         download = _download_shell_command(url, archive_path, archive_type)
     mode = channel_install_mode or 'preserve'
     command = 'set -eu\n(\n%s\n)\n/bin/sh %s %s %s %s %s\n' % (download, _safe_shell_arg(script_path), _safe_shell_arg(archive_path), _safe_shell_arg(archive_type), _safe_shell_arg(status_path), _safe_shell_arg(mode))
+    if backup_dir:
+        command = command.rstrip() + " " + _safe_shell_arg(backup_dir) + "\n"
 
     def channel_finished(command_result):
         status_value = _read_text_file(status_path, '').strip()
@@ -1967,6 +1992,8 @@ def install_archive(session, title, url, callback_on_finish=None, picon_path=Non
             result['gui_reloaded'] = reloaded
             if callback_on_finish:
                 _invoke_safe_callback(callback_on_finish, result, noarg_only_on_success=True)
+            elif reloaded and mode == 'replace':
+                show_message_compat(session, ('Wczytano nową listę kanałów.' if _operation_language(session) == 'PL' else 'The new channel list has been loaded.'), timeout=8)
             elif reloaded:
                 show_message_compat(session, 'Lista SAT została zaktualizowana. Zachowano lokalne DVB-T/T2/C, IPTV i FAVOURITES.', timeout=8)
             else:
@@ -2242,7 +2269,7 @@ DIAGNOSTICS_EN = [
 SKINS_PL = [
     ("🎨 AIOHD NEXT - Instalator", "CMD:INSTALL_AIOHD_NEXT"),
     ("🎨 Jihad FHD - Instalator", "CMD:INSTALL_JIHAD_SKIN"),
-    ("🎨 Algare FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
+    ("🎨 Aglare FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
     ("🎨 Fury FHD - Instalator", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Instalator", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
@@ -2253,7 +2280,7 @@ SKINS_PL = [
 SKINS_EN = [
     ("🎨 AIOHD NEXT - Installer", "CMD:INSTALL_AIOHD_NEXT"),
     ("🎨 Jihad FHD - Installer", "CMD:INSTALL_JIHAD_SKIN"),
-    ("🎨 Algare FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
+    ("🎨 Aglare FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/aglarepli/installer.sh"),
     ("🎨 Fury FHD - Installer", "CMD:INSTALL_FURY_SKIN"),
     ("🎨 Luka FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/lukapli/installer.sh"),
     ("🎨 Maxy FHD - Installer", "remote_script:https://raw.githubusercontent.com/popking159/skins/refs/heads/main/maxyatv/installer.sh"),
@@ -2791,7 +2818,7 @@ def _get_levi45_available_version_sync():
             from urllib.request import Request, urlopen
         except ImportError:
             from urllib2 import Request, urlopen
-        request = Request(url, headers={'User-Agent': 'AIO-Panel/18.0.0'})
+        request = Request(url, headers={'User-Agent': 'AIO-Panel/18.2.0'})
         response = urlopen(request, timeout=7)
         content = response.read(16384)
         response.close()
@@ -2906,6 +2933,7 @@ class WizardProgressScreen(Screen):
         self.failed = False
         self.cancelled = False
         self.wizard_warnings = []
+        self.backup_dir = kwargs.get('backup_dir')
         self.wizard_channel_list_url = kwargs.get('channel_list_url', '')
         self.wizard_channel_list_name = kwargs.get('channel_list_name', 'Polska 13E AIO Panel')
         self.wizard_picon_url = kwargs.get('picon_url', '')
@@ -2917,7 +2945,7 @@ class WizardProgressScreen(Screen):
             'cancel': self.cancel_wizard, 'red': self.cancel_wizard,
             'green': self.retry_step, 'yellow': self.skip_step,
         }, -1)
-        self.onShown.append(self.start_wizard)
+        self.onFirstExecBegin.append(self.start_wizard)
 
     def _txt(self, pl, en):
         return pl if self.lang == 'PL' else en
@@ -2957,6 +2985,9 @@ class WizardProgressScreen(Screen):
 
     def _step_done(self, result):
         self.running = False
+        if self.cancelled:
+            self.close()
+            return
         success = bool(result and result.get('success'))
         if success:
             self.index += 1
@@ -2996,12 +3027,13 @@ class WizardProgressScreen(Screen):
 
     def _wizard_step_deps(self):
         self._set_progress('Instalacja wymaganych zależności systemowych...', 'Installing required system dependencies...')
-        cmd = "opkg update && opkg install wget ca-certificates && (command -v tar >/dev/null 2>&1 || opkg install tar) && (command -v unzip >/dev/null 2>&1 || opkg install unzip)"
+        cmd = BASE_DEPENDENCIES_COMMAND
         run_command_in_background(self.session, self._step_title('Zależności'), [cmd], callback_on_finish=self._step_done)
 
     def _wizard_step_channel_list(self):
         self._set_progress("Instalacja listy kanałów '%s' z kopią i rollbackiem..." % self.wizard_channel_list_name, "Installing channel list '%s' with backup and rollback..." % self.wizard_channel_list_name)
-        install_archive(self.session, self._step_title(self.wizard_channel_list_name), self.wizard_channel_list_url, callback_on_finish=self._step_done, action_type='channels')
+        install_archive(self.session, self._step_title(self.wizard_channel_list_name), self.wizard_channel_list_url, callback_on_finish=self._step_done,
+                        action_type='channels', channel_install_mode='replace', backup_dir=self.backup_dir)
 
     def _wizard_step_install_softcam(self):
         self._set_progress('Instalacja feedu Softcam z polecenia mynonpublic...', 'Installing the Softcam feed using the mynonpublic command...')
@@ -3098,6 +3130,7 @@ class AIOLoadingScreen(Screen):
         self._loading_timeout_call = None
         self._dependency_prompt_open = False
         self.flag_file = os.path.join(PLUGIN_PATH, '.deps_ok')
+        self._loading_started = False
         self.onShown.append(self.start_loading_process)
 
     def _has_cmd(self, cmd):
@@ -3111,6 +3144,9 @@ class AIOLoadingScreen(Screen):
         return all(self._has_cmd(x) for x in ('wget', 'tar', 'unzip')) and any(os.path.exists(x) for x in ca_paths)
 
     def start_loading_process(self):
+        if self._loading_started:
+            return
+        self._loading_started = True
         if self._deps_present():
             self.start_async_data_load()
             return
@@ -3124,7 +3160,7 @@ class AIOLoadingScreen(Screen):
             self.start_async_data_load()
             return
         self['message'].setText('Instalacja zależności...\n\nNie zamykaj tunera.')
-        cmd = "opkg update && opkg install wget ca-certificates && (command -v tar >/dev/null 2>&1 || opkg install tar) && (command -v unzip >/dev/null 2>&1 || opkg install unzip)"
+        cmd = BASE_DEPENDENCIES_COMMAND
         def done(result):
             if result and result.get('success') and self._deps_present():
                 try:
@@ -3181,11 +3217,11 @@ class AIOLoadingScreen(Screen):
         self.close()
 
     def _loading_timeout_fallback(self):
-        if not self._panel_opened:
+        if not getattr(self, '_panel_opened', True):
             self._open_panel_safe()
 
     def _on_data_loaded(self):
-        self._open_panel_safe(self.fetched_data_cache)
+        self._open_panel_safe(getattr(self, 'fetched_data_cache', None))
 
 
 
@@ -4780,7 +4816,7 @@ class PanelAIO(Screen):
         self.skinName = getattr(self, "modern_skin_name", ["PanelAIO"])
         self.setTitle("Panel AIO " + VER)
         self.sess = session
-        self.lang = 'PL'
+        self.lang = _operation_language(session)
         try:
             saved_lang = config.plugins.panelaio.language.value if config is not None and hasattr(config.plugins.panelaio, 'language') else 'auto'
             if saved_lang in ('PL', 'EN'):
@@ -4788,22 +4824,19 @@ class PanelAIO(Screen):
         except Exception:
             pass
         
-        # Logika detekcji obrazu
         self.image_type = "unknown"
-        if fileExists("/etc/issue"):
+        for path in ("/etc/image-version", "/etc/os-release", "/etc/issue"):
             try:
-                with open("/etc/issue", "r") as f:
-                    issue_content = f.read()
-                if "Hyperion" in issue_content:
-                    self.image_type = "hyperion"
-            except Exception: pass
-        if self.image_type == "unknown" and fileExists("/etc/image-version"):
-            try:
-                with open("/etc/image-version", "r") as f:
-                    img_info = f.read().lower()
-                if "openatv" in img_info: self.image_type = "openatv"
-                elif "openpli" in img_info: self.image_type = "openpli"
-            except Exception: pass
+                with open(path, "r") as handle:
+                    info = handle.read(8192).lower()
+                for name in ("hyperion", "openatv", "openpli"):
+                    if name in info:
+                        self.image_type = name
+                        break
+            except (IOError, OSError):
+                continue
+            if self.image_type != "unknown":
+                break
         if self.image_type == "unknown" and fileExists("/etc/vtiversion.info"):
             self.image_type = "vti"
 
@@ -4824,8 +4857,8 @@ class PanelAIO(Screen):
         self["support_label"] = Label(TRANSLATIONS[self.lang]["support_text"])
         self["title_label"] = Label("AIO Panel " + VER)
         self["tabs_display"] = Label("") 
-        self["menu"] = MenuList([])
-        self["sidebar"] = MenuList([])
+        self["menu"] = self._make_menu("menu")
+        self["sidebar"] = self._make_menu("sidebar")
         self["health"] = Label("")
         self["update_status"] = Label("")
         self._focus = "menu"
@@ -4857,8 +4890,8 @@ class PanelAIO(Screen):
         self["act"] = ActionMap(["OkCancelActions", "ColorActions", "DirectionActions", "ChannelUpDownActions", "ChannelSelectBaseActions", "NumberActions", "HelpActions", "InfoActions"], {
             "ok": self.ok_pressed,
             "cancel": self.close,
-            "red": lambda: self.set_language('PL'),
-            "green": lambda: self.set_language('EN'),
+            "red": lambda: self.set_language('PL', persist=True),
+            "green": lambda: self.set_language('EN', persist=True),
             "yellow": self.restart_gui,
             "blue": self.check_for_updates_manual,
             "info": self.open_support,
@@ -4880,11 +4913,18 @@ class PanelAIO(Screen):
             "0": self.toggle_current_favorite
         }, -1)
         
-        self.onShown.append(self.post_initial_setup)
+        self.onFirstExecBegin.append(self.post_initial_setup)
         self.onExecBegin.append(self._on_exec_begin)
         self.set_language(self.lang) 
 
     # --- FUNKCJE ZAKŁADEK ---
+    def _make_menu(self, role):
+        return MenuList([])
+
+    def open_appearance(self):
+        from Plugins.SystemPlugins.PanelAIO.ui.appearance import AppearanceScreen
+        self.sess.open(AppearanceScreen, self.lang)
+
     def next_tab(self):
         if not self.tabs:
             return
@@ -4945,7 +4985,7 @@ class PanelAIO(Screen):
                 return
 
             # Pobierz nazwę funkcji
-            func_name = str(item[0])
+            func_name = ensure_str(item[0])
 
             # Sprawdź czy to separator
             if len(item) > 1 and item[1] == "SEPARATOR":
@@ -5013,10 +5053,10 @@ class PanelAIO(Screen):
         except Exception:
             pass
         self.update_function_description()
-    def set_language(self, lang):
+    def set_language(self, lang, persist=False):
         self.lang = lang if lang in ('PL', 'EN') else 'PL'
         try:
-            if config is not None and hasattr(config.plugins.panelaio, 'language'):
+            if persist and config is not None and hasattr(config.plugins.panelaio, 'language'):
                 config.plugins.panelaio.language.value = self.lang
                 config.plugins.panelaio.language.save()
                 if configfile is not None: configfile.save()
@@ -5040,6 +5080,7 @@ class PanelAIO(Screen):
             
             softcam_menu = list(SOFTCAM_AND_PLUGINS_PL if lang == 'PL' else SOFTCAM_AND_PLUGINS_EN)
             tools_menu = list(SYSTEM_TOOLS_PL if lang == 'PL' else SYSTEM_TOOLS_EN)
+            tools_menu.insert(0, ('Wygląd panelu' if lang == 'PL' else 'Panel appearance', 'CMD:AIO_APPEARANCE'))
             diag_menu = list(DIAGNOSTICS_PL if lang == 'PL' else DIAGNOSTICS_EN)
             if self.update_info:
                 try:
@@ -5108,6 +5149,9 @@ class PanelAIO(Screen):
             skins_menu.extend(menu_items(lang, sys.version_info[0], only_skins=True, available_skins=self.fetched_data_cache.get('available_skins', [])))
             tabs = build_tabs(lang, final_channel_lists, softcam_menu, tools_menu, skins_menu, diag_menu)
 
+            if IS_PY2:
+                from Plugins.SystemPlugins.PanelAIO.data.navigation import needs_python3
+                tabs = [(label, [(name, action) for name, action in items if not needs_python3(action)]) for label, items in tabs]
             tabs = [(ensure_str(label), [(ensure_str(name), ensure_str(action)) for name, action in items]) for label, items in tabs]
             self._set_sidebar_tabs(tabs)
             self.switch_tab(self.active_tab)
@@ -5772,7 +5816,7 @@ class PanelAIO(Screen):
         self._start_update_check(True)
 
     def _start_update_check(self, manual):
-        if self._closed or self._self_update_running:
+        if getattr(self, '_closed', True) or self._self_update_running:
             return
         self._update_manual_requested = self._update_manual_requested or manual
         if self._update_check_running:
@@ -5796,11 +5840,11 @@ class PanelAIO(Screen):
         thread.start()
 
     def _finish_update_check(self, remote, changelog, error):
+        if getattr(self, '_closed', True):
+            return
         self._update_check_running = False
         manual = self._update_manual_requested
         self._update_manual_requested = False
-        if self._closed:
-            return
         self["update_status"].setText("")
         if error:
             AIO_LOGGER.warning('Update check: %s', error)
@@ -5950,9 +5994,10 @@ class PanelAIO(Screen):
             (('Picony 13E + 19.2E' if self.lang == 'PL' else 'Picons 13E + 19.2E'), PICON_SET_COMBINED),
         ]
         label = 'Wybierz zestaw piconów' if self.lang == 'PL' else 'Choose picon package'
+        from Plugins.SystemPlugins.PanelAIO.ui.picon_picker import PiconPreviewPicker
         self.sess.openWithCallback(
             lambda choice: self._on_picon_pack_selected(title, choice),
-            ChoiceBox, title=label, list=choices)
+            PiconPreviewPicker, choices, self.lang)
 
     def _on_picon_pack_selected(self, title, choice):
         if not choice:
@@ -6075,6 +6120,11 @@ class PanelAIO(Screen):
 
     # --- GŁÓWNY WYKONAWCA AKCJI ---
     def execute_action(self, name, action):
+        if IS_PY2:
+            from Plugins.SystemPlugins.PanelAIO.data.navigation import needs_python3
+            if needs_python3(action):
+                show_message_compat(self.sess, ('Ta pozycja wymaga Pythona 3.' if self.lang == 'PL' else 'This item requires Python 3.'), MessageBox.TYPE_INFO)
+                return
         title = name
         try:
             AIO_LOGGER.info('ACTION start | %s | %s', ensure_unicode(name), ensure_unicode(action))
@@ -6082,6 +6132,8 @@ class PanelAIO(Screen):
                 _record_recent(name, action)
         except Exception as exc:
             _log_exception('action history/logging', exc)
+        from Plugins.SystemPlugins.PanelAIO.data.skins import action_for_image
+        action = action_for_image(action, self.image_type)
         if action.startswith('feed:'):
             key = action.split(':', 1)[1]
             from Plugins.SystemPlugins.PanelAIO.data.catalog import command_for
@@ -6179,10 +6231,12 @@ class PanelAIO(Screen):
             elif key in ('INSTALL_AIOHD_NEXT', 'INSTALL_FURY_SKIN', 'INSTALL_JIHAD_SKIN', 'INSTALL_ADULT_XXX'):
                 from Plugins.SystemPlugins.PanelAIO.data.requested_installers import COMMANDS
                 command = ('/bin/sh ' + _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_fury_package.sh'))) if key == 'INSTALL_FURY_SKIN' else self._safe_legacy_action_command(title, COMMANDS[key])
+                if key == 'INSTALL_JIHAD_SKIN' and 'enigma2-plugin-skins-jihad' in self.fetched_data_cache.get('available_skins', []):
+                    command = '/bin/sh %s enigma2-plugin-skins-jihad' % _safe_shell_arg(os.path.join(PLUGIN_PATH, 'install_feed_package.sh'))
                 if not command:
                     show_message_compat(self.sess, 'Nieprawidłowe źródło instalatora.' if self.lang == 'PL' else 'Invalid installer source.', MessageBox.TYPE_ERROR)
                     return
-                run_command_in_background(self.sess, title, [command], callback_on_finish=lambda result: show_message_compat(self.sess, ('Polecenie instalatora zakończone. Sprawdź wynik w logu; zewnętrzny skrypt może ukryć błąd instalacji.' if self.lang == 'PL' else 'Installer command finished. Check the log; the external script may hide an installation error.') if result and result.get('success') else ('Błąd instalatora.' if self.lang == 'PL' else 'Installer failed.'), MessageBox.TYPE_INFO if result and result.get('success') else MessageBox.TYPE_ERROR))
+                run_command_in_background(self.sess, title, [command], callback_on_finish=self._show_action_result)
             elif key in ('INSTALL_JEDI_GITHUB', 'INSTALL_CHOCHO_GITHUB', 'INSTALL_PHUB'):
                 script = 'install_phub_safe.sh' if key == 'INSTALL_PHUB' else 'install_github_package_safe.sh'
                 args = '' if key == 'INSTALL_PHUB' else (' jedi' if key == 'INSTALL_JEDI_GITHUB' else ' chocho')
@@ -6259,8 +6313,8 @@ class PanelAIO(Screen):
         ]
         desc_map = {
             'deps_only': ('Instaluje wyłącznie brakujące zależności. Nie zmienia list, piconów ani softcamu.' if lang == 'PL' else 'Installs missing dependencies only. It does not change lists, picons or softcam.'),
-            'install_basic_no_picons': ('Bezpiecznie instaluje listę Polska 13E AIO Panel, feed Softcam i OSCam-Emu. Każdy krok jest sprawdzany; bez automatycznego restartu.' if lang == 'PL' else 'Safely installs Polska 13E AIO Panel, the Softcam feed and OSCam-Emu. Every step is verified; no automatic restart.'),
-            'install_with_picons': ('Pełna konfiguracja jak START oraz picony do wybranego katalogu. Wymaga wolnego miejsca; bez automatycznego restartu.' if lang == 'PL' else 'Full START configuration plus picons in a selected folder. Requires free space; no automatic restart.'),
+            'install_basic_no_picons': ('Zastępuje obecną listę listą Polska 13E AIO Panel po zapisaniu kopii. Następnie instaluje feed Softcam i OSCam-Emu. Każdy krok jest sprawdzany; bez automatycznego restartu.' if lang == 'PL' else 'Backs up and replaces your channel list with Polska 13E AIO Panel. Then installs the Softcam feed and OSCam-Emu. Every step is verified; no automatic restart.'),
+            'install_with_picons': ('Zapisuje kopię, zastępuje obecną listę listą Polska 13E AIO Panel i wykonuje pozostałe kroki START. Picony zapisuje w wybranym katalogu.' if lang == 'PL' else 'Backs up and replaces your channel list with Polska 13E AIO Panel, completes START setup and installs picons in the selected folder.'),
             'cancel': ('Powrót do menu.' if lang == 'PL' else 'Return to menu.')
         }
         self.sess.openWithCallback(self._super_wizard_selected, SuperWizardChoiceScreen, options=options, title=TRANSLATIONS[lang]['sk_choice_title'], description_map=desc_map)
@@ -6282,6 +6336,8 @@ class PanelAIO(Screen):
             self._start_super_wizard(key, None)
 
     def _start_super_wizard(self, key, picon_choice):
+        if key == 'install_with_picons' and not picon_choice:
+            return
         if picon_choice and picon_choice[1] == '__custom__':
             self.sess.openWithCallback(lambda value: self._start_super_wizard_custom(key, value), InputBox, title=('Podaj katalog piconów' if self.lang == 'PL' else 'Enter picon folder'), text='/media/hdd/picon')
             return
@@ -6289,26 +6345,20 @@ class PanelAIO(Screen):
         steps = {'deps_only': ['deps'], 'install_basic_no_picons': ['deps', 'channel_list', 'install_softcam', 'install_oscam', 'reload_settings'], 'install_with_picons': ['deps', 'channel_list', 'install_softcam', 'install_oscam', 'picons', 'reload_settings']}.get(key, [])
         if not steps:
             return
-        channel_url = 'https://github.com/OliOli2013/PanelAIO-Lists/raw/main/archives/Polska_13E_AIO_Panel.zip'
-        try:
-            for item in self.fetched_data_cache.get('repo_lists', []):
-                if not (isinstance(item, (list, tuple)) and len(item) >= 2):
-                    continue
-                action = ensure_unicode(item[1])
-                if not action.startswith('archive:'):
-                    continue
-                item_url = action.split(':', 1)[1]
-                normalized = re.sub(r'[^a-z0-9]+', ' ', ensure_unicode(item[0]).replace(u'📡 ', '').lower()).strip()
-                if normalized == 'polska 13e aio panel' or 'Polska_13E_AIO_Panel.zip' in item_url:
-                    channel_url = item_url
-                    break
-        except Exception:
-            pass
-        self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=channel_url, channel_list_name='Polska 13E AIO Panel', picon_url='https://github.com/OliOli2013/PanelAIO-Plugin/raw/main/Picony.zip', picon_path=picon_path, lang=self.lang)
+        backup_dir = self._get_backup_path() if 'channel_list' in steps else None
+        if 'channel_list' in steps and not backup_dir:
+            show_message_compat(self.sess, ('Brak katalogu na kopię listy.' if self.lang == 'PL' else 'No channel backup directory available.'), MessageBox.TYPE_ERROR)
+            return
+        self.sess.open(WizardProgressScreen, steps=steps, channel_list_url=WIZARD_CHANNEL_URL,
+                       channel_list_name='Polska 13E AIO Panel', picon_url=PICON_SET_13E,
+                       backup_dir=backup_dir, picon_path=picon_path, lang=self.lang)
 
     def _start_super_wizard_custom(self, key, value):
+        if not value:
+            return
         value = ensure_unicode(value).strip()
-        allowed = value.startswith('/usr/share/enigma2/picon') or re.match(r'^/media/[A-Za-z0-9_.-]+/picon(?:/.*)?$', value)
+        allowed = re.match(r'^/(?:usr/share/enigma2|media/[A-Za-z0-9_.-]+)/picon(?:/[A-Za-z0-9_.-]+)*$', value)
+        allowed = allowed and os.path.normpath(value) == value
         if not value or not allowed:
             show_message_compat(self.sess, ('Niedozwolony katalog piconów.' if self.lang == 'PL' else 'The picon folder is not allowed.'), MessageBox.TYPE_ERROR)
             return
@@ -7686,7 +7736,8 @@ class NetworkDiagnosticsSummaryScreen(Screen):
         except Exception as exc:
             print('[AIO Panel] Network result display error:', exc)
 def main(session, **kwargs):
-    session.open(AIOLoadingScreen)
+    from Plugins.SystemPlugins.PanelAIO.ui.main import open_main
+    return open_main(session, **kwargs)
 
 
 def sessionstart(reason, session=None, **kwargs):

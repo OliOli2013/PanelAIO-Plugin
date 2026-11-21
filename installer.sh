@@ -224,7 +224,7 @@ AIO_VERIFIED=0
 
 if [ "$INSTALLED" = "$VERSION" ] \
     && [ "$FILE_VERSION" = "$VERSION" ] \
-    && [ "$PKG_STATUS" = "install ok installed" ]; then
+    && aio_package_is_configured "$PKG_STATUS"; then
 
     if "$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1; then
         AIO_VERIFIED=1
@@ -260,7 +260,7 @@ fi
 [ "$FILE_VERSION" = "$VERSION" ] \
     || fail 'Installed files have wrong version'
 
-[ "$PKG_STATUS" = "install ok installed" ] \
+aio_package_is_configured "$PKG_STATUS" \
     || fail 'Installed package is not fully configured'
 
 fail 'AIO Panel installation could not be verified'

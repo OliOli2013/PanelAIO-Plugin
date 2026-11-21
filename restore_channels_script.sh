@@ -66,7 +66,7 @@ copy_e2(){
     SRC="$1"; DST="$2"
     mkdir -p "$DST" || return 1
     for N in lamedb lamedb5 bouquets.tv bouquets.radio blacklist whitelist; do
-        [ -f "$SRC/$N" ] && cp -p "$SRC/$N" "$DST/$N" || true
+        if [ -f "$SRC/$N" ]; then cp -p "$SRC/$N" "$DST/$N" || return 1; fi
     done
     for F in "$SRC"/*.tv "$SRC"/*.radio "$SRC"/*.del; do
         [ -f "$F" ] || continue
@@ -78,7 +78,7 @@ copy_tux(){
     SRC="$1"; DST="$2"
     mkdir -p "$DST" || return 1
     for N in satellites.xml cables.xml terrestrial.xml; do
-        [ -f "$SRC/$N" ] && cp -p "$SRC/$N" "$DST/$N" || true
+        if [ -f "$SRC/$N" ]; then cp -p "$SRC/$N" "$DST/$N" || return 1; fi
     done
 }
 
@@ -151,7 +151,9 @@ APPLY_STARTED=1
 remove_lists
 rm -f "$TARGET_TUXBOX/satellites.xml" "$TARGET_TUXBOX/cables.xml" "$TARGET_TUXBOX/terrestrial.xml" 2>/dev/null || true
 copy_e2 "$STAGE/enigma2" "$TARGET_E2" || fail "Błąd zapisu listy." apply
-[ -d "$STAGE/tuxbox" ] && copy_tux "$STAGE/tuxbox" "$TARGET_TUXBOX" || true
+if [ -d "$STAGE/tuxbox" ]; then
+    copy_tux "$STAGE/tuxbox" "$TARGET_TUXBOX" || fail "Błąd zapisu XML tunerów." apply
+fi
 chmod 644 "$TARGET_E2/lamedb" "$TARGET_E2/lamedb5" "$TARGET_E2/bouquets.tv" "$TARGET_E2/bouquets.radio" \
           "$TARGET_E2"/*.tv "$TARGET_E2"/*.radio "$TARGET_TUXBOX"/*.xml 2>/dev/null || true
 sync 2>/dev/null || true

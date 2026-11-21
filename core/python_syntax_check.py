@@ -21,7 +21,8 @@ def check(root):
         # Legacy AIO only supports this fixed entry set on Python 2.
         files_to_check = [os.path.join(root, name) for name in (
             'plugin.py', 'runtime.py', 'legacy_plugin.py',
-            'ui/modern.py', 'ui/screens/connect.py')]
+            'ui/modern.py', 'ui/appearance.py', 'ui/media_list.py', 'core/skin_previews.py',
+            'ui/main.py', 'ui/screens/connect.py')]
     else:
         files_to_check = []
         for current, dirs, files in os.walk(root, onerror=report_walk_error):

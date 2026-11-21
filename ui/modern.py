@@ -13,6 +13,9 @@ import datetime
 import os
 import re
 import sys
+import time
+import xml.etree.ElementTree as ET
+from threading import Thread
 
 from Components.Label import Label
 from Components.Pixmap import Pixmap
@@ -22,6 +25,10 @@ except Exception:
     config = None
 
 from Plugins.SystemPlugins.PanelAIO import runtime as legacy
+from Plugins.SystemPlugins.PanelAIO.core import skin_previews, visual_previews
+from Plugins.SystemPlugins.PanelAIO.ui.appearance import (
+    AppearanceScreen, PreviewScreen, PALETTES, apply_colors, fit_skin, preferences, themed_skin, place_preview)
+from Plugins.SystemPlugins.PanelAIO.ui.media_list import CATEGORY_ICONS, MediaMenu
 from Plugins.SystemPlugins.PanelAIO.core.plugin_state import status_text as _plugin_status_text
 
 PLUGIN_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -44,7 +51,7 @@ def _screen_mode():
     return 'fhd'
 
 
-def _modern_skin():
+def _dashboard_template():
     """Dashboard skin without static eLabel overlays.
 
     Several Enigma2 images render static eLabel elements above dynamic widgets
@@ -83,12 +90,12 @@ def _modern_skin():
     <widget name="net_value" position="692,446" size="186,16" font="Regular;13" foregroundColor="#00C2FF" backgroundColor="#0D1A29" transparent="0" />
 
     <widget name="update_status" position="18,476" size="320,20" font="Regular;15" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="key_red" position="18,505" size="196,25" font="Regular;16" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_red" position="18,505" size="196,25" font="Regular;16" foregroundColor="#FF7381" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="226,505" size="196,25" font="Regular;16" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="434,505" size="210,25" font="Regular;16" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_blue" position="656,505" size="160,25" font="Regular;16" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="footer" position="18,536" size="798,18" font="Regular;13" halign="center" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="site_qr_label" position="704,480" size="174,18" font="Regular;12" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr_label" position="704,480" size="174,18" font="Regular;12" halign="right" foregroundColor="#00C2FF" backgroundColor="#07111D" transparent="0" />
     <widget name="site_qr" position="833,505" size="48,48" alphatest="blend" scale="1" />
     <widget name="function_description" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="legend" position="0,0" size="0,0" font="Regular;1" transparent="1" />
@@ -124,9 +131,9 @@ def _modern_skin():
 
     <widget name="update_status" position="22,604" size="380,22" font="Regular;17" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="footer" position="430,604" size="650,22" font="Regular;15" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="site_qr_label" position="956,576" size="192,20" font="Regular;14" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr_label" position="956,576" size="192,20" font="Regular;14" halign="right" foregroundColor="#00C2FF" backgroundColor="#07111D" transparent="0" />
     <widget name="site_qr" position="1094,599" size="64,64" alphatest="blend" scale="1" />
-    <widget name="key_red" position="22,640" size="250,26" font="Regular;18" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_red" position="22,640" size="250,26" font="Regular;18" foregroundColor="#FF7381" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="284,640" size="250,26" font="Regular;18" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="546,640" size="276,26" font="Regular;18" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_blue" position="834,640" size="246,26" font="Regular;18" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
@@ -163,9 +170,9 @@ def _modern_skin():
 
     <widget name="update_status" position="30,808" size="500,28" font="Regular;22" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="footer" position="560,808" size="840,28" font="Regular;20" halign="right" foregroundColor="#70879D" backgroundColor="#0E1C2C" transparent="0" />
-    <widget name="site_qr_label" position="1230,772" size="284,24" font="Regular;18" halign="right" foregroundColor="#58DDFF" backgroundColor="#07111D" transparent="0" />
+    <widget name="site_qr_label" position="1230,772" size="284,24" font="Regular;18" halign="right" foregroundColor="#00C2FF" backgroundColor="#07111D" transparent="0" />
     <widget name="site_qr" position="1422,798" size="96,96" alphatest="blend" scale="1" />
-    <widget name="key_red" position="30,852" size="330,32" font="Regular;24" foregroundColor="#FF5A68" backgroundColor="#0E1C2C" transparent="0" />
+    <widget name="key_red" position="30,852" size="330,32" font="Regular;24" foregroundColor="#FF7381" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_green" position="378,852" size="330,32" font="Regular;24" foregroundColor="#4CDB91" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_yellow" position="726,852" size="370,32" font="Regular;24" foregroundColor="#FFD24A" backgroundColor="#0E1C2C" transparent="0" />
     <widget name="key_blue" position="1114,852" size="286,32" font="Regular;24" foregroundColor="#4CA3FF" backgroundColor="#0E1C2C" transparent="0" />
@@ -173,6 +180,21 @@ def _modern_skin():
     <widget name="legend" position="0,0" size="0,0" font="Regular;1" transparent="1" />
     <widget name="tabs_display" position="0,0" size="0,0" font="Regular;1" transparent="1" />
 </screen>""" % (logo, legacy.PLUGIN_QR_CODE_SMALL_PATH, _asset('sel_sidebar_fhd.png'), _asset('sel_menu_fhd.png'))
+
+def _modern_skin(theme='ocean'):
+    root = themed_skin(_dashboard_template(), theme)
+    mode = _screen_mode()
+    geometry = {'small': ('692,350', '186,104'), 'hd': ('896,430', '252,142'),
+                'fhd': ('1154,586', '352,198')}
+    pos, size = geometry[mode]
+    ET.SubElement(root, 'widget', name='skin_preview', position=pos, size=size, scale='1')
+    root.set('name', 'PanelAIODashboard181')
+    for name in ('sidebar', 'menu'):
+        node = root.find("widget[@name='%s']" % name)
+        node.attrib.pop('selectionPixmap', None)
+        node.set('backgroundColorSelected', PALETTES[theme][-1])
+    return fit_skin(root, legacy._desktop_size())
+
 
 def _loading_skin():
     mode = _screen_mode()
@@ -186,8 +208,8 @@ def _loading_skin():
     <widget name="title" position="92,15" size="470,32" font="Regular;27" foregroundColor="#F2F7FC" transparent="1" />
     <widget name="version" position="562,20" size="136,24" font="Regular;18" halign="right" foregroundColor="#00C2FF" transparent="1" />
     <widget name="stage" position="92,49" size="600,20" font="Regular;16" foregroundColor="#8FA7BE" transparent="1" />
-    <widget name="message" position="34,104" size="652,130" font="Regular;22" halign="center" valign="center" foregroundColor="#DCE7F1" transparent="1" />
-    <eLabel position="34,252" size="652,1" backgroundColor="#24435D"  zPosition="-10" />
+    <widget name="message" position="34,104" size="652,130" font="Regular;22" halign="center" valign="center" foregroundColor="#D8E3ED" transparent="1" />
+    <eLabel position="34,252" size="652,1" backgroundColor="#1E789E"  zPosition="-10" />
     <widget name="tip" position="42,270" size="636,52" font="Regular;16" halign="center" valign="center" foregroundColor="#8FA7BE" transparent="1" />
 </screen>""" % logo
     return """
@@ -198,8 +220,8 @@ def _loading_skin():
     <widget name="title" position="118,20" size="560,38" font="Regular;33" foregroundColor="#F2F7FC" transparent="1" />
     <widget name="version" position="690,25" size="180,28" font="Regular;22" halign="right" foregroundColor="#00C2FF" transparent="1" />
     <widget name="stage" position="118,62" size="750,24" font="Regular;20" foregroundColor="#8FA7BE" transparent="1" />
-    <widget name="message" position="46,132" size="808,160" font="Regular;28" halign="center" valign="center" foregroundColor="#DCE7F1" transparent="1" />
-    <eLabel position="46,322" size="808,1" backgroundColor="#24435D"  zPosition="-10" />
+    <widget name="message" position="46,132" size="808,160" font="Regular;28" halign="center" valign="center" foregroundColor="#D8E3ED" transparent="1" />
+    <eLabel position="46,322" size="808,1" backgroundColor="#1E789E"  zPosition="-10" />
     <widget name="tip" position="58,344" size="784,62" font="Regular;20" halign="center" valign="center" foregroundColor="#8FA7BE" transparent="1" />
 </screen>""" % logo
 
@@ -231,16 +253,28 @@ def _truncate(text, limit):
 
 
 class ModernPanelAIO(legacy.PanelAIO):
-    skin = _modern_skin()
-    modern_skin_name = ['PanelAIOModern150']
+    modern_skin_name = ['PanelAIODashboard181']
 
     def __init__(self, session, fetched_data):
+        self.theme, self.show_icons, self.show_previews = preferences()
+        self.skin = _modern_skin(self.theme)
+        self._dashboard_xml = ET.fromstring(self.skin)
+        self._media_ready = False
+        self._preview_key = None
+        self._preview_path = None
+        self._preview_timer = None
+        self._fetching_key = None
+        self._miss_until = {}
+        self._pixel_paths = {}
+        self._setting_tabs = False
         legacy.PanelAIO.__init__(self, session, fetched_data)
-        self.skinName = ['PanelAIOModern150']
+        self['skin_preview'] = Pixmap()
+        self.onClose.append(self._cancel_preview_timer)
         self['brand_logo'] = Pixmap()
         self['category_icon'] = Pixmap()
         self['item_icon'] = Pixmap()
         self['site_qr'] = Pixmap()
+        self['appearance_actions'] = legacy.ActionMap(['MenuActions'], {'menu': self.open_appearance}, -1)
         self['qr_support_label'] = Label('')
         self['site_qr_label'] = Label('')
         self['category_title'] = Label('')
@@ -259,17 +293,33 @@ class ModernPanelAIO(legacy.PanelAIO):
         self['key_yellow'] = Label('')
         self['key_blue'] = Label('')
         self._modern_image_name = self._detect_image_name()
-        try:
-            self['menu'].onSelectionChanged.append(self._modern_selection_changed)
-        except Exception:
-            pass
-        try:
-            self['sidebar'].onSelectionChanged.append(self._modern_sidebar_changed)
-        except Exception:
-            pass
+        self['menu'].onSelectionChanged.append(self._modern_selection_changed)
         self.onLayoutFinish.append(self._modern_layout_ready)
-        # Automatic UI language: Polish only on a Polish Enigma2 image; English otherwise.
-        self.set_language(_system_language())
+
+    def _make_menu(self, role):
+        node = self._dashboard_xml.find("widget[@name='%s']" % role)
+        return MediaMenu(int(node.get('size').split(',')[0]), int(node.get('itemHeight')),
+                        int(node.get('font').split(';')[-1]))
+
+    def _on_sidebar_changed(self):
+        if not self._setting_tabs:
+            legacy.PanelAIO._on_sidebar_changed(self)
+
+    def open_appearance(self):
+        self.sess.openWithCallback(self._appearance_saved, AppearanceScreen, self.lang)
+
+    def _appearance_saved(self, saved=False):
+        if not saved:
+            return
+        self.theme, self.show_icons, self.show_previews = preferences()
+        self.skin = _modern_skin(self.theme)
+        self._dashboard_xml = ET.fromstring(self.skin)
+        apply_colors(self, self._dashboard_xml)
+        index = self._get_list_index(self['menu'])
+        self._set_sidebar_tabs(self.tabs)
+        self.switch_tab(self.active_tab)
+        self['menu'].moveToIndex(index)
+        self._refresh_modern_ui()
 
     def _detect_image_name(self):
         candidates = [
@@ -298,6 +348,8 @@ class ModernPanelAIO(legacy.PanelAIO):
         return 'Enigma2'
 
     def _modern_layout_ready(self):
+        self._media_ready = True
+        self['skin_preview'].hide()
         self._set_pixmap('brand_logo', os.path.join(PLUGIN_PATH, 'logo_original_14.png'))
         self._set_pixmap('site_qr', _asset('qr_site.png'))
         try:
@@ -313,7 +365,9 @@ class ModernPanelAIO(legacy.PanelAIO):
         try:
             widget = self[widget_name]
             if widget.instance is not None and os.path.exists(path):
-                widget.instance.setPixmapFromFile(path)
+                if self._pixel_paths.get(widget_name) != path:
+                    widget.instance.setPixmapFromFile(path)
+                    self._pixel_paths[widget_name] = path
                 widget.show()
                 return True
         except Exception:
@@ -322,7 +376,7 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _refresh_modern_labels(self):
         if self.lang == 'PL':
-            self['support_label'].setText('Nowoczesne centrum narzędzi Enigma2')
+            self['support_label'].setText('MENU  •  Wygląd panelu')
             self['qr_support_label'].setText('WSPARCIE')
             self['site_qr_label'].setText('STRONA AIO TEAM')
             self['key_red'].setText('●  Polski')
@@ -330,7 +384,7 @@ class ModernPanelAIO(legacy.PanelAIO):
             self['key_yellow'].setText('●  Restart GUI')
             self['key_blue'].setText('●  Aktualizacja')
         else:
-            self['support_label'].setText('Modern Enigma2 tools and maintenance hub')
+            self['support_label'].setText('MENU  •  Panel appearance')
             self['qr_support_label'].setText('SUPPORT')
             self['site_qr_label'].setText('AIO TEAM WEBSITE')
             self['key_red'].setText('●  Polski')
@@ -341,24 +395,17 @@ class ModernPanelAIO(legacy.PanelAIO):
 
     def _set_sidebar_tabs(self, tabs):
         self.tabs = tabs or []
-        titles = []
-        for title, items in self.tabs:
-            clean = legacy.ensure_unicode(title).strip()
-            clean = clean.replace('---', '').strip()
-            titles.append(legacy.ensure_str(clean))
+        self.active_tab = min(self.active_tab, max(0, len(self.tabs) - 1))
+        self._setting_tabs = True
         try:
-            self['sidebar'].setList(titles)
-        except Exception:
-            self['sidebar'].setList([])
-        if not self.tabs:
-            self.active_tab = 0
-            return
-        if self.active_tab >= len(self.tabs):
-            self.active_tab = 0
-        try:
-            self['sidebar'].setIndex(self.active_tab)
-        except Exception:
-            pass
+            rows = []
+            for title, items in self.tabs:
+                clean = legacy.ensure_unicode(title).replace('---', '').strip()
+                rows.append((clean, CATEGORY_ICONS.get(clean, 'system')))
+            self['sidebar'].set_rows(rows, self.show_icons)
+            self['sidebar'].moveToIndex(self.active_tab)
+        finally:
+            self._setting_tabs = False
 
     def switch_tab(self, tab_index):
         if not self.tabs:
@@ -372,39 +419,27 @@ class ModernPanelAIO(legacy.PanelAIO):
             tab_index = len(self.tabs) - 1
         self.active_tab = tab_index
         try:
-            self['sidebar'].setIndex(tab_index)
+            self['sidebar'].moveToIndex(tab_index)
         except Exception:
             pass
         items = self.tabs[tab_index][1]
-        display = [legacy.ensure_str(_strip_leading_symbol(item[0])) for item in items]
-        self['menu'].setList(display)
-        try:
-            self['menu'].setIndex(0)
-        except Exception:
-            pass
+        category = CATEGORY_ICONS.get(legacy.ensure_unicode(self.tabs[tab_index][0]), 'system')
+        rows = [(_strip_leading_symbol(name), self._row_icon(action, category)) for name, action in items]
+        self['menu'].set_rows(rows, self.show_icons)
+        self['menu'].moveToIndex(0)
         self.update_function_description()
         self._apply_focus()
         self._refresh_modern_ui()
 
-    def set_language(self, lang):
-        legacy.PanelAIO.set_language(self, lang)
+    def set_language(self, lang, persist=False):
+        legacy.PanelAIO.set_language(self, lang, persist=persist)
         try:
             self._refresh_modern_labels()
             self._refresh_modern_ui()
         except Exception:
             pass
 
-    def _modern_sidebar_changed(self):
-        try:
-            self._refresh_modern_ui()
-        except Exception:
-            pass
-
     def _modern_selection_changed(self):
-        try:
-            self.update_function_description()
-        except Exception:
-            pass
         self._refresh_modern_ui()
 
     def _current_item(self):
@@ -418,45 +453,29 @@ class ModernPanelAIO(legacy.PanelAIO):
         except Exception:
             return (None, None, 0, 0)
 
-    def _category_icon_name(self, title):
-        text = legacy.ensure_unicode(title).lower()
-        if 'iptv' in text or 'epg' in text or 'picon' in text or '18+' in text:
-            return 'plugins.png'
-        if 'kontakt' in text or 'contact' in text:
-            return 'network.png'
-        if 'kopie' in text or 'przywr' in text:
-            return 'backup.png'
-        if 'diagn' in text:
-            return 'diagnostics.png'
-        if 'list' in text or 'kana' in text or 'channel' in text:
-            return 'channels.png'
-        if 'softcam' in text or 'oscam' in text or 'ncam' in text:
-            return 'softcam.png'
-        if 'aio connect' in text or 'connect' in text or 'połącz' in text:
-            return 'network.png'
-        if 'wtycz' in text or 'plugin' in text or 'online' in text:
-            return 'plugins.png'
-        if 'konfigur' in text or 'configur' in text or 'setup' in text:
-            return 'setup.png'
-        if 'feed' in text or 'repo' in text:
-            return 'feed.png'
-        if 'backup' in text or 'restore' in text or 'napraw' in text or 'repair' in text:
-            return 'backup.png'
-        if 'skin' in text or 'skór' in text:
-            return 'skins.png'
-        if 'diagn' in text or 'monitor' in text:
-            return 'diagnostics.png'
-        if 'czy' in text or 'clean' in text or 'security' in text or 'bezpie' in text:
-            return 'cleanup.png'
-        if 'info' in text or 'aktual' in text or 'update' in text:
-            return 'info.png'
-        if 'extra' in text or 'quick' in text or 'polec' in text:
-            return 'star.png'
-        if 'system' in text or 'narz' in text:
-            return 'system.png'
-        return 'toolbox.png'
+    def _row_icon(self, action, category):
+        if action == 'CMD:AIO_APPEARANCE':
+            return 'appearance'
+        preview = visual_previews.preview_id(action)
+        if preview and preview.startswith('skin:'):
+            return 'skins'
+        if preview and preview.startswith('card:'):
+            name = preview[5:]
+            return name if name in ('picons', 'softcam', 'video', 'camera', 'radio',
+                                     'channels', 'epg', 'iptv', 'backup', 'repair',
+                                     'update', 'network', 'plugins', 'install', 'browser') else 'install'
+        return category if category in ('channels', 'epg', 'softcam', 'backup',
+                                        'iptv', 'adult', 'projects', 'system',
+                                        'diagnostics') else 'system'
 
     def _item_icon_name(self, action):
+        if action == 'CMD:AIO_APPEARANCE':
+            return 'appearance.png'
+        preview = visual_previews.preview_id(action)
+        if preview:
+            key = 'skins' if preview.startswith('skin:') else preview[5:]
+            if os.path.isfile(_asset(key + '.png')):
+                return key + '.png'
         value = legacy.ensure_unicode(action or '').lower()
         if 'aio_search' in value:
             return 'diagnostics.png'
@@ -519,15 +538,20 @@ class ModernPanelAIO(legacy.PanelAIO):
         return 'Press OK to review the confirmation and run this function.'
 
     def _refresh_modern_ui(self):
+        if not self._media_ready:
+            return
         try:
             if self.tabs and self.active_tab < len(self.tabs):
                 category = legacy.ensure_unicode(self.tabs[self.active_tab][0]).replace('---', '').strip()
             else:
                 category = ''
             self['category_title'].setText(legacy.ensure_str(category))
-            self._set_pixmap('category_icon', _asset(self._category_icon_name(category)))
+            category_icon = CATEGORY_ICONS.get(category, 'system')
+            self._set_pixmap('category_icon', os.path.join(PLUGIN_PATH, 'assets', 'icons', 'large', category_icon + '.png'))
             name, action, index, total = self._current_item()
             self['item_counter'].setText('%d/%d' % ((index + 1) if total else 0, total))
+            key = visual_previews.preview_id(action) if self.show_previews else None
+            self._select_preview(key)
             if name:
                 clean_name = _strip_leading_symbol(name)
                 self['detail_title'].setText(legacy.ensure_str(_truncate(clean_name, 44)))
@@ -544,6 +568,19 @@ class ModernPanelAIO(legacy.PanelAIO):
                     state = ''
                 if state:
                     description = (description.rstrip() + '\n\n' + state).strip()
+                if action == 'CMD:AIO_APPEARANCE':
+                    description = ('Wybierz motyw, ikony menu i podglądy skórek.' if self.lang == 'PL'
+                                   else 'Choose a theme, menu icons and skin previews.')
+                if key and self._preview_path:
+                    if key.startswith('skin:'):
+                        if visual_previews.actual_photo(key):
+                            note = 'INFO  •  Zdjęcie skina' if self.lang == 'PL' else 'INFO  •  Skin screenshot'
+                        else:
+                            note = ('Brak zdjęcia skina – grafika informacyjna' if self.lang == 'PL'
+                                    else 'No skin screenshot – informational card')
+                    else:
+                        note = ('INFO  •  Ilustracja funkcji' if self.lang == 'PL' else 'INFO  •  Feature illustration')
+                    description = note + '\n' + legacy.ensure_str(description)
                 self['detail_body'].setText(legacy.ensure_str(_truncate(description, 310)))
                 self._set_pixmap('item_icon', _asset(self._item_icon_name(action)))
             else:
@@ -552,6 +589,71 @@ class ModernPanelAIO(legacy.PanelAIO):
                 self._set_pixmap('item_icon', _asset('toolbox.png'))
         except Exception as error:
             print('[AIO Panel] modern UI refresh error:', error)
+
+    def _cancel_preview_timer(self):
+        if self._preview_timer is not None and self._preview_timer.active():
+            self._preview_timer.cancel()
+        self._preview_timer = None
+
+    def _display_preview(self, path):
+        self._preview_path = path
+        widget = self['skin_preview']
+        if path:
+            node = self._dashboard_xml.find("widget[@name='skin_preview']")
+            rect = [int(n) for n in (node.get('position') + ',' + node.get('size')).split(',')]
+            place_preview(widget, path, rect)
+            widget.show()
+        else:
+            widget.hide()
+        for name in ('image_value', 'python_value', 'flash_value', 'cpu_value', 'ram_value', 'net_value'):
+            if path:
+                self[name].hide()
+            else:
+                self[name].show()
+
+    def _select_preview(self, key):
+        if key == self._preview_key:
+            return
+        self._preview_key = key
+        self._cancel_preview_timer()
+        path = visual_previews.local_image(key)
+        self._display_preview(path)
+        # The informational fallback is intentionally shown while a real screenshot
+        # is sought in the background. Generic cards are never downloaded.
+        if (key and key.startswith('skin:') and not visual_previews.actual_photo(key)
+                and self._fetching_key != key
+                and time.time() >= self._miss_until.get(key, 0)):
+            self._preview_timer = legacy.reactor.callLater(0.45, self._fetch_preview, key)
+
+    def _fetch_preview(self, key):
+        self._preview_timer = None
+        self._fetching_key = key
+        def worker():
+            try:
+                path = visual_previews.fetch_image(key)
+            except Exception:
+                path = None
+            legacy.reactor.callFromThread(self._preview_finished, key, path)
+        thread = Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+
+    def _preview_finished(self, key, path):
+        if getattr(self, '_closed', True):
+            return
+        self._fetching_key = None
+        if not path:
+            self._miss_until[key] = time.time() + 600
+        current = self._preview_key
+        if key == current:
+            self._display_preview(path or visual_previews.local_image(key))
+        self._refresh_modern_ui()
+
+    def open_support(self):
+        if self._focus == 'menu' and self._preview_path:
+            self.sess.open(PreviewScreen, _strip_leading_symbol(self._current_item()[0]), self._preview_path)
+            return
+        legacy.PanelAIO.open_support(self)
 
     def _flash_percent(self):
         try:
@@ -595,6 +697,7 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
 
     def __init__(self, session):
         legacy.AIOLoadingScreen.__init__(self, session)
+        self.skin = fit_skin(themed_skin(_loading_skin(), preferences()[0]), legacy._desktop_size())
         self.skinName = ['AIOModernLoading150']
         self['logo'] = Pixmap()
         self['title'] = Label('AIO Panel')
@@ -602,6 +705,13 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
         self['stage'] = Label('')
         self['tip'] = Label('')
         self.onLayoutFinish.append(self._modern_loading_ready)
+        self.onClose.append(self._stop_loading)
+
+    def _stop_loading(self):
+        self._panel_opened = True
+        timer = self._loading_timeout_call
+        if timer is not None and timer.active():
+            timer.cancel()
 
     def _modern_loading_ready(self):
         try:
@@ -618,12 +728,12 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
             self['stage'].setText('Initializing the safe runtime environment')
             self['tip'].setText('AIO Panel loads data in the background. A server timeout will not block the dashboard.')
 
-    def check_dependencies(self):
+    def start_loading_process(self):
         try:
             self['stage'].setText('Sprawdzanie zależności systemowych' if _system_language() == 'PL' else 'Checking system dependencies')
         except Exception:
             pass
-        return legacy.AIOLoadingScreen.check_dependencies(self)
+        return legacy.AIOLoadingScreen.start_loading_process(self)
 
     def start_async_data_load(self):
         try:
@@ -634,7 +744,7 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
         return legacy.AIOLoadingScreen.start_async_data_load(self)
 
     def _open_panel_safe(self, fetched_data=None):
-        if self._panel_opened:
+        if getattr(self, '_panel_opened', True):
             return
         self._panel_opened = True
         try:
@@ -648,5 +758,4 @@ class ModernLoadingScreen(legacy.AIOLoadingScreen):
             'best_oscam_version': 'Auto',
             'local_oscam_version': 'Online'
         }
-        self.session.open(ModernPanelAIO, data)
-        self.close()
+        self.close(data)
