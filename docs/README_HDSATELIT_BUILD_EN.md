@@ -1,5 +1,8 @@
 # AIO Panel — HD Satelit edition (GPL-3.0)
 
+<!-- AIO_HDSATELIT_CI_1821 -->
+> **Updated 2026-11-22 — AIO Panel 18.2.1+hds2:** build with `python3 tools/build_hdsatelit_ci.py --source . --out dist-hdsatelit`. Run `python3 tools/test_hdsatelit.py --out dist-hdsatelit` and `python3 tools/test_hdsatelit_ci.py --out dist-hdsatelit`. The workflow builds on stable tags; publication into HD Satelit feed remains with its maintainers. See [README_HDSATELIT_CI_18_2_1.md](README_HDSATELIT_CI_18_2_1.md). The 18.0.0+hds2 instructions below are retained as historical notes.
+
 Author attribution: **Paweł Pawełek | AIO Team** — https://github.com/OliOli2013/PanelAIO-Plugin
 
 The official-feed edition is a separately generated **build of the same upstream repository**. The default AIO Panel code, its standard releases, IPK/DEB packages, and user settings are not modified. This is an opt-in build profile, not a second fork.

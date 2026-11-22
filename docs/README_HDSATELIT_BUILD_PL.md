@@ -1,5 +1,8 @@
 # AIO Panel — edycja HD Satelit
 
+<!-- AIO_HDSATELIT_CI_1821 -->
+> **Aktualizacja od 22.11.2026 — AIO Panel 18.2.1+hds2:** aktualne narzędzie budowania: `python3 tools/build_hdsatelit_ci.py --source . --out dist-hdsatelit`. Następnie uruchom `python3 tools/test_hdsatelit.py --out dist-hdsatelit` oraz `python3 tools/test_hdsatelit_ci.py --out dist-hdsatelit`. Przy nowych tagach generator uruchamia GitHub Actions; wydanie na feed publikuje HD Satelit. Szczegóły: [README_HDSATELIT_CI_18_2_1.md](README_HDSATELIT_CI_18_2_1.md). Poniższy opis 18.0.0+hds2 pozostaje jako dokumentacja historyczna.
+
 **Autor: Paweł Pawełek | AIO Team**
 Repozytorium źródłowe: https://github.com/OliOli2013/PanelAIO-Plugin
 
