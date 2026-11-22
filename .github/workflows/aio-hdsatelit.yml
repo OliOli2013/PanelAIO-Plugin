@@ -70,7 +70,7 @@ jobs:
       - name: Udostępnij artefakty GitHub Actions do publikacji w Releases
         uses: actions/upload-artifact@v4
         with:
-          name: AIO-Panel-HD-Satelit-hds2-${{ github.ref_name }}
+          name: AIO-Panel-HD-Satelit-hds2-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             dist-hdsatelit/*.ipk
             dist-hdsatelit/*.deb
