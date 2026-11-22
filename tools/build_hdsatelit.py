@@ -570,6 +570,11 @@ def main():
         version = stage_repo(source, stage)
         harden(stage)
         harden_hds2(stage)
+        # The shared postinst now validates only the shipped .py and .sh files.
+        # Generate the manifest for this legacy build path, too.
+        checker = stage/'core'/'python_syntax_check.py'
+        run([sys.executable, checker, '--write-manifest', stage])
+        run([sys.executable, checker, '--package', stage])
         syntax_and_selftest(stage)
         assert_hds2_policy(stage)
         out.mkdir(parents=True, exist_ok=True)

@@ -4968,20 +4968,27 @@ class PanelAIO(Screen):
         self._apply_focus()
     def update_function_description(self):
         """Aktualizuje opis funkcji na podstawie zaznaczonego elementu"""
+        # post_initial_setup can leave a delayed callback after the screen closes.
+        if getattr(self, "_closed", False):
+            return
+        try:
+            label = self["function_description"]
+        except (KeyError, TypeError):
+            return
         try:
             data_list = self.tabs[self.active_tab][1] if self.tabs and self.active_tab < len(self.tabs) else []
             if not data_list:
-                self["function_description"].setText("")
+                label.setText("")
                 return
 
             selected_index = self["menu"].getSelectionIndex()
             if selected_index is None or selected_index >= len(data_list):
-                self["function_description"].setText("")
+                label.setText("")
                 return
 
             item = data_list[selected_index]
             if not item or len(item) < 1:
-                self["function_description"].setText("")
+                label.setText("")
                 return
 
             # Pobierz nazwę funkcji
@@ -4989,7 +4996,7 @@ class PanelAIO(Screen):
 
             # Sprawdź czy to separator
             if len(item) > 1 and item[1] == "SEPARATOR":
-                self["function_description"].setText("")
+                label.setText("")
                 return
 
             # Pobierz opis z słownika
@@ -5019,11 +5026,14 @@ class PanelAIO(Screen):
                     description = project_description(item[1], self.lang)
                 except Exception:
                     pass
-            self["function_description"].setText(description)
+            label.setText(description)
 
-        except Exception as e:
-            # W przypadku błędu po prostu wyczyść opis
-            self["function_description"].setText("")
+        except Exception:
+            if not getattr(self, "_closed", False):
+                try:
+                    label.setText("")
+                except Exception:
+                    pass
 
     def menu_up(self):
         """Nawigacja UP zgodna z focusem (sidebar/content)."""

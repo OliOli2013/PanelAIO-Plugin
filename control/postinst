@@ -20,23 +20,11 @@ PY="${AIO_PYTHON:-}"
 [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY=python
 [ -n "$PY" ] || fail "Python interpreter not found"
 
-# Full module validation on Python 3. On legacy Python 2 images validate the runtime entry set,
-# preserving compatibility with optional modules that may intentionally be Py3-only/hidden.
-if "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
-    "$PY" "$DST/core/python_syntax_check.py" "$DST" >> "$LOG" 2>&1 || fail "Python syntax validation failed"
-else
-    "$PY" "$DST/core/python_syntax_check.py" "$DST" >> "$LOG" 2>&1 || fail "Python 2 compatibility syntax validation failed"
-fi
-
-find "$DST" -type f -name '*.sh' -print 2>/dev/null | while IFS= read -r S; do
-    /bin/sh -n "$S" >> "$LOG" 2>&1 || exit 1
-done || fail "shell syntax validation failed"
+# The build manifest contains only files delivered by this package. The checker
+# keeps the Python 2 compatibility subset and runs /bin/sh -n without executing scripts.
+"$PY" "$DST/core/python_syntax_check.py" --package "$DST" >> "$LOG" 2>&1 || fail "package source validation failed (Python / shell / manifest)"
 
 "$PY" "$DST/core/selftest.py" "$DST" >> "$LOG" 2>&1 || fail "AIO 18.2.1 self-test failed"
-
-find "$DST" -type f -name '*.sh' -exec chmod 755 {} \; 2>/dev/null || true
-find "$DST" -type f -name '*.py' -exec chmod 644 {} \; 2>/dev/null || true
-find "$DST" -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true
 
 # Remove stale development/report files that could remain after upgrading from older packages.
 rm -f "$DST"/AIO_PANEL_*_ZMIANY.txt "$DST"/AIO_PANEL_*_POPRAWKI.txt "$DST"/AIO_PANEL_AWARYJNE_USUNIECIE.txt 2>/dev/null || true
@@ -47,9 +35,16 @@ rm -f "$DST"/SUPERCONFIG_*.txt "$DST"/SUPER_CONFIG_*.txt "$DST"/UPDATE_ONLINE_FI
 find "$DST" -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
 find "$DST" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.before_full_repair' \) -delete 2>/dev/null || true
 
-# Remove only the obsolete duplicate after the new SystemPlugins copy passed validation.
-if [ -d "$OLD" ] && [ "$OLD" != "$DST" ]; then
-    rm -rf "$OLD" 2>/dev/null || true
+# Preserve a surviving manually installed copy outside Enigma2's plugin paths.
+# Do not follow a symlink or overwrite any existing backup.
+if [ -L "$OLD" ]; then
+    fail "legacy plugin path is a symlink; left untouched: $OLD"
+elif [ -d "$OLD" ]; then
+    BACKUPS=/var/backups
+    mkdir -p "$BACKUPS" || fail "cannot create $BACKUPS; legacy copy left in place"
+    BACKUP=$(mktemp -d "$BACKUPS/panelaio-legacy.XXXXXX") || fail "cannot reserve a legacy backup directory"
+    mv "$OLD" "$BACKUP/PanelAIO" || fail "cannot move legacy copy to $BACKUP"
+    printf 'Legacy PanelAIO moved to %s/PanelAIO\n' "$BACKUP" >> "$LOG"
 fi
 rm -f /tmp/PanelAIO/preupgrade_version 2>/dev/null || true
 sync 2>/dev/null || true

@@ -34,8 +34,8 @@ find "$DST" -type f -name '*.sh' -exec chmod 755 {} \;
 find "$DST" -type f -name '*.py' -exec chmod 644 {} \;
 chmod 755 "$WORK/ipk/control"/preinst "$WORK/ipk/control"/postinst "$WORK/ipk/control"/postrm
 [ "$(sed -n 's/^Version: //p' "$WORK/ipk/control/control")" = "$VERSION" ] || { echo 'Control/version mismatch' >&2; exit 1; }
-python3 "$DST/core/python_syntax_check.py" "$DST"
-find "$DST" -type f -name '*.sh' -exec sh -c 'for script do sh -n "$script" || exit 1; done' sh {} +
+python3 "$DST/core/python_syntax_check.py" --write-manifest "$DST"
+python3 "$DST/core/python_syntax_check.py" --package "$DST"
 python3 "$DST/core/selftest.py" "$DST"
 if [ -f "$ROOT/tests/test_release_18.py" ]; then
     python3 "$ROOT/tests/test_release_18.py" "$ROOT"
@@ -43,10 +43,11 @@ fi
 python3 "$ROOT/tests/test_dashboard.py"
 python3 "$ROOT/tests/test_skin_feed.py"
 python3 "$ROOT/tests/test_visual_18_2.py" "$DST"
+python3 "$ROOT/tests/test_hds2_maintenance.py"
 if [ -n "${AIO_TEST_PYTHON2:-}" ]; then
     "$AIO_TEST_PYTHON2" "$ROOT/tests/test_dashboard.py"
     "$AIO_TEST_PYTHON2" "$ROOT/tests/test_skin_feed.py"
-    "$AIO_TEST_PYTHON2" "$DST/core/python_syntax_check.py" "$DST"
+    "$AIO_TEST_PYTHON2" "$DST/core/python_syntax_check.py" --package "$DST"
     "$AIO_TEST_PYTHON2" "$DST/core/selftest.py" "$DST"
 fi
 printf '2.0\n' > "$WORK/ipk/debian-binary"

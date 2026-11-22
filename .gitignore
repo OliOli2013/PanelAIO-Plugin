@@ -13,3 +13,4 @@ dist/
 *.log
 
 dist-hdsatelit/
+dist-hdsatelit-source/
