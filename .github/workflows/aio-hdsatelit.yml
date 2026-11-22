@@ -22,10 +22,12 @@ jobs:
     steps:
       - name: Pobierz dokładny commit / tag
         uses: actions/checkout@v4
+
       - name: Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Sprawdź zgodność taga z kodem
         shell: bash
         run: |
@@ -36,16 +38,19 @@ jobs:
             TAG="${GITHUB_REF_NAME#v}"
             test "$TAG" = "$VERSION" || { echo "Niezgodny tag $TAG vs version.txt $VERSION"; exit 1; }
           fi
-          test -f "release/enigma2-plugin-extensions-panelaio_${VERSION}_all.ipk" || {
-            echo 'Brak standardowego IPK w katalogu release. Zbuduj/commituj wydanie standardowe przed tagiem.'
-            exit 1
-          }
+
+      - name: Zbuduj standardowy IPK z bieżących źródeł
+        run: sh build_ipk.sh
+
       - name: Budowanie wersji wyłącznie dla HD Satelit
         run: python3 tools/build_hdsatelit_ci.py --source . --out dist-hdsatelit
+
       - name: Oryginalne testy profilu HD Satelit
         run: python3 tools/test_hdsatelit.py --out dist-hdsatelit
+
       - name: Niezależne testy dwóch pakietów i ograniczeń
         run: python3 tools/test_hdsatelit_ci.py --out dist-hdsatelit
+
       - name: Testy regresji i eksport dla BitBake bez dpkg-deb
         shell: bash
         run: |
@@ -56,10 +61,12 @@ jobs:
           ln -s "$(command -v ar)" "$AIO_AR_DIR/ar"
           PATH="$AIO_AR_DIR" "$AIO_PYTHON" tools/build_hdsatelit_ci.py --source-only
           (cd dist-hdsatelit-source && sha256sum --check SHA256SUMS.txt)
+
       - name: Ponowna kontrola wyników SHA256
         run: |
           cd dist-hdsatelit
           sha256sum --check SHA256SUMS.txt
+
       - name: Udostępnij artefakty GitHub Actions do publikacji w Releases
         uses: actions/upload-artifact@v4
         with:
