@@ -6,6 +6,8 @@ Architecture: all
 Maintainer: Paweł Pawełek <aio-iptv@wp.pl>
 Depends: enigma2
 Provides: enigma2-plugin-systemplugins-panelaio
+Replaces: enigma2-plugin-systemplugins-panelaio
+Conflicts: enigma2-plugin-systemplugins-panelaio
 Description: AIO Panel 18.2.1 stable Enigma2 toolbox
  Offline skin gallery, transparent satellite picons and plugin previews.
  Nine dashboard themes and high-colour menu icons.

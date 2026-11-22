@@ -13,7 +13,7 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
@@ -87,16 +87,40 @@ def remove_exact_lines(root,rel,needle,count):
     p.write_text(s,encoding='utf-8')
 
 def stage_from_ipk(ipk, root):
-    # Use dpkg-deb on package, not install. It handles standard ar/tar safely.
-    pkgroot=root.parent/'unpacked'; pkgroot.mkdir()
-    subprocess.run(['dpkg-deb','-R',str(ipk),str(pkgroot)],check=True,stdout=subprocess.DEVNULL)
-    source=pkgroot/REL
-    chk(source.is_dir(),'w pakiecie nie ma katalogu PanelAIO')
-    for f in source.iterdir():
-        if f.is_symlink(): raise RuntimeError('Symbolic link forbidden in source: '+f.name)
-        if f.is_dir():shutil.copytree(f,root/f.name,ignore=shutil.ignore_patterns('__pycache__','*.pyc','*.pyo'))
-        elif f.is_file():shutil.copy2(f,root/f.name)
-    shutil.copytree(pkgroot/'DEBIAN',root/'control')
+    """Copy only the AIO payload and package control files, without dpkg-deb."""
+    members=subprocess.check_output(['ar','t',str(ipk)],text=True).splitlines()
+    for name, target, prefix in (('data',root,PurePosixPath(REL).parts),
+                                 ('control',root/'control',())):
+        candidates=[x for x in members if x in (
+            name+'.tar',name+'.tar.gz',name+'.tar.xz',name+'.tar.bz2')]
+        chk(len(candidates)==1,'wymagane jedno obsługiwane archiwum '+name+' w IPK')
+        raw=subprocess.check_output(['ar','p',str(ipk),candidates[0]])
+        target.mkdir(parents=True,exist_ok=True)
+        seen=set()
+        with tarfile.open(fileobj=io.BytesIO(raw),mode='r:*') as archive:
+            for item in archive:
+                path=PurePosixPath(item.name)
+                chk(not path.is_absolute() and '..' not in path.parts,
+                    'niedozwolona ścieżka w IPK: '+item.name)
+                if path.parts[:len(prefix)]!=prefix:
+                    continue
+                parts=path.parts[len(prefix):]
+                if not parts:
+                    chk(item.isdir(),'niepoprawny katalog główny archiwum '+name)
+                    continue
+                chk(item.isdir() or item.isfile(),'niedozwolony typ pliku w IPK: '+item.name)
+                if name=='data' and ('__pycache__' in parts or parts[-1].endswith(('.pyc','.pyo'))):
+                    continue
+                dest=target.joinpath(*parts)
+                if item.isdir():
+                    dest.mkdir(parents=True,exist_ok=True)
+                else:
+                    chk(parts not in seen,'podwójny plik w IPK: '+item.name)
+                    seen.add(parts)
+                    dest.parent.mkdir(parents=True,exist_ok=True)
+                    with archive.extractfile(item) as inp, dest.open('xb') as out:
+                        shutil.copyfileobj(inp,out)
+                    dest.chmod(item.mode & 0o777)
     c=(root/'control'/'control').read_text(encoding='utf-8')
     ver=re.search(r'(?m)^Version:\s*(\S+)\s*$',c)
     pkg=re.search(r'(?m)^Package:\s*(\S+)\s*$',c)
@@ -262,7 +286,7 @@ def check_policy(root):
     print('POLICY PASS: blocked keys/BISS/Softcam/Jihad/Adult/self-update; allowed feed OSCam & wizard')
 
 
-def make_archives(root,out,version):
+def prepare_edition_metadata(root,version):
     edition_ver=version+'+'+REV
     text=(root/'control/control').read_text(encoding='utf-8')
     chk(text.count('Version: '+version+'\n')==1,'wersja pakietu niezgodna z bazą')
@@ -270,6 +294,31 @@ def make_archives(root,out,version):
     for f in list(root.rglob('*.pyc'))+list(root.rglob('*.pyo')):
         f.unlink()
     for d in list(root.rglob('__pycache__')):shutil.rmtree(d)
+    # New standard packages carry a source manifest; include any new .py/.sh
+    # created during the profile transformation as well. Old IPKs stay supported.
+    if (root/'AIO_PACKAGE_SOURCES.txt').is_file():
+        subprocess.run([sys.executable,str(root/'core/python_syntax_check.py'),
+                        '--write-manifest',str(root)],check=True)
+        subprocess.run([sys.executable,str(root/'core/python_syntax_check.py'),
+                        '--package',str(root)],check=True)
+
+
+def make_source_zip(root,out):
+    out.mkdir(parents=True,exist_ok=True)
+    srczip=out/'aio-panel-hdsatelit-source.zip'
+    with zipfile.ZipFile(srczip,'w',zipfile.ZIP_DEFLATED,compresslevel=7) as z:
+        for f in sorted(root.rglob('*')):
+            if f.is_file():z.write(f,'PanelAIO-Plugin-HDS/'+f.relative_to(root).as_posix())
+    return srczip
+
+
+def write_checksums(out,files):
+    with (out/'SHA256SUMS.txt').open('w',encoding='utf-8') as fp:
+        for f in files:fp.write(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+f.name+'\n')
+
+
+def make_archives(root,out,version):
+    edition_ver=version+'+'+REV
     out.mkdir(parents=True,exist_ok=True)
     pkgdir=out.parent/'pkgstage';(pkgdir/'DEBIAN').mkdir(parents=True)
     data=pkgdir/REL;data.mkdir(parents=True)
@@ -295,14 +344,7 @@ def make_archives(root,out,version):
         tar_folder(work,tmp/'data.tar.gz')
         (tmp/'debian-binary').write_bytes(b'2.0\n')
         subprocess.run(['ar','rcs',str(ipk),'debian-binary','control.tar.gz','data.tar.gz'],cwd=tmp,check=True,stdout=subprocess.DEVNULL)
-    srczip=out/'aio-panel-hdsatelit-source.zip'
-    with zipfile.ZipFile(srczip,'w',zipfile.ZIP_DEFLATED,compresslevel=7) as z:
-        for f in sorted(root.rglob('*')):
-            if f.is_file():z.write(f,'PanelAIO-Plugin-HDS/'+f.relative_to(root).as_posix())
-    result=[ipk,deb,srczip]
-    with (out/'SHA256SUMS.txt').open('w',encoding='utf-8') as fp:
-        for f in result:fp.write(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+f.name+'\n')
-    return result
+    return [ipk,deb,make_source_zip(root,out)]
 
 
 def verify_files(out,expected_ver):
@@ -327,9 +369,13 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument('--standard-ipk',help='Exact upstream standard AIO Panel IPK')
     p.add_argument('--source',default='.',help='Repository root with version.txt, control/control, release/')
-    p.add_argument('--out',default='dist-hdsatelit',help='Output directory (outside tracked source)')
-    p.add_argument('--verify-only',action='store_true')
-    a=p.parse_args();out=Path(a.out).resolve()
+    p.add_argument('--out',help='Output directory (outside tracked source)')
+    mode=p.add_mutually_exclusive_group()
+    mode.add_argument('--verify-only',action='store_true')
+    mode.add_argument('--source-only',action='store_true',
+                      help='Export the transformed source ZIP and SHA256; no dpkg-deb, IPK or DEB output')
+    a=p.parse_args()
+    out=Path(a.out or ('dist-hdsatelit-source' if a.source_only else 'dist-hdsatelit')).resolve()
     if a.verify_only:
         meta=list(out.glob(PKG+'_*+hds2_all.ipk'))
         chk(len(meta)==1,'oczekiwano dokładnie jednego pakietu HDS')
@@ -341,6 +387,9 @@ def main():
     ipk=Path(a.standard_ipk).resolve() if a.standard_ipk else source/'release'/(PKG+'_'+version+'_all.ipk')
     chk(ipk.is_file(),'nie znaleziono stabilnego pakietu standardowego: '+str(ipk))
     chk(out!=source and out!=source/'release' and source/'release' not in out.parents,'nie używaj katalogu release do HD Satelit')
+    if a.source_only:
+        chk(not any(p.suffix in ('.ipk','.deb') for p in out.glob('*')),
+            '--source-only wymaga osobnego katalogu niezawierającego IPK/DEB')
     if (source/'control/control').exists():
         control=(source/'control/control').read_text(encoding='utf-8')
         chk('Version: '+version+'\n' in control,'repo version/control inconsistent')
@@ -348,14 +397,24 @@ def main():
         work=Path(d);root=work/'src';root.mkdir()
         actual_ver=stage_from_ipk(ipk,root)
         chk(actual_ver==version,'standardowy IPK ma inną wersję: '+actual_ver)
+        if not a.standard_ipk:
+            for rel in ('runtime.py','core/python_syntax_check.py','control/control','control/postinst'):
+                original=source/rel
+                if original.is_file():
+                    chk(original.read_bytes()==(root/rel).read_bytes(),
+                        'IPK nie odpowiada źródłom ('+rel+'); zbuduj aktualny standardowy IPK')
         license_src=source/'LICENSE'
         chk(license_src.is_file(),'brak oryginalnej licencji GPL-3 w źródłach (LICENSE)')
         shutil.copy2(license_src,root/'LICENSE')
         (root/'BUILD_PROVENANCE.txt').write_text('Upstream standard IPK: '+ipk.name+'\nSHA256: '+hashlib.sha256(ipk.read_bytes()).hexdigest()+'\nHD Satelit edition: '+version+'+hds2\n',encoding='utf-8')
         harden(root,version)
         check_policy(root)
-        result=make_archives(root,work/'dist',version)
-        verify_files(work/'dist',version+'+'+REV)
+        prepare_edition_metadata(root,version)
+        dist=work/'dist'
+        result=[make_source_zip(root,dist)] if a.source_only else make_archives(root,dist,version)
+        write_checksums(dist,result)
+        if not a.source_only:
+            verify_files(dist,version+'+'+REV)
         out.mkdir(parents=True,exist_ok=True)
         for item in result+[work/'dist'/'SHA256SUMS.txt']:
             shutil.copy2(item,out/item.name)
